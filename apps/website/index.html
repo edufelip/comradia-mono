@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Comradia — Where Solidarity Meets Romance</title>
+    <meta
+      name="description"
+      content="Comradia is the dating and community app for the left. Connect over shared values, praxis, and mutual aid."
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container nav-row">
+        <div class="brand">
+          <span class="brand-dot" aria-hidden="true"></span>
+          <span class="brand-name">Comradia</span>
+        </div>
+        <a class="cta-pill" href="#waitlist">Join the Collective</a>
+      </div>
+    </header>
+
+    <main class="container hero">
+      <p class="eyebrow">DATE LEFT · BUILD SOLIDARITY</p>
+      <h1>Where solidarity meets romance.</h1>
+      <p class="lead">
+        Skip the political dealbreakers. Meet people who care about labor rights, climate justice,
+        mutual aid, and building a better world together.
+      </p>
+
+      <form id="waitlist" class="waitlist-form">
+        <input
+          id="waitlist-email"
+          type="email"
+          name="email"
+          placeholder="you@solidarity.org"
+          required
+          aria-label="Email address"
+        />
+        <button type="submit">Get Early Access</button>
+      </form>
+      <p id="waitlist-status" class="status-text" role="status" aria-live="polite"></p>
+    </main>
+
+    <script src="./main.js" defer></script>
+  </body>
+</html>

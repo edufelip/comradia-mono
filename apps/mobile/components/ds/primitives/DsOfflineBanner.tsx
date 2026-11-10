@@ -1,0 +1,53 @@
+import { MaterialIcons } from '@expo/vector-icons';
+import { StyleSheet, Text, View } from 'react-native';
+import {
+  DsFontFamily,
+  DsRadius,
+  DsSpace,
+  DsTypography,
+  type DsColorScheme,
+  getDsTheme,
+} from '@/constants/design-system';
+
+type DsOfflineBannerProps = {
+  scheme: DsColorScheme;
+  text: string;
+  testID?: string;
+};
+
+export function DsOfflineBanner({ scheme, text, testID }: DsOfflineBannerProps) {
+  const theme = getDsTheme(scheme);
+
+  return (
+    <View
+      style={[
+        styles.banner,
+        {
+          backgroundColor: theme.color.warningSoft,
+        },
+      ]}
+      testID={testID}
+      accessibilityRole="alert"
+    >
+      <MaterialIcons color={theme.color.warning} name="cloud-off" size={18} />
+      <Text style={[styles.text, { color: theme.color.warning }]}>{text}</Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  banner: {
+    alignItems: 'center',
+    borderRadius: DsRadius.md,
+    flexDirection: 'row',
+    gap: DsSpace.sm,
+    paddingHorizontal: DsSpace.md,
+    paddingVertical: 10,
+  },
+  text: {
+    ...DsTypography.caption,
+    flex: 1,
+    fontFamily: DsFontFamily.medium,
+    fontWeight: '500',
+  },
+});

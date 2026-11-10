@@ -1,0 +1,48 @@
+name: comradia
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: comradia-local-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: comradia_local
+      POSTGRES_PASSWORD: comradia_local_password
+      POSTGRES_DB: comradia_local
+    ports:
+      - "127.0.0.1:15442:5432"
+    volumes:
+      - comradia-local-postgres-data:/var/lib/postgresql/data
+      - ./infra/local-postgres/initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U comradia_local -d comradia_local"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    container_name: comradia-local-redis
+    restart: unless-stopped
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --appendfsync
+      - everysec
+      - --maxmemory
+      - "256mb"
+      - --maxmemory-policy
+      - noeviction
+    ports:
+      - "127.0.0.1:16389:6379"
+    volumes:
+      - comradia-local-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  comradia-local-postgres-data:
+  comradia-local-redis-data:

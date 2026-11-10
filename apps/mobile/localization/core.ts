@@ -1,0 +1,69 @@
+import { enUS, type TranslationKey } from './en-US';
+import { esES } from './es-ES';
+import { getDeviceLocale } from './get-device-locale';
+import { ptBR } from './pt-BR';
+
+export type SupportedLocale = 'en-US' | 'pt-BR' | 'es-ES';
+export type { TranslationKey };
+
+export const DICTIONARIES: Record<SupportedLocale, Record<TranslationKey, string>> = {
+  'en-US': enUS,
+  'pt-BR': ptBR,
+  'es-ES': esES,
+};
+
+export function resolveLocale(rawLocale?: string | null): SupportedLocale {
+  const normalized = (rawLocale ?? '').trim();
+  if (!DICTIONARIES) {
+    return 'en-US';
+  }
+  if (normalized in DICTIONARIES) {
+    return normalized as SupportedLocale;
+  }
+  const lower = normalized.toLowerCase();
+  if (lower.startsWith('pt')) {
+    return 'pt-BR';
+  }
+  if (lower.startsWith('es')) {
+    return 'es-ES';
+  }
+  return 'en-US';
+}
+
+export { getDeviceLocale };
+
+export function t(
+  locale: SupportedLocale,
+  key: TranslationKey,
+  params?: Record<string, string | number>,
+): string {
+  const dict = DICTIONARIES[locale] ?? DICTIONARIES['en-US'];
+  const template = dict[key] ?? DICTIONARIES['en-US'][key] ?? key;
+
+  if (!params) {
+    return template;
+  }
+
+  return Object.entries(params).reduce((acc, [paramKey, value]) => {
+    return acc.replaceAll(`{${paramKey}}`, String(value));
+  }, template);
+}
+
+export type TranslationBinding = {
+  locale: SupportedLocale;
+  t: (key: TranslationKey, params?: Record<string, string | number>) => string;
+};
+
+export function buildTranslationBinding(
+  locale: SupportedLocale,
+  previous?: TranslationBinding | null,
+): TranslationBinding {
+  if (previous && previous.locale === locale) {
+    return previous;
+  }
+
+  return {
+    locale,
+    t: (key: TranslationKey, params?: Record<string, string | number>) => t(locale, key, params),
+  };
+}

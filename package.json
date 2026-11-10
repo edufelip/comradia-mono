@@ -1,0 +1,22 @@
+{
+  "name": "comradia-mono",
+  "private": true,
+  "packageManager": "bun@1.3.14",
+  "engines": {
+    "bun": "1.3.14"
+  },
+  "scripts": {
+    "setup": "bash scripts/setup.sh",
+    "dev": "bun run local:dev",
+    "dev:pane": "bash scripts/dev-pane.sh",
+    "local:db:up": "bash scripts/local-db.sh up",
+    "local:db:down": "bash scripts/local-db.sh down",
+    "local:db:reset": "bash scripts/local-db.sh reset",
+    "local:bun:install": "bash scripts/install-pinned-bun.sh",
+    "local:doctor": "bash scripts/local-doctor.sh",
+    "local:dev": "bash scripts/local-dev.sh",
+    "server:dev": "bash scripts/server-bun.sh run dev",
+    "server:test": "bash scripts/server-bun.sh test",
+    "server:db:migrate": "bash scripts/server-bun.sh run db:migrate"
+  }
+}

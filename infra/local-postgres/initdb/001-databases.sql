@@ -1,0 +1,1 @@
+CREATE DATABASE comradia_server_local OWNER comradia_local;
