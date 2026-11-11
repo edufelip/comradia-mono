@@ -1,0 +1,44 @@
+name: Firestore rules
+
+on:
+  pull_request:
+    paths:
+      - 'apps/firebase/**'
+      - 'apps/mobile/features/profile/profile-schema.ts'
+      - '.github/workflows/firebase-rules.yml'
+  push:
+    branches: [develop, main]
+    paths:
+      - 'apps/firebase/**'
+      - 'apps/mobile/features/profile/profile-schema.ts'
+      - '.github/workflows/firebase-rules.yml'
+
+concurrency:
+  group: firebase-rules-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: apps/firebase
+
+jobs:
+  rules:
+    name: Rules and schema parity
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      # firebase-tools 13 starts the emulators with Java; 17 is the oldest it supports.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+          cache-dependency-path: apps/firebase/yarn.lock
+      - run: yarn install --frozen-lockfile
+      # `yarn test` starts its own Firestore emulator via `firebase emulators:exec`
+      # and runs every file in tests/ against it.
+      - run: yarn test

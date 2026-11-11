@@ -2,10 +2,10 @@ name: Mobile tests
 
 on:
   pull_request:
-    paths: ['apps/mobile/**', '.github/workflows/mobile-tests.yml']
+    paths: ['apps/mobile/**', 'apps/firebase/**', '.github/workflows/mobile-tests.yml']
   push:
     branches: [develop, main]
-    paths: ['apps/mobile/**', '.github/workflows/mobile-tests.yml']
+    paths: ['apps/mobile/**', 'apps/firebase/**', '.github/workflows/mobile-tests.yml']
 
 concurrency:
   group: mobile-tests-${{ github.ref }}
@@ -40,12 +40,20 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+      # Playwright starts the Firebase emulators (`yarn --cwd ../firebase emulators`),
+      # and firebase-tools 13 needs a JDK.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: yarn
           cache-dependency-path: apps/mobile/yarn.lock
       - run: yarn install --frozen-lockfile
+      - run: yarn install --frozen-lockfile
+        working-directory: apps/firebase
       - id: pw
         run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
       - uses: actions/cache@v4
