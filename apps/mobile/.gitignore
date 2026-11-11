@@ -13,7 +13,9 @@ dist/
 web-build/
 expo-env.d.ts
 
-# Native
+# Native — Continuous Native Generation: `npx expo prebuild` recreates these
+/ios
+/android
 .kotlin/
 *.orig.*
 *.jks
