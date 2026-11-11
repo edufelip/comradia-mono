@@ -7,19 +7,21 @@ Five test layers, fastest first. Run the cheapest layer that proves your change,
 | Unit | Pure logic: stores, theme tokens and contrast, translations, locale resolution, backend helpers (`services/backend`) | `node:test` via `tsx` | next to the source: `constants/`, `features/`, `localization/`, `services/` `**/*.test.ts` | `yarn test` | ~1 s |
 | Component | Screens and components render and react to taps; routing redirects | Jest + `jest-expo` + React Native Testing Library + `expo-router/testing-library` | `apps/mobile/tests/component/*.test.tsx` | `yarn test:component` (`:coverage` to enforce thresholds) | ~2 s warm, ~10 s cold |
 | E2E web | Real user journeys in real browsers (Chromium + WebKit, 390×844 and 320×568, dark mode, pt-BR / es-ES, accessibility tree) | Playwright, against `expo start --web` and the Firebase emulators | `apps/mobile/tests/e2e/*.spec.ts` | `yarn test:e2e` (`:ui` to debug) | ~16 s |
-| E2E native | The same journeys on iOS / Android | Maestro | `apps/mobile/.maestro/*.yaml` | `yarn test:e2e:native` (needs a dev build installed on a booted simulator or emulator) | not run in CI yet |
+| E2E native | The same journeys on iOS / Android | Maestro | `apps/mobile/.maestro/*.yaml` | `yarn test:e2e:native` (needs a dev build installed on a booted simulator or emulator) | not run yet |
 | Firestore rules | Every allow and deny in `firestore.rules`, plus parity between the rules' option lists and `features/profile/profile-schema.ts` | `node:test` via `tsx` + `@firebase/rules-unit-testing` against the Firestore emulator | `apps/firebase/tests/*.test.ts` | `yarn test` (starts its own emulator; with one already on `:8089`, run `FIRESTORE_EMULATOR_HOST=127.0.0.1:8089 node --import tsx --test tests/*.test.ts`) | ~1 s |
 
 `yarn test:all` in `apps/mobile` runs typecheck, lint, unit, component (with coverage) and E2E web in that order.
 
 ## CI
 
+**Off for now (since 2026-11-11): tests run locally only.** Both workflows below are disabled on GitHub, so run the layers above before you push: `cd apps/mobile && yarn test:all && yarn format:check`, plus `cd apps/firebase && yarn test` when the rules or the profile schema change.
+
+The workflow files stay in the repo so CI can come back with `gh workflow enable "Mobile tests"` and `gh workflow enable "Firestore rules"`:
+
 | Workflow | Runs when | Jobs |
 | --- | --- | --- |
-| `.github/workflows/mobile-tests.yml` | PR or push to `develop` / `main` touching `apps/mobile/**` or `apps/firebase/**` | `checks` (typecheck, lint, format, unit, component + coverage) and `e2e-web` (Playwright, in parallel; report uploaded on failure) |
-| `.github/workflows/firebase-rules.yml` | PR or push to `develop` / `main` touching `apps/firebase/**` or `apps/mobile/features/profile/profile-schema.ts` | `yarn test` in `apps/firebase`: rules tests under a Firestore emulator |
-
-Both cancel an older run on the same branch. Playwright browsers are cached by version, and `e2e-web` starts the Firebase emulators through Playwright's `webServer` config (so it installs `apps/firebase` and needs Java). Maestro is not in CI: it needs a native build and a simulator.
+| `.github/workflows/mobile-tests.yml` | every PR; pushes to `develop` / `main` touching `apps/mobile/**` or `apps/firebase/**` | `checks` (typecheck, lint, format, unit, component + coverage) and `e2e-web` (Playwright, in parallel; report uploaded on failure) |
+| `.github/workflows/firebase-rules.yml` | every PR; pushes to `develop` / `main` touching `apps/firebase/**` or `apps/mobile/features/profile/profile-schema.ts` | `yarn test` in `apps/firebase`: rules tests under a Firestore emulator |
 
 ## Rules
 
