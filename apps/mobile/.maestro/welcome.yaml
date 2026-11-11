@@ -1,0 +1,17 @@
+appId: com.edufelip.comradia.dev
+name: Welcome screen
+tags:
+  - smoke
+---
+# Cold start: the tab layout redirects to /welcome while the session flag is in-memory.
+- launchApp:
+    clearState: true
+- assertVisible: '.*Meet someone who gives a damn.*'
+- assertVisible: '.*214 first dates this week.*'
+- assertVisible: '.*nearby are already here.*'
+- assertVisible:
+    id: welcome-cta-start
+- assertVisible:
+    id: welcome-cta-login
+- assertVisible: '.*Find your person.*'
+- assertVisible: '.*I already have an account.*'

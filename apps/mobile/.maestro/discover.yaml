@@ -1,0 +1,28 @@
+appId: com.edufelip.comradia.dev
+name: Discover deck
+tags:
+  - smoke
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: welcome-cta-start
+- assertVisible: '.*Maya, 28.*'
+
+# Like advances the deck and records a match.
+- tapOn: '^Like$'
+- assertVisible: '.*Lucas, 31.*'
+- assertNotVisible: '.*Maya, 28.*'
+- tapOn: '.*Matches.*'
+- assertVisible: '.*Maya, 28.*'
+- assertVisible: '.*Mutual Matches.*'
+
+# Back on Discover, pass through the rest of the deck to reach the empty state.
+- tapOn: '.*Discover.*'
+- assertVisible: '.*Lucas, 31.*'
+- tapOn: '^Pass$'
+- assertVisible: '.*Val, 26.*'
+- tapOn: '^Pass$'
+- assertVisible: '.*You are all caught up.*'
+- tapOn: '.*Reset Deck.*'
+- assertVisible: '.*Maya, 28.*'

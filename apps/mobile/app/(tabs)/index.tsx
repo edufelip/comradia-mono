@@ -46,7 +46,10 @@ export default function DiscoverScreen() {
             <View
               style={[
                 styles.badge,
-                { backgroundColor: ds.color.accentPrimarySoft, borderColor: ds.color.accentPrimary },
+                {
+                  backgroundColor: ds.color.accentPrimarySoft,
+                  borderColor: ds.color.accentPrimary,
+                },
               ]}
             >
               <Text style={[DsTypography.micro, { color: ds.color.accentPrimary }]}>

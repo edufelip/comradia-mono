@@ -1,8 +1,4 @@
-import {
-  Geist_400Regular,
-  Geist_500Medium,
-  Geist_700Bold,
-} from '@expo-google-fonts/geist';
+import { Geist_400Regular, Geist_500Medium, Geist_700Bold } from '@expo-google-fonts/geist';
 import { GeistMono_500Medium } from '@expo-google-fonts/geist-mono';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';

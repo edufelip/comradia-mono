@@ -1,0 +1,11 @@
+# Maestro workspace config for the native E2E flows.
+#
+# Run with:  maestro test apps/mobile/.maestro
+# Requires a booted simulator/emulator and a dev build whose app id matches the flows:
+#   dev  -> com.edufelip.comradia.dev   (default, APP_VARIANT unset)  <- used in the flows
+#   prod -> com.edufelip.comradia       (APP_VARIANT=prod)
+# To run the suite against the prod build, override the flows' appId header.
+flows:
+  - welcome.yaml
+  - onboarding-to-discover.yaml
+  - discover.yaml

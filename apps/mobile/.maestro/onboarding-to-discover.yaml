@@ -1,0 +1,25 @@
+appId: com.edufelip.comradia.dev
+name: Onboarding to discover
+tags:
+  - smoke
+---
+# Journey 2a — primary CTA opens the Discover deck.
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: welcome-cta-start
+- tapOn:
+    id: welcome-cta-start
+- assertVisible: '.*Maya, 28.*'
+- assertVisible: '.*Discover.*'
+- assertVisible: '.*Matches.*'
+- assertVisible: '.*Profile.*'
+
+# Journey 2b — the login link takes the same shortcut.
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: welcome-cta-login
+- tapOn:
+    id: welcome-cta-login
+- assertVisible: '.*Maya, 28.*'

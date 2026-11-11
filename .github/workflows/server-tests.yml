@@ -1,0 +1,30 @@
+name: Server tests
+
+on:
+  pull_request:
+    paths: ['apps/server/**', '.github/workflows/server-tests.yml']
+  push:
+    branches: [develop, main]
+    paths: ['apps/server/**', '.github/workflows/server-tests.yml']
+
+concurrency:
+  group: server-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: apps/server
+
+jobs:
+  test:
+    name: Types and API tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: apps/server/.bun-version
+      - run: bun install --frozen-lockfile
+      - run: bunx tsc --noEmit
+      - run: bun test
