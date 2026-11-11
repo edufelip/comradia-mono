@@ -140,7 +140,7 @@ test.describe('discover deck', () => {
 
     await expectPathname(page, '/matches');
     await expect(
-      matches(page).getByText('No matches yet — tap Like on Discover to start a conversation.'),
+      matches(page).getByText("Nobody yet. Tap Like on Discover and they'll show up here."),
     ).toBeVisible();
   });
 

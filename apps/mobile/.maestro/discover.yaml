@@ -65,7 +65,7 @@ tags:
 - assertNotVisible: '.*Maya, 28.*'
 - tapOn: '.*Matches.*'
 - assertVisible: '.*Maya, 28.*'
-- assertVisible: '.*Mutual Matches.*'
+- assertVisible: '.*People you liked.*'
 
 # Back on Discover, pass the rest of the deck to reach the empty state.
 - tapOn: '.*Discover.*'
