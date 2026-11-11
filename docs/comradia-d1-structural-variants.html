@@ -1,0 +1,1091 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Comradia D1 Layouts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;700;800&family=Caveat:wght@500;700&family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,400;0,600;1,400;1,600&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700;800&family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--pg:#ECEAE6;--panel:#FFFFFF;--panel2:#F6F5F2;--line:#DDD9D2;--text:#16151A;--muted:#6E6A72;--acc:#16151A;--accT:#FFFFFF;--spring:cubic-bezier(.22,1,.36,1)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--pg:#111013;--panel:#1A191D;--panel2:#222126;--line:#2E2C33;--text:#F1EFEC;--muted:#9C98A2;--acc:#F1EFEC;--accT:#111013}}
+:root[data-theme="dark"]{--pg:#111013;--panel:#1A191D;--panel2:#222126;--line:#2E2C33;--text:#F1EFEC;--muted:#9C98A2;--acc:#F1EFEC;--accT:#111013}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:transparent}
+body{font-family:Inter,system-ui,sans-serif;color:var(--text);-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;text-align:inherit}
+input{font:inherit}
+.app{position:relative;background:var(--pg);border-radius:20px;padding:28px 28px 22px;max-width:1600px;margin:0 auto}
+
+/* ---------- page chrome ---------- */
+.top{display:flex;justify-content:space-between;gap:24px;align-items:flex-end;flex-wrap:wrap}
+.top h1{font:400 40px/1 'Instrument Serif',serif;letter-spacing:-.01em}
+.top h1 i{color:#D92D3A}
+.top p{color:var(--muted);font-size:14px;margin-top:8px;max-width:760px;line-height:1.45}
+.pal{display:flex;gap:6px;align-items:center;font:500 11px 'DM Mono',monospace;color:var(--muted)}
+.pal i{width:22px;height:22px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(0,0,0,.14)}
+.bar{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:20px 0 14px}
+.lbl{font:600 10.5px/1 Inter;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-left:6px}
+.seg{display:inline-flex;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:3px;gap:2px;max-width:100%;overflow-x:auto;scrollbar-width:none}
+.seg button{height:34px;padding:0 14px;border-radius:999px;font-size:13px;font-weight:600;color:var(--muted);transition:background .25s,color .25s;white-space:nowrap}
+.seg button.on{background:var(--acc);color:var(--accT)}
+.rec{font-size:10px;font-weight:700;padding:3px 7px;border-radius:999px;background:#D92D3A;color:#fff;white-space:nowrap}
+.view,.ctl-all,.ctl-flow{display:none}
+.app.m-all .view.all,.app.m-flow .view.flowv,.app.m-h2h .view.h2h{display:block}
+.app.m-all .ctl-all,.app.m-flow .ctl-flow{display:inline-flex}
+
+/* all-5 grid */
+.vgrid{display:grid;grid-template-columns:repeat(5,minmax(240px,1fr));gap:14px;overflow-x:auto;padding-bottom:4px}
+.vcol{background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:14px 12px;display:flex;flex-direction:column;gap:12px;min-width:0;transition:box-shadow .3s,border-color .3s}
+.vcol.pk{border-color:#D92D3A;box-shadow:0 0 0 2px #D92D3A}
+.vh{display:flex;gap:10px;align-items:flex-start;min-height:78px}
+.vh .k{flex:none;width:34px;height:34px;border-radius:11px;background:#D92D3A;color:#fff;font:700 15px Inter;display:grid;place-items:center}
+.vh div{font-weight:700;font-size:14px;line-height:1.2}.vh small{display:block;font-weight:500;font-size:12px;color:var(--muted);margin-top:3px}
+.vh .rec{margin-left:auto}
+.pflip{display:flex;background:var(--panel2);border-radius:999px;padding:3px;gap:2px}
+.pflip button{flex:1;height:30px;border-radius:999px;font-size:12px;font-weight:600;color:var(--muted)}
+.pflip button.on{background:var(--panel);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.spec{display:grid;gap:9px;font-size:12.5px;line-height:1.45}
+.spec dt{font:600 10px/1 Inter;letter-spacing:.12em;text-transform:uppercase;color:#D92D3A}
+.spec>div{display:grid;gap:5px}.spec dd{color:var(--muted)}
+.use{height:42px;border-radius:14px;font-weight:700;font-size:13.5px;background:var(--acc);color:var(--accT);text-align:center;margin-top:auto}
+.pk .use,.hcol.pk .use{background:#D92D3A;color:#fff}
+
+/* flow */
+.flow{position:relative;overflow-x:auto;overflow-y:hidden;border-radius:24px;background:var(--panel);border:1px solid var(--line);padding:96px 26px 80px}
+.frow{position:relative;display:grid;grid-template-columns:repeat(5,minmax(220px,1fr));gap:46px;min-width:1250px}
+.arcs{position:absolute;inset:0;pointer-events:none;overflow:visible}
+.arcs .base{fill:none;stroke:#D92D3A;stroke-width:2;opacity:.35}
+.arcs .pulse{fill:none;stroke:#D92D3A;stroke-width:2.5;stroke-dasharray:2 14;stroke-linecap:round;animation:flowA 1s linear infinite}
+.arcs .back .base{stroke-dasharray:6 6}
+@keyframes flowA{to{stroke-dashoffset:-16}}
+.arcs .edge.flash .base{opacity:1;stroke-width:4}
+.elab{position:absolute;transform:translate(-50%,-50%);background:var(--panel);border:1.5px solid #D92D3A;color:var(--text);font-size:12px;font-weight:600;padding:6px 11px;border-radius:999px;white-space:nowrap;box-shadow:0 8px 18px -12px rgba(0,0,0,.4);pointer-events:none;transition:transform .3s var(--spring)}
+.elab em{font-style:normal;color:#D92D3A;margin-right:5px;font-weight:700}
+.elab.flash{transform:translate(-50%,-50%) scale(1.1)}
+.col{display:flex;flex-direction:column;gap:12px;min-width:0}
+.cap{display:flex;gap:10px;align-items:flex-start}
+.cap b{flex:none;width:26px;height:26px;border-radius:9px;background:#D92D3A;color:#fff;display:grid;place-items:center;font-size:13px}
+.cap div{font-size:14px;font-weight:700;line-height:1.2}
+.cap small{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-top:3px;line-height:1.35}
+.fspec{display:grid;grid-template-columns:auto repeat(4,1fr);gap:18px;align-items:start;margin-top:14px;background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:16px 18px}
+.fspec .vh{min-height:0}
+.fspec .spec{display:contents}
+.fspec .spec>div{display:grid;gap:8px}
+
+/* head-to-head */
+.hgrid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.hcol{background:var(--panel);border:1px solid var(--line);border-radius:24px;padding:16px;display:flex;flex-direction:column;gap:14px}
+.hcol .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.hcol .spec{grid-template-columns:1fr 1fr;column-gap:18px}
+
+.pw{position:relative;width:100%;margin:0 auto;transition:transform .5s var(--spring)}
+.pw.beat{animation:beat .7s var(--spring)}
+@keyframes beat{40%{transform:scale(1.035)}}
+
+/* handoff bar */
+.handoff{position:sticky;bottom:12px;margin-top:18px;z-index:20;display:flex;align-items:center;gap:14px;background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:12px 14px;box-shadow:0 18px 40px -22px rgba(0,0,0,.35)}
+.handoff .t{font-size:13px;font-weight:700;white-space:nowrap}.handoff .t small{display:block;font-weight:500;color:var(--muted);font-size:11.5px}
+.chip{flex:1;min-width:0;font:500 12px/1.4 'DM Mono',monospace;background:var(--panel2);border:1px dashed var(--line);border-radius:12px;padding:9px 12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted);user-select:all}
+.copy{height:40px;padding:0 16px;border-radius:12px;background:#D92D3A;color:#fff;font-weight:700;font-size:13px;white-space:nowrap}
+
+/* =========================== DEVICE =========================== */
+.dev{position:absolute;left:0;top:0;width:415px;height:874px;padding:11px;border-radius:66px;transform-origin:0 0;background:linear-gradient(150deg,#4a4a4f,#151517 30%,#2c2c30 70%,#111);box-shadow:0 0 0 1px #000,inset 0 0 0 1.5px #66666c,0 50px 70px -40px rgba(0,0,0,.55)}
+.ph{--bg:#FBF6F4;--ink:#231214;--pri:#D92D3A;--sec:#E05A47;--blush:#FCE8E9;--mut:#7A5A5C;--ln:#EFDCDA;--card:#FFFFFF;--deep:#8E1622;--paper:#FFF3EC;
+  position:relative;width:393px;height:852px;border-radius:55px;overflow:hidden;overflow:clip;isolation:isolate;user-select:none;background:var(--bg);color:var(--ink)}
+.vA{font-family:Outfit,sans-serif}.vB{font-family:Outfit,sans-serif}.vC{font-family:Inter,sans-serif}.vD{font-family:Inter,sans-serif}.vE{font-family:'Space Grotesk',sans-serif}
+.ser{font-family:Fraunces,serif}.hand{font-family:Caveat,cursive;font-weight:600}.ins{font-family:'Instrument Serif',serif;font-weight:400}.bri{font-family:'Bricolage Grotesque',sans-serif}
+.mono{font-family:'DM Mono',monospace;font-weight:500;letter-spacing:.05em}
+.isl{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:124px;height:36px;border-radius:20px;background:#000;z-index:60}
+.sb{position:absolute;top:0;left:0;right:0;height:54px;display:flex;justify-content:space-between;align-items:center;padding:4px 34px 0 46px;font:600 16px/1 Inter;z-index:59;pointer-events:none;color:var(--ink)}
+.sb .r{display:flex;gap:6px;align-items:center}
+.hi{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:138px;height:5px;border-radius:3px;background:var(--ink);opacity:.85;z-index:59;pointer-events:none}
+.ph.lt .sb{color:#fff}.ph.lt .hi{background:#fff}
+.scr{position:absolute;inset:0;display:flex;flex-direction:column}
+.rv{animation:rvUp .8s var(--spring) both;animation-delay:calc(var(--d,0) * 70ms + 60ms)}
+@keyframes rvUp{from{opacity:0;transform:translateY(16px)}}
+.pt{position:absolute;inset:0;width:100%;height:100%;display:block}
+.tst{position:absolute;left:50%;top:62px;z-index:58;transform:translate(-50%,-20px);opacity:0;transition:.45s var(--spring);white-space:nowrap;pointer-events:none;background:var(--ink);color:var(--bg);font:600 14px Inter;padding:10px 16px;border-radius:999px}
+.tst.on{opacity:1;transform:translate(-50%,0)}
+.btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;height:58px;border-radius:999px;font-weight:600;font-size:17px;transition:transform .2s var(--spring),filter .2s;text-align:center;flex:none}
+.btn:active{transform:scale(.97)}
+.btn.pri{background:var(--pri);color:#fff;box-shadow:0 14px 26px -14px var(--pri)}
+.btn.wht{background:#fff;color:var(--pri)}
+.btn.gh{box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.6);color:#fff}
+.btn.line{box-shadow:inset 0 0 0 1.5px var(--ink);color:var(--ink)}
+.sub{margin-top:12px;text-align:center;font-size:14.5px;color:var(--mut);font-weight:500}
+.sub b{color:var(--ink);font-weight:600}
+.bump{animation:bump .4s var(--spring)}
+@keyframes bump{40%{transform:scale(.86)}}
+@keyframes spinS{to{transform:rotate(360deg)}}
+.rays{animation:spinS 60s linear infinite;transform-origin:140px 140px}
+.gbg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.vinyl{animation:spinS 4s linear infinite;display:block}
+.pill{display:inline-flex;font-size:12.5px;font-weight:500;padding:6px 11px;border-radius:999px;background:var(--card);color:var(--ink);box-shadow:inset 0 0 0 1px var(--ln);white-space:nowrap}
+.pill.sh{background:var(--blush);color:var(--pri);box-shadow:none}
+.vb{width:21px;height:21px;border-radius:50%;background:var(--pri);color:#fff;display:inline-grid;place-items:center;flex:none}
+.tag{position:absolute;left:10px;bottom:10px;font-size:10.5px;background:var(--card);color:var(--ink);padding:6px 10px;border-radius:999px;z-index:2}
+
+/* shared discovery bits */
+.d{padding-top:54px}
+.dh{padding:6px 20px 0;position:relative}
+.dh .row{display:flex;justify-content:space-between;align-items:center}
+.wm{font-weight:700;font-size:25px;line-height:1;letter-spacing:-.04em;display:flex;align-items:center;gap:6px}
+.wm span{color:var(--pri);display:flex}
+.rt{display:flex;gap:8px;align-items:center}
+.mchip{font-size:11px;font-weight:600;background:var(--card);border-radius:999px;padding:9px 12px;box-shadow:inset 0 0 0 1px var(--ln)}
+.mchip.mono{font-size:10.5px;font-weight:500}
+.ib{width:40px;height:40px;border-radius:50%;background:var(--card);display:grid;place-items:center;box-shadow:inset 0 0 0 1px var(--ln)}
+.wx{font-size:10px;color:var(--mut);margin-top:8px}
+.deck{position:relative;flex:1;min-height:0}
+.card{position:absolute;inset:0;touch-action:none;will-change:transform}
+.card.back{pointer-events:none;transform:scale(.94) translateY(14px);filter:brightness(.96);animation:backIn .45s var(--spring) both}
+@keyframes backIn{from{opacity:0}}
+.card.top{cursor:grab}.card.top.drag{cursor:grabbing}
+.cin{position:absolute;inset:0;background:var(--card);border-radius:34px;padding:10px;display:flex;flex-direction:column;box-shadow:0 24px 40px -28px rgba(35,18,20,.55)}
+.stamp{position:absolute;top:56px;z-index:20;opacity:0;pointer-events:none;font:700 30px Inter;letter-spacing:.04em;padding:4px 18px;border-radius:999px}
+.stamp.like{left:22px;background:var(--pri);color:#fff;transform:rotate(-10deg)}.stamp.pass{right:22px;background:var(--ink);color:var(--bg);transform:rotate(10deg)}
+.acts{display:flex;justify-content:center;align-items:center;gap:18px;padding:14px 0 10px}
+.acts button{border-radius:50%;display:grid;place-items:center;transition:transform .25s var(--spring)}
+.acts .pass{width:58px;height:58px;background:var(--card);box-shadow:0 8px 20px -10px rgba(35,18,20,.45)}
+.acts .note{width:50px;height:50px;background:var(--sec);color:#fff}
+.acts .like{width:58px;height:58px;background:var(--pri);color:#fff;box-shadow:0 12px 22px -10px var(--pri)}
+.tb{margin:0 20px 28px;background:var(--card);border-radius:999px;display:flex;justify-content:space-between;padding:6px;color:var(--mut);box-shadow:0 10px 24px -18px rgba(35,18,20,.5)}
+.tb span{display:flex;align-items:center;gap:6px;padding:9px 14px;border-radius:999px;font-size:13px;font-weight:600}
+.tb .on{background:var(--pri);color:#fff}
+
+/* ===== A · Sunlit Arch ===== */
+.aw{padding-top:54px;align-items:center;text-align:center}
+.topo{position:absolute;pointer-events:none;opacity:.5}
+.aw .topo{left:-110px;top:300px;width:360px;height:360px}
+.aw-top{display:flex;justify-content:space-between;width:100%;padding:10px 26px 0;font-size:10px;color:var(--mut)}
+.aw-stage{position:relative;width:250px;height:316px;margin-top:40px;flex:none}
+.aw-sun{position:absolute;left:50%;top:-58px;width:330px;height:330px;margin-left:-165px}
+.aw-arch{position:absolute;inset:0;border-radius:125px 125px 28px 28px;overflow:hidden;border:6px solid #fff;box-shadow:0 30px 50px -30px rgba(35,18,20,.6)}
+.aw-crown{position:absolute;top:-13px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);font-size:10.5px;padding:7px 12px;border-radius:999px;z-index:2;white-space:nowrap;box-shadow:0 0 0 4px var(--bg)}
+.aw h1{font:600 38px/1 Outfit;letter-spacing:-.035em;margin-top:22px;padding:0 28px}
+.aw h1 em{font-style:normal;color:var(--pri)}
+.aw-sheet{margin-top:auto;width:100%;background:var(--card);border-radius:34px 34px 0 0;padding:20px 24px 36px;box-shadow:0 -16px 34px -26px rgba(35,18,20,.5)}
+.aw-sheet p{font-size:15px;line-height:1.45;color:var(--mut);margin-bottom:16px}
+.dA .deck{margin:12px 16px 0}
+.a-ph{position:relative;flex:1;min-height:0;border-radius:150px 150px 24px 24px;overflow:hidden}
+.a-nm{display:flex;justify-content:space-between;align-items:center;padding:10px 6px 0}
+.a-nm b{font:600 26px/1 Outfit;letter-spacing:-.03em;display:flex;align-items:center;gap:7px}
+.a-nm .mono{font-size:9.5px;color:var(--mut)}
+.tix{position:relative;margin-top:10px;background:var(--paper);border-radius:16px;padding:11px 18px 13px;border:1px dashed #F0C4B8}
+.tix::before,.tix::after{content:'';position:absolute;top:50%;width:18px;height:18px;margin-top:-9px;border-radius:50%;background:var(--card)}
+.tix::before{left:-10px}.tix::after{right:-10px}
+.tix .k{font-size:9.5px;color:var(--pri)}
+.tix .q{font-size:12.5px;color:var(--mut);margin-top:5px}
+.tix .ans{font:500 16.5px/1.25 Outfit;margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.a-dock{align-self:center;margin:14px 0 34px;display:flex;gap:6px;background:var(--card);padding:6px;border-radius:999px;box-shadow:0 16px 32px -14px rgba(35,18,20,.5)}
+.a-dock button{height:50px;padding:0 18px;border-radius:999px;font:600 15px Outfit;display:flex;align-items:center;gap:7px;transition:transform .25s var(--spring)}
+.a-dock .sp{background:var(--blush);color:var(--pri)}
+.a-dock .lk{background:var(--pri);color:#fff}
+
+/* ===== B · Polaroid ===== */
+.bw{padding:56px 22px 30px}
+.bw-top{display:flex;justify-content:space-between;align-items:center;position:relative;padding-top:6px}
+.bw-wm{font:600 23px/1 Fraunces;color:var(--pri);letter-spacing:-.02em}
+.bw-top .hand{font-size:20px;color:var(--mut)}
+.bw h1{position:relative;font:500 36px/1.04 Outfit;letter-spacing:-.03em;margin-top:18px}
+.bw h1 .ser{font:italic 600 44px/1 Fraunces;color:var(--pri);letter-spacing:-.02em}
+.bw-fan{position:relative;height:330px;margin-top:10px;flex:none}
+.pol{position:absolute;width:168px;padding:9px 9px 0;background:#fff;border-radius:5px;box-shadow:0 18px 30px -16px rgba(35,18,20,.55);transition:transform .45s var(--spring)}
+.pph{display:block;position:relative;height:168px;border-radius:2px;overflow:hidden}
+.pol .hand{display:block;text-align:center;font-size:20px;line-height:36px;color:var(--ink)}
+.bw .p0{left:50%;margin-left:-84px;top:46px;transform:rotate(-3deg);z-index:3}
+.bw .p1{left:0;top:82px;transform:rotate(-13deg);z-index:2}
+.bw .p2{right:0;top:70px;transform:rotate(12deg);z-index:1}
+.bw .pol.front{z-index:5;transform:rotate(-1deg) scale(1.05)}
+.bub{position:absolute;z-index:6;background:var(--card);border-radius:16px;padding:8px 12px;font-size:13px;font-weight:600;box-shadow:0 10px 24px -12px rgba(35,18,20,.55);animation:flt 4s ease-in-out infinite;white-space:nowrap}
+.bub.b1{left:0;top:0}.bub.b2{right:4px;bottom:22px;animation-delay:-2s;background:var(--pri);color:#fff}
+@keyframes flt{50%{transform:translateY(-6px)}}
+.bw-note{position:relative;text-align:right;font-size:23px;color:var(--pri);transform:rotate(-3deg);margin-top:-4px}
+.bw .btn{margin-top:auto;position:relative}
+.dB .deck{margin:8px 18px 0}
+.dB .wm{font:600 25px/1 Fraunces;color:var(--pri);letter-spacing:-.02em}
+.b-new{font-size:21px;color:var(--mut)}
+.cin.b{border-radius:24px;padding:10px;box-shadow:0 20px 34px -22px rgba(35,18,20,.6)}
+.vB .card.back{transform:rotate(4deg) translate(8px,6px);filter:none}
+.b-ph{position:relative;flex:1;min-height:0;border-radius:18px;overflow:hidden}
+.b-hn{position:absolute;right:12px;top:10px;font-size:21px;color:#fff;transform:rotate(-5deg);text-shadow:0 1px 6px rgba(0,0,0,.35);z-index:2}
+.b-nm{display:flex;align-items:center;gap:8px;padding:10px 4px 0}
+.b-nm .ser{font:600 27px/1 Fraunces;letter-spacing:-.02em}
+.b-job{margin-left:auto;font-size:13px;color:var(--mut)}
+.voice{display:flex;align-items:center;gap:10px;margin-top:8px;background:var(--blush);border-radius:999px;padding:5px 14px 5px 5px;width:100%}
+.vp{width:34px;height:34px;border-radius:50%;background:var(--pri);color:#fff;display:grid;place-items:center;flex:none}
+.voice .vl{font:600 11px Inter;color:var(--pri);white-space:nowrap}
+.wave{flex:1;display:flex;align-items:center;gap:2px;height:24px}
+.wave i{flex:1;background:#EAA9AE;border-radius:2px;height:var(--h)}
+.voice.play .wave i{background:var(--pri);animation:wv .6s ease-in-out infinite alternate;animation-delay:calc(var(--n) * -70ms)}
+@keyframes wv{to{transform:scaleY(.3)}}
+.voice .mono{font-size:11px;color:var(--pri)}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.split>div{border-radius:16px;padding:10px 11px;min-height:98px}
+.sp1{background:var(--paper)}.sp2{background:var(--bg)}
+.split small{display:block;font-size:9px;color:var(--pri)}
+.sp1 i{display:block;font-style:normal;font-size:20px;margin:5px 0 2px}
+.sp1 b{font:600 14px/1.15 Outfit}
+.sp2 div{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.sp2 .pill{font-size:11px;padding:4px 8px}
+
+/* ===== C · Full-bleed ===== */
+.cw{background:#231214;color:#fff}
+.cw-ph{position:absolute;inset:0}
+.cw-scrim{position:absolute;inset:0;background:linear-gradient(180deg,rgba(35,18,20,.4) 0%,rgba(35,18,20,0) 18%,rgba(35,18,20,0) 34%,rgba(224,90,71,.55) 52%,rgba(217,45,58,.94) 70%,#8E1622 100%)}
+.cw-top{position:relative;display:flex;justify-content:space-between;align-items:center;padding:62px 24px 0}
+.cw-wm{font:400 32px/1 'Instrument Serif'}
+.cw-top span:last-child{font-weight:600;font-size:15px}
+.cw-low{position:absolute;left:0;right:0;bottom:0;padding:0 22px 34px;color:#fff}
+.glass{background:rgba(251,246,244,.18);border:1px solid rgba(255,255,255,.32);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+.cw-badge{display:inline-block;font-size:10.5px;padding:7px 11px;border-radius:999px}
+.cw h1{font:400 70px/.9 'Instrument Serif';letter-spacing:-.02em;margin-top:14px}
+.cw h1 i{color:#FFD9C7}
+.cw p{font-size:15.5px;line-height:1.45;opacity:.92;margin-top:12px}
+.slide{--sp:0;position:relative;height:64px;border-radius:999px;margin-top:20px;display:flex;align-items:center;justify-content:center}
+.slide span{font-weight:600;font-size:15px;padding-left:44px;opacity:calc(1 - var(--sp) * 1.5)}
+.knob{position:absolute;left:5px;top:5px;width:54px;height:54px;border-radius:50%;background:#fff;color:var(--pri);display:grid;place-items:center;box-shadow:0 8px 20px -8px rgba(0,0,0,.5);touch-action:none;cursor:grab;z-index:2}
+.knob.hint{animation:nudge 2.4s var(--spring) infinite 1s}
+@keyframes nudge{0%,60%,100%{transform:none}30%{transform:translateX(14px)}}
+.cw .sub{color:#fff;opacity:.85}.cw .sub b{color:#fff}
+.dC .dh{padding:4px 18px 0}
+.dC .wm{font:400 30px/1 'Instrument Serif';letter-spacing:0}
+.dC .deck{margin:8px 10px 44px}
+.cin.c{padding:0;border-radius:30px;overflow:hidden;background:#231214}
+.vC .card.back{transform:scale(.95) translateY(10px)}
+.c-img{position:absolute;inset:0;overflow:hidden}
+.c-img .pt{transition:transform .5s var(--spring)}
+.c-img.z .pt{transform:scale(1.45);transform-origin:50% 40%}
+.bars{position:absolute;top:12px;left:14px;right:14px;display:flex;gap:4px;z-index:3}
+.bars i{flex:1;height:3.5px;border-radius:2px;background:rgba(255,255,255,.4)}
+.bars i.on{background:#fff}
+.c-badge{position:absolute;top:28px;left:12px;z-index:3;background:rgba(251,246,244,.84);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);color:var(--ink);font-weight:600;font-size:15px;padding:8px 12px;border-radius:999px;display:flex;gap:6px;align-items:center}
+.c-b2{position:absolute;top:74px;left:12px;z-index:3;font-size:9.5px;color:#fff;padding:6px 10px;border-radius:999px;background:rgba(35,18,20,.35)!important}
+.c-scrim{position:absolute;left:0;right:0;bottom:0;height:56%;background:linear-gradient(transparent,rgba(142,22,34,.82))}
+.c-quote{position:absolute;left:12px;right:12px;bottom:46px;z-index:3;text-align:left;background:rgba(252,232,233,.88);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);color:var(--ink);border-radius:22px;padding:13px 15px;transition:.35s var(--spring)}
+.c-quote small{font-size:9.5px;color:var(--pri)}
+.c-quote .qa{font:400 23px/1.1 'Instrument Serif';margin-top:5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.c-quote .qx{display:none;gap:10px;align-items:center;margin-top:10px;font-size:13px;font-weight:600;background:#fff;border-radius:14px;padding:8px 10px}
+.c-quote .qx i{font-style:normal;font-size:18px}
+.c-quote .qx small{display:block;color:var(--mut)}
+.c-quote.x .qa{-webkit-line-clamp:6}.c-quote.x .qx{display:flex}
+.c-fabs{position:absolute;left:0;right:0;bottom:88px;display:flex;justify-content:center;align-items:center;gap:16px;z-index:25;pointer-events:none}
+.c-fabs button{pointer-events:auto;border-radius:50%;display:grid;place-items:center;box-shadow:0 14px 26px -12px rgba(35,18,20,.6);transition:transform .25s var(--spring)}
+.c-fabs .pass{width:58px;height:58px;background:var(--card)}
+.c-fabs .note{width:48px;height:48px;background:var(--sec);color:#fff}
+.c-fabs .like{width:66px;height:66px;background:var(--pri);color:#fff}
+
+/* ===== D · Bento ===== */
+.dw{padding:56px 20px 30px}
+.dw-top{display:flex;justify-content:space-between;align-items:center;padding-top:8px}
+.dw-wm{font:800 24px/1 'Bricolage Grotesque';letter-spacing:-.04em}
+.dw-wm b{color:var(--pri)}
+.dw-top span:last-child{font-weight:600;font-size:14px}
+.dw h1{font:700 40px/1 'Bricolage Grotesque';letter-spacing:-.035em;margin-top:18px}
+.dw h1 em{font-style:normal;color:var(--pri)}
+.mq{margin:16px -20px 0;overflow:hidden;-webkit-mask:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent);mask:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)}
+.mq-in{display:flex;gap:8px;width:max-content;animation:mq 26s linear infinite}
+.mq-in span{font-size:13px;font-weight:600;background:var(--card);padding:9px 13px;border-radius:999px;box-shadow:inset 0 0 0 1px var(--ln);white-space:nowrap}
+@keyframes mq{to{transform:translateX(-50%)}}
+.bento{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:176px 136px;gap:10px;margin-top:16px}
+.bt{position:relative;border-radius:22px;overflow:hidden;background:var(--card);padding:12px;box-shadow:inset 0 0 0 1px var(--ln)}
+.bt small,.blk small{display:block;font:700 9.5px/1.2 Inter;letter-spacing:.11em;color:var(--pri)}
+.bt-ph{padding:0}
+.bt-ph::after,.blk.bph::after{content:'';position:absolute;inset:0;background:linear-gradient(transparent 55%,rgba(35,18,20,.6))}
+.bt-nm{position:absolute;left:12px;bottom:10px;color:#fff;font:700 17px 'Bricolage Grotesque';z-index:2}
+.bt-q{background:var(--blush)}
+.bt-q p,.blk .fr{font:500 17px/1.2 Fraunces;margin-top:6px;letter-spacing:-.01em}
+.bt-vin{display:flex;flex-direction:column;justify-content:flex-end}
+.bt-vin .vinyl{position:absolute;right:-18px;top:-18px;width:100px;height:100px}
+.bt-vin b{font:700 16px 'Bricolage Grotesque';display:block;margin-top:3px}.bt-vin span{font-size:12.5px;color:var(--mut)}
+.bt-v{background:var(--pri);color:#fff}
+.bt-v small{color:#fff;opacity:.8}
+.bt-v div{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+.bt-v .pill{background:rgba(255,255,255,.18);color:#fff;box-shadow:none;font-size:11px;padding:4px 8px}
+.dw .btn{margin-top:auto}
+.dD .wm{font:800 24px/1 'Bricolage Grotesque'}
+.dsc{flex:1;min-height:0;overflow-y:auto;padding:10px 16px 120px;display:flex;flex-direction:column;gap:10px;scrollbar-width:none}
+.dsc::-webkit-scrollbar{display:none}
+.blk{position:relative;flex:none;background:var(--card);border-radius:24px;padding:14px 14px 56px;box-shadow:inset 0 0 0 1px var(--ln);transition:box-shadow .3s,transform .3s var(--spring)}
+.blk.liked{box-shadow:inset 0 0 0 3px var(--pri);transform:scale(.985)}
+.blk.bph{height:410px;padding:0;overflow:hidden}
+.blk.bph.p2{height:300px}
+.bph-nm{position:absolute;left:16px;bottom:16px;color:#fff;z-index:2}
+.bph-nm b{display:flex;align-items:center;gap:8px;font:700 32px/1 'Bricolage Grotesque';letter-spacing:-.03em}
+.bph-nm span{display:block;font-size:13.5px;opacity:.92;margin-top:5px}
+.bact{position:absolute;right:10px;bottom:10px;display:flex;gap:6px;z-index:3}
+.bact button{width:38px;height:38px;border-radius:50%;background:var(--card);color:var(--pri);display:grid;place-items:center;box-shadow:0 6px 16px -8px rgba(35,18,20,.5),inset 0 0 0 1px var(--ln);transition:transform .25s var(--spring)}
+.bact button[data-bk="like"]{background:var(--pri);color:#fff;box-shadow:0 6px 16px -6px var(--pri)}
+.brow{display:grid;grid-template-columns:1fr 1fr;gap:10px;flex:none}
+.brow .fr{font-size:15.5px}
+.blk.vin .vinyl{width:62px;height:62px;margin-bottom:10px}
+.blk.vin b{display:block;font:700 16px 'Bricolage Grotesque';margin-top:4px}.blk.vin span{font-size:12.5px;color:var(--mut)}
+.blk.vals div{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.blk.dt{display:flex;gap:12px;align-items:center;padding-bottom:14px;padding-right:100px}
+.blk.dt i{width:46px;height:46px;border-radius:14px;background:var(--blush);display:grid;place-items:center;font-style:normal;font-size:22px;flex:none}
+.blk.dt b{font:700 16px 'Bricolage Grotesque';display:block;margin-top:3px}
+.blk.dt .bact{top:50%;margin-top:-19px}
+.d-pass{position:absolute;left:22px;bottom:104px;width:58px;height:58px;border-radius:50%;background:var(--card);box-shadow:0 12px 26px -10px rgba(35,18,20,.6);display:grid;place-items:center;z-index:5;transition:transform .25s var(--spring)}
+.d-hint{position:absolute;left:88px;bottom:118px;z-index:5;font-size:12px;font-weight:600;color:var(--mut);background:var(--card);padding:6px 10px;border-radius:999px;box-shadow:inset 0 0 0 1px var(--ln)}
+
+/* ===== E · Radar & Passport ===== */
+.ew{padding:56px 22px 30px}
+.ew-top{display:flex;justify-content:space-between;font-size:10px;color:var(--mut);padding-top:10px}
+.ew h1{font:600 34px/1.02 'Space Grotesk';letter-spacing:-.035em;margin-top:16px}
+.ew h1 em{font-style:normal;color:var(--pri)}
+.ew .lede{font-size:15px;color:var(--mut);margin-top:8px;line-height:1.4}
+.radar{position:relative;width:286px;height:286px;margin:16px auto 0;flex:none}
+.radar>svg{position:absolute;inset:0;width:100%;height:100%}
+.sweep{position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 0deg,rgba(217,45,58,.3),rgba(217,45,58,0) 24%);animation:spinS 4.5s linear infinite}
+.rpin{position:absolute;transform:translate(-50%,-22px);display:flex;flex-direction:column;align-items:center;z-index:2}
+.rav{position:relative;width:44px;height:44px;border-radius:50%;overflow:hidden;border:3px solid #fff;box-shadow:0 8px 16px -8px rgba(35,18,20,.6);z-index:1;transition:transform .3s var(--spring),border-color .3s}
+.rpin.on .rav{border-color:var(--pri);transform:scale(1.15)}
+.pul{position:absolute;top:0;left:50%;width:44px;height:44px;margin-left:-22px;border-radius:50%;background:var(--pri);opacity:.45;animation:pulse 2.2s ease-out infinite}
+@keyframes pulse{to{transform:scale(2.3);opacity:0}}
+.rl{font-size:8.5px;background:var(--ink);color:var(--bg);padding:3px 6px;border-radius:999px;margin-top:5px;white-space:nowrap}
+.rpin.on .rl{background:var(--pri)}
+.you{position:absolute;left:50%;top:50%;width:16px;height:16px;margin:-8px 0 0 -8px;border-radius:50%;background:var(--pri);box-shadow:0 0 0 5px rgba(217,45,58,.22);z-index:1}
+.you+span{position:absolute;left:50%;top:50%;transform:translate(-50%,12px);font-size:9px;color:var(--pri)}
+.rprev{margin-top:14px;background:var(--card);border-radius:20px;padding:10px 12px;display:flex;gap:12px;align-items:center;box-shadow:0 12px 26px -18px rgba(35,18,20,.5),inset 0 0 0 1px var(--ln)}
+.av{position:relative;width:42px;height:50px;border-radius:22px 22px 10px 10px;overflow:hidden;flex:none}
+.rprev b{font-size:16px;font-weight:600;display:block}.rprev small{font-size:9.5px;color:var(--mut)}
+.rprev .pill{margin-left:auto;font-size:11px;padding:5px 9px}
+.ew .btn{margin-top:auto}
+.dE .deck{margin:10px 16px 0}
+.cin.e{padding:0;border-radius:26px;overflow:hidden}
+.e-hd{position:relative;background:var(--pri);color:#fff;padding:14px 16px 12px;display:flex;gap:12px;align-items:center}
+.e-av{position:relative;width:46px;height:56px;border-radius:24px 24px 10px 10px;overflow:hidden;border:2px solid #fff;flex:none}
+.e-hd small{font-size:9px;opacity:.8;display:block}
+.e-hd b{display:block;font:600 24px/1.05 'Space Grotesk';letter-spacing:-.02em}
+.e-hd span.mono{font-size:9.5px;opacity:.88}
+.e-stamp{position:absolute;right:14px;top:14px;border:1.5px solid rgba(255,255,255,.75);border-radius:6px;padding:3px 6px;font-size:9px;transform:rotate(8deg)}
+.e-dist{display:flex;align-items:center;gap:8px;padding:14px 18px 0;font-size:10px}
+.e-line{flex:1;height:2px;background:repeating-linear-gradient(90deg,var(--pri) 0 6px,transparent 6px 11px);position:relative}
+.bike{position:absolute;top:-14px;font-style:normal;font-size:16px;animation:bike 3.5s ease-in-out infinite alternate}
+@keyframes bike{from{left:0}to{left:calc(100% - 18px)}}
+.e-dk{padding:5px 16px 0;font-size:9.5px;color:var(--mut);text-align:center}
+.perf{position:relative;height:18px;margin-top:6px;flex:none;background:radial-gradient(circle at 0 50%,var(--nb,var(--bg)) 9px,transparent 9.5px),radial-gradient(circle at 100% 50%,var(--nb,var(--bg)) 9px,transparent 9.5px)}
+.perf::before{content:'';position:absolute;left:16px;right:16px;top:8px;border-top:2px dashed var(--ln)}
+.e-tabs{display:flex;margin:0 14px;background:var(--bg);border-radius:999px;padding:4px}
+.e-tabs button{flex:1;height:34px;border-radius:999px;font:600 13px 'Space Grotesk';color:var(--mut);text-align:center;transition:.25s}
+.e-tabs button.on{background:var(--ink);color:var(--bg)}
+.e-body{flex:1;min-height:0;padding:10px 14px 0;display:flex;flex-direction:column}
+.e-photo{position:relative;flex:1;min-height:0;border-radius:18px;overflow:hidden}
+.e-photo .tag{font-size:9.5px}
+.e-row{display:flex;gap:12px;align-items:center;padding:11px 4px;border-bottom:1px dashed var(--ln)}
+.e-st{width:48px;height:48px;border-radius:50%;border:2px dashed var(--pri);display:grid;place-items:center;font-size:21px;transform:rotate(-8deg);flex:none;background:var(--blush)}
+.e-row b{display:block;font-size:16px;font-weight:600}.e-row small{font-size:9.5px;color:var(--pri)}
+.e-inv{display:flex;gap:8px;padding:12px 14px 14px}
+.e-ven{height:46px;padding:0 12px;border-radius:999px;background:var(--blush);color:var(--pri);font:600 13px 'Space Grotesk';white-space:nowrap}
+.e-inv .btn{flex:1;height:46px;font-size:14.5px}
+.e-acts{display:flex;justify-content:center;gap:10px;margin:14px 0 34px}
+.e-acts button{height:48px;padding:0 26px;border-radius:999px;font:600 15px 'Space Grotesk';background:var(--card);box-shadow:0 10px 22px -12px rgba(35,18,20,.5);display:flex;align-items:center;gap:7px;transition:transform .25s var(--spring)}
+.e-acts .lk{background:var(--pri);color:#fff}
+
+/* ===== values (S2) ===== */
+.ob{padding:58px 22px 30px}
+.obt{display:flex;align-items:center;gap:14px;position:relative}
+.circ{width:42px;height:42px;border-radius:50%;background:var(--card);display:grid;place-items:center;flex:none;box-shadow:0 4px 12px -8px rgba(0,0,0,.3)}
+.prog{flex:1;display:flex;gap:6px}.prog i{flex:1;height:5px;border-radius:3px;background:var(--ln)}.prog i.on{background:var(--pri)}
+.stp{font-size:10.5px;color:var(--mut);margin-top:22px;position:relative}
+.ob h2{font:600 36px/1.02 Outfit;letter-spacing:-.035em;margin-top:8px;position:relative}
+.lead{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:14.5px;color:var(--mut);margin-top:10px;position:relative}
+.cnt{font-size:11px;background:var(--blush);color:var(--pri);padding:6px 10px;border-radius:999px;flex:none}
+.vals{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px;position:relative}
+.val{padding:10px 14px;border-radius:999px;background:var(--card);box-shadow:inset 0 0 0 1.5px var(--ln);font-size:14.5px;font-weight:500;transition:background .25s,color .25s,box-shadow .25s,transform .3s var(--spring)}
+.val.on{background:var(--pri);color:#fff;box-shadow:none}
+.val.shake{animation:shake .4s}
+@keyframes shake{25%{translate:-5px}75%{translate:5px}}
+.lkl{margin-top:20px;font-size:10.5px;color:var(--mut);position:relative}
+.look{position:relative;display:flex;gap:6px;margin-top:8px;background:var(--card);border-radius:999px;padding:4px;box-shadow:inset 0 0 0 1.5px var(--ln)}
+.look button{flex:1;height:38px;border-radius:999px;font-weight:500;font-size:13px;color:var(--mut);text-align:center;transition:.25s}
+.look button.on{background:var(--ink);color:var(--bg)}
+.ob .btn{margin-top:auto;position:relative}
+.ob .note{text-align:center;font-size:12.5px;color:var(--mut);margin-top:10px}
+.oA .sun2{position:absolute;right:-90px;top:-90px;width:240px;height:240px;opacity:.55}
+.oB h2{font:600 40px/1 Fraunces;letter-spacing:-.02em}.oB h2 i{color:var(--pri)}
+.oB .stp{font-size:22px;color:var(--pri);margin-top:16px}
+.oB .lead .hand{font-size:21px;color:var(--mut)}
+.oB .val{border-radius:10px;transform:rotate(var(--r));box-shadow:0 6px 14px -8px rgba(35,18,20,.45),inset 0 0 0 1.5px var(--ln)}
+.oB .val.on{box-shadow:0 8px 16px -8px var(--pri)}
+.oC{background:linear-gradient(180deg,#3A1518 0%,#8E1622 42%,#D92D3A 100%);color:#fff}
+.oC-ph{position:absolute;left:0;right:0;top:0;height:330px;opacity:.38;-webkit-mask:linear-gradient(#000 30%,transparent);mask:linear-gradient(#000 30%,transparent)}
+.oC .circ{background:rgba(255,255,255,.16);color:#fff}
+.oC .prog i{background:rgba(255,255,255,.25)}.oC .prog i.on{background:#fff}
+.oC .stp,.oC .lkl,.oC .lead{color:rgba(255,255,255,.78)}
+.oC h2{font:400 58px/.92 'Instrument Serif';letter-spacing:-.01em;margin-top:60px}
+.oC h2 i{color:#FFD9C7}
+.oC .cnt{background:#fff;color:var(--pri)}
+.oC .val{background:rgba(255,255,255,.12);color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.3);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.oC .val.on{background:#fff;color:var(--pri)}
+.oC .look{background:rgba(255,255,255,.12);box-shadow:inset 0 0 0 1px rgba(255,255,255,.3)}
+.oC .look button{color:rgba(255,255,255,.8)}.oC .look button.on{background:#fff;color:var(--pri)}
+.oC .btn.pri{background:#fff;color:var(--pri);box-shadow:none}
+.oD h2{font:700 38px/1 'Bricolage Grotesque';letter-spacing:-.035em}
+.oD .vals{display:grid;grid-template-columns:repeat(3,1fr)}
+.oD .val{border-radius:18px;height:84px;padding:8px 6px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font-size:12px;font-weight:600;line-height:1.15;text-align:center}
+.oD .val .em{font-size:23px}
+.oE h2{font:600 34px/1.02 'Space Grotesk';letter-spacing:-.035em}
+.oE .vals{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.oE .val{aspect-ratio:1;border-radius:50%;background:transparent;box-shadow:none;border:2px dashed #E4C5C2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:6px;font:500 8.5px/1.1 'DM Mono',monospace;letter-spacing:.02em;text-transform:uppercase;text-align:center}
+.oE .val .em{font-size:22px}
+.oE .val.on{border:2px solid var(--pri);background:var(--blush);color:var(--pri);transform:rotate(-9deg)}
+
+/* ===== match (S4) ===== */
+.mx canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:8}
+.mx .btns{margin-top:auto;width:100%;display:flex;flex-direction:column;gap:10px;position:relative;z-index:9}
+.both{position:relative;margin-top:16px;font-size:14px;font-weight:500;background:rgba(255,255,255,.17);border:1px solid rgba(255,255,255,.3);padding:10px 16px;border-radius:999px;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);color:#fff}
+.both b{font-weight:700}
+.hb{position:absolute;left:50%;bottom:10px;width:62px;height:62px;margin-left:-31px;border-radius:50%;background:#fff;color:var(--pri);display:grid;place-items:center;box-shadow:0 10px 24px -8px rgba(0,0,0,.45);animation:pop .7s var(--spring) both .55s;z-index:4}
+@keyframes pop{from{transform:scale(0)}}
+@keyframes inL{from{translate:-90px 0;opacity:0}}
+@keyframes inR{from{translate:90px 0;opacity:0}}
+.mA{background:radial-gradient(130% 80% at 50% 0%,var(--sec) 0%,var(--pri) 48%,var(--deep) 100%);color:#fff;align-items:center;text-align:center;padding:84px 26px 34px}
+.mA .rays2{position:absolute;top:120px;left:50%;width:520px;height:520px;margin-left:-260px;pointer-events:none;opacity:.14;animation:spinS 50s linear infinite}
+.mA .k{font-size:11px;letter-spacing:.14em;opacity:.8;position:relative}
+.mA h2{font:700 56px/.95 Outfit;letter-spacing:-.045em;margin-top:12px;position:relative}
+.mA .lede{font-size:16px;opacity:.88;margin-top:10px;position:relative}
+.duo{position:relative;width:300px;height:250px;margin-top:26px;flex:none}
+.arch{position:absolute;top:10px;width:150px;height:205px;border-radius:80px 80px 22px 22px;overflow:hidden;border:5px solid #fff;box-shadow:0 24px 40px -18px rgba(0,0,0,.5)}
+.arch.a1{left:16px;transform:rotate(-7deg);animation:inL .9s var(--spring) both .1s}
+.arch.a2{right:16px;transform:rotate(7deg);animation:inR .9s var(--spring) both .1s}
+.mB{align-items:center;text-align:center;padding:74px 24px 34px}
+.mB .k{font-size:26px;color:var(--pri);transform:rotate(-4deg);position:relative}
+.mB h2{font:600 54px/.95 Fraunces;letter-spacing:-.03em;position:relative}.mB h2 i{color:var(--pri)}
+.mB .lede{font-size:16px;color:var(--mut);margin-top:10px;position:relative}
+.mB-duo{position:relative;width:330px;height:270px;margin-top:20px;flex:none}
+.mB .pol{top:14px;width:158px}
+.mB .pph{height:160px}
+.mB .m1{left:6px;transform:rotate(-8deg);animation:inL .9s var(--spring) both .1s}
+.mB .m2{right:6px;transform:rotate(7deg);animation:inR .9s var(--spring) both .1s}
+.tape{position:absolute;width:66px;height:20px;background:rgba(224,90,71,.45);top:4px;z-index:3}
+.tape.t1{left:48px;transform:rotate(-14deg)}.tape.t2{right:46px;transform:rotate(11deg)}
+.mB .hb{bottom:4px;background:var(--pri);color:#fff}
+.mB .both,.mD .both{background:var(--blush);color:var(--pri);border:0}
+.mC{background:#231214;color:#fff}
+.mC-low{position:absolute;left:0;right:0;bottom:0;padding:0 24px 34px;display:flex;flex-direction:column;z-index:9}
+.mC-me{position:relative;width:78px;height:78px;border-radius:50%;overflow:hidden;border:3px solid #fff;margin-bottom:14px;animation:pop .7s var(--spring) both .3s}
+.mC .k{font-size:10.5px;opacity:.85}
+.mC h2{font:400 88px/.84 'Instrument Serif';letter-spacing:-.02em;margin-top:8px}.mC h2 i{color:#FFD9C7}
+.mC p{font-size:16px;opacity:.9;margin-top:10px}
+.mC .both{align-self:flex-start}
+.mC .btns{margin-top:22px}
+.mD{padding:70px 20px 34px}
+.mD small.k{font:700 10px Inter;letter-spacing:.12em;color:var(--pri)}
+.mD h2{font:700 46px/.95 'Bricolage Grotesque';letter-spacing:-.04em;margin-top:6px}
+.mD p{font-size:15.5px;color:var(--mut);margin-top:8px}
+.mD-grid{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:200px auto auto;gap:10px;margin-top:18px}
+.mD-grid .bt-ph:nth-child(1){animation:inL .8s var(--spring) both}.mD-grid .bt-ph:nth-child(2){animation:inR .8s var(--spring) both}
+.mD-q{grid-column:span 2;background:var(--blush)}
+.mD-q p{font:500 19px/1.2 Fraunces;margin-top:6px}
+.mD .bt-v{grid-column:span 2}
+.mE{background:radial-gradient(130% 80% at 50% 0%,var(--sec) 0%,var(--pri) 48%,var(--deep) 100%);color:#fff;padding:78px 22px 34px;align-items:center;text-align:center}
+.mE .k{font-size:10.5px;opacity:.85}
+.mE h2{font:700 50px/.95 'Space Grotesk';letter-spacing:-.045em;margin-top:10px}
+.mE .lede{font-size:15.5px;opacity:.9;margin-top:8px}
+.bp{position:relative;width:100%;margin-top:22px;background:var(--card);color:var(--ink);border-radius:22px;padding:16px 16px 18px;text-align:left;animation:rvUp .8s var(--spring) both .2s}
+.bp-h{display:flex;justify-content:space-between;font-size:9.5px;color:var(--mut)}
+.bp-r{display:flex;align-items:center;justify-content:space-between;margin-top:14px;text-align:center}
+.bp-av{position:relative;width:72px;height:86px;border-radius:36px 36px 14px 14px;overflow:hidden;margin:0 auto 6px}
+.bp-r b{display:block;font:700 17px 'Space Grotesk'}.bp-r small{font-size:9px;color:var(--mut)}
+.bp-mid{flex:1;display:flex;flex-direction:column;align-items:center;color:var(--pri);gap:6px;padding:0 6px}
+.bp-l{width:100%;border-top:2px dashed var(--ln)}
+.bp-mid small{color:var(--pri)!important}
+.bp .perf{--nb:var(--pri);margin:12px -16px 4px}
+.bp-f small{font-size:9.5px;color:var(--pri)}.bp-f div{font-weight:600;font-size:15px;margin-top:3px}
+.bp-stamp{position:absolute;right:16px;bottom:18px;border:2px solid var(--pri);color:var(--pri);padding:5px 8px;border-radius:8px;transform:rotate(-10deg);font-size:12px;animation:pop .6s var(--spring) both .8s}
+
+/* ===== chat (S5 in flow) ===== */
+.ch{padding-top:54px}
+.chh{display:flex;align-items:center;gap:12px;padding:8px 16px 12px;border-bottom:1px solid var(--ln);flex:none}
+.chh .back{width:36px;height:36px;display:grid;place-items:center}
+.chh b{font-size:17px;font-weight:600;display:block}.chh small{font-size:12.5px;color:var(--pri);font-weight:500}
+.chh .ib{margin-left:auto}
+.bav{position:relative;width:44px;height:52px;background:#fff;padding:3px 3px 9px;box-shadow:0 4px 10px -4px rgba(35,18,20,.5);transform:rotate(-6deg);flex:none}
+.bav span{display:block;position:relative;width:100%;height:100%;overflow:hidden}
+.chh .ser{font:600 19px Fraunces}.chh .hand{font-size:18px;color:var(--pri)}
+.chC{padding-top:0}
+.cch{position:relative;height:200px;flex:none;overflow:hidden}
+.cch-s{position:absolute;inset:0;background:linear-gradient(rgba(35,18,20,.35),transparent 30%,rgba(142,22,34,.85))}
+.cch .back{position:absolute;left:14px;top:56px;width:40px;height:40px;border-radius:50%;color:#fff;display:grid;place-items:center;z-index:2}
+.cch-n{position:absolute;left:20px;bottom:14px;color:#fff;z-index:2}
+.cch-n .ins{font-size:44px;line-height:1}.cch-n small{display:block;font-size:12.5px;opacity:.9}
+.edist{display:flex;align-items:center;gap:8px;padding:8px 18px;font-size:9.5px;color:var(--mut);border-bottom:1px solid var(--ln);flex:none}
+.edist .e-line{flex:1}
+.msgs{flex:1;overflow-y:auto;padding:14px 16px 10px;display:flex;flex-direction:column;gap:8px;scrollbar-width:none}
+.msgs::-webkit-scrollbar{display:none}
+.msgs>*{flex-shrink:0}
+.pin{align-self:center;font-size:12.5px;font-weight:500;background:var(--blush);color:var(--pri);padding:8px 13px;border-radius:999px}
+.dq{align-self:stretch;background:var(--blush);border-radius:18px;padding:11px 14px}
+.dq p{font:500 15px/1.25 Fraunces;margin-top:4px}
+.day{align-self:center;font-size:10px;color:var(--mut);margin:4px 0 2px}
+.msg{max-width:78%;padding:11px 15px;border-radius:22px;font-size:15px;line-height:1.35;animation:msgIn .45s var(--spring) both}
+@keyframes msgIn{from{opacity:0;transform:translateY(10px) scale(.96)}}
+.msg.them{align-self:flex-start;background:var(--card);border-bottom-left-radius:7px;box-shadow:inset 0 0 0 1px var(--ln)}
+.msg.me{align-self:flex-end;background:var(--pri);color:#fff;border-bottom-right-radius:7px}
+.typing{align-self:flex-start;display:flex;gap:4px;background:var(--card);padding:14px 16px;border-radius:22px;box-shadow:inset 0 0 0 1px var(--ln)}
+.typing i{width:7px;height:7px;border-radius:50%;background:var(--mut);animation:ty 1s infinite}
+.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
+@keyframes ty{30%{transform:translateY(-4px);opacity:.5}}
+.inv{position:relative;align-self:flex-end;width:92%;background:var(--card);border-radius:24px;padding:14px;box-shadow:0 14px 30px -20px rgba(35,18,20,.5),inset 0 0 0 1px var(--ln);animation:msgIn .45s var(--spring) both}
+.inv.tk{border-radius:16px;background:var(--paper)}
+.inv.tk::before,.inv.tk::after{content:'';position:absolute;top:58px;width:18px;height:18px;border-radius:50%;background:var(--bg)}
+.inv.tk::before{left:-9px}.inv.tk::after{right:-9px}
+.inv.pl{border-radius:4px;transform:rotate(-1.2deg)}
+.inv .k{font-size:10px;color:var(--pri)}
+.vch{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.vch button{font-weight:500;font-size:12px;padding:7px 10px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1px var(--ln);transition:.2s}
+.vch button.on{background:var(--ink);color:var(--bg);box-shadow:none}
+.vd{display:flex;gap:12px;align-items:center;margin-top:12px}
+.vd i{width:50px;height:50px;border-radius:16px;background:var(--blush);display:grid;place-items:center;font-size:24px;font-style:normal;flex:none}
+.vd b{font-size:17px;font-weight:600;display:block;letter-spacing:-.01em}.vd small{font-size:10px;color:var(--mut)}
+.inv .btn{height:46px;font-size:15px;margin-top:12px}
+.inv .st{margin-top:12px;text-align:center;font-size:14px;font-weight:600;padding:12px;border-radius:999px;background:var(--blush);color:var(--pri)}
+.inv .st.ok{background:var(--pri);color:#fff}
+.comp{display:flex;gap:8px;align-items:center;padding:10px 14px 34px;border-top:1px solid var(--ln);flex:none}
+.comp .cal{width:44px;height:44px;border-radius:50%;background:var(--sec);color:#fff;display:grid;place-items:center;flex:none}
+.comp input{flex:1;min-width:0;height:44px;border-radius:999px;border:0;background:var(--card);box-shadow:inset 0 0 0 1px var(--ln);padding:0 16px;font-size:15px;color:var(--ink);outline:none}
+.comp .send{width:44px;height:44px;border-radius:50%;background:var(--pri);color:#fff;display:grid;place-items:center;flex:none}
+
+@media (max-width:1100px){.hgrid{grid-template-columns:minmax(0,1fr)}.fspec{grid-template-columns:1fr 1fr}}
+@media (max-width:760px){.app{padding:18px 16px}.handoff{flex-wrap:wrap}.chip{flex-basis:100%;order:3}.flow{padding:96px 16px 80px}.hcol .two{grid-template-columns:minmax(0,1fr)}.fspec{grid-template-columns:minmax(0,1fr)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app m-all" id="app">
+  <header class="top">
+    <div>
+      <h1>Comradia · D1, <i>five ways to build it</i></h1>
+      <p>One palette (Crimson Terracotta &amp; Warm Cream) and the same warm dating copy, built five different ways. Each variant changes the hero, how a profile card works, the type pairing and how you interact with it. Every phone is live: drag, tap, play, like.</p>
+    </div>
+    <div class="pal" id="pal"></div>
+  </header>
+  <div class="bar">
+    <span class="lbl">View</span>
+    <div class="seg" id="mode"><button data-m="all">All 5 side-by-side</button><button data-m="flow">5-screen flow</button><button data-m="h2h">Compare 2</button></div>
+    <span class="lbl ctl-all">Screen</span>
+    <div class="seg ctl-all" id="flip"><button data-s="welcome">S1 · Welcome</button><button data-s="discover">S5 · Discovery</button></div>
+    <span class="lbl ctl-flow">Variant</span>
+    <div class="seg ctl-flow" id="fpick"></div>
+  </div>
+  <section class="view all"><div class="vgrid" id="vgrid"></div></section>
+  <section class="view flowv"><div class="flow" id="flow"><svg class="arcs" id="arcs"></svg><div id="elabs"></div><div class="frow" id="frow"></div></div><div class="fspec" id="fspec"></div></section>
+  <section class="view h2h"><div class="hgrid" id="hgrid"></div></section>
+  <div class="handoff">
+    <div class="t" id="hT"></div>
+    <div class="chip" id="hChip"></div>
+    <button class="copy" id="hCopy">Copy prompt</button>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+const q = (s, r = document) => r.querySelector(s), qa = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+/* ---------- data ---------- */
+const V = {
+  A: { n: 'The Sunlit Arch & Field Notes', t: 'Classic arch portrait + paper ticket', light: ['match'],
+    spec: { hero: 'One monumental arch portrait under a rising terracotta sun, a live distance pill pinned to its crown, and a clean bottom CTA sheet.', card: 'Swipe card: framed arch photo above a perforated paper “Conversation Starter” ticket, with a floating Pass · Spark · Like pill dock.', type: 'Outfit (rounded geometric) + DM Mono field-note tags.', best: 'The calmest, safest evolution of Option D. Warm and brand-led.' } },
+  B: { n: 'The Polaroid Stack & Collage', t: 'Fanned photo deck + handwritten notes', light: [],
+    spec: { hero: 'Three tilted polaroids of real people fanned over a grid, floating match-reason bubbles, and an editorial serif + sans headline.', card: 'Stacked deck with the next card peeking at 4°. A square photo, an inline voice-intro player, and a two-column First Date Idea + Shared Passions split.', type: 'Fraunces serif + Outfit body + Caveat handwritten notes.', best: 'Playful and personality-first. Stands out most from other swipe apps.' } },
+  C: { n: 'Full-Bleed Editorial Scrim', t: 'Edge-to-edge photo + glass pills', light: ['welcome', 'values', 'match', 'chat'], rec: true,
+    spec: { hero: 'A full-screen portrait with a warm crimson scrim, oversized display type on the lower third, and a tactile slide-to-meet control.', card: 'A full-bleed card filling most of the screen: 4 story bars (tap to step through), a frosted name badge, a tap-to-expand quote, and round buttons floating over the bottom edge.', type: 'Instrument Serif display + Inter UI.', best: 'Photo-led discovery that feels like the top swipe apps. Recommended.' } },
+  D: { n: 'The Bento Profile Sheet', t: 'Hinge-style blocks, no blind swiping', light: [],
+    spec: { hero: 'A marquee of neighbourhood date spots plus a 2×2 bento preview of real prompts, songs and photos before the CTA.', card: 'A scrollable profile made of blocks. Every block has its own ♥ / 💬 button, so you like a specific thing, not just a face.', type: 'Bricolage Grotesque headlines + Inter body + Fraunces for answers.', best: 'Thoughtful, conversation-first matching. The strongest fit for “shared values”.' } },
+  E: { n: 'Neighborhood Radar & Passport', t: 'Local-first map + boarding-pass card', light: ['match'],
+    spec: { hero: 'A live radar with pulsing pins across São Paulo neighbourhoods. Tap an avatar to preview someone before you explore.', card: 'A passport-style card: a distance bar (3 km · 12 min bike), two tabs (Photo & Vibe | 3 Things We Share), and a first-date invite bar on the card.', type: 'Space Grotesk + DM Mono ticket codes.', best: 'Hyper-local dating that makes “close by” the hook.' } },
+};
+const VK = Object.keys(V);
+const VALUES = [['🌿', 'Climate & Outdoors'], ['🚲', 'Public Transit'], ['🌱', 'Community Gardens'], ['🎬', 'Art & Indie Film'], ['🤝', 'Labor & Fair Work'], ['📚', 'Bookshops & Coffee'], ['🎶', 'Local Music'], ['✨', 'Progressive'], ['♻️', 'Eco-Minded'], ['🧺', 'Markets & Food'], ['💛', 'Volunteering'], ['🐾', 'Dog People']];
+const VIC = Object.fromEntries(VALUES.map(([i, n]) => [n, i]));
+const VEN = {
+  market: { ic: '🧺', n: 'Saturday Farmers Market', s: 'Farmers Market', d: 'PRAÇA BENEDITO CALIXTO · SAT 09:30' },
+  cine: { ic: '🎬', n: 'CineSesc Matinee', s: 'Cinema', d: 'RUA AUGUSTA · SAT 15:00 · R$ 12' },
+  coffee: { ic: '☕', n: 'Pinheiros Coffee & Vinyl', s: 'Coffee & Vinyl', d: 'RUA DOS PINHEIROS · SAT 11:00' },
+  wine: { ic: '🍷', n: 'Vila Madalena Wine Bar', s: 'Wine Bar', d: 'RUA ASPICUELTA · FRI 20:00' },
+};
+const VKEYS = Object.keys(VEN);
+const P = [
+  { ix: 0, id: 'maya', first: 'Maya', age: 28, hood: 'Pinheiros', km: 3, bike: 12, job: 'Teacher', likesYou: true, verified: true, voice: '0:14',
+    vals: ['Climate & Outdoors', 'Bookshops & Coffee', 'Community Gardens', 'Local Music'], q: 'My ideal first date…', a: 'Farmers market in the morning, then coffee and a record shop. Bonus points if you dance badly.', date: 'market',
+    sunday: 'Benedito Calixto market, a long lunch, then flipping through records.', song: 'Baby 95', artist: 'Liniker', vibe: 'SLOW MORNINGS · LOUD RECORDS',
+    look: { skin: '#C68B6B', shade: '#99604A', hair: '#2A1610', style: 'long', top: '#7F1D1D', lip: '#9F3A44', earrings: '#FCD34D' } },
+  { ix: 1, id: 'lucas', first: 'Lucas', age: 31, hood: 'Vila Mariana', km: 2, bike: 9, job: 'Architect', likesYou: false, verified: true, voice: '0:21',
+    vals: ['Art & Indie Film', 'Public Transit', 'Bookshops & Coffee', 'Labor & Fair Work'], q: 'A conversation starter…', a: 'Ask me about the best R$ 12 matinee in São Paulo. I have opinions.', date: 'cine',
+    sunday: 'A CineSesc matinee, then arguing about the ending over pastel.', song: 'Ela Partiu', artist: 'Tim Maia', vibe: 'MATINEES · LONG WALKS',
+    look: { skin: '#E0B394', shade: '#B5826A', hair: '#3B2618', style: 'short', beard: true, top: '#1E293B', lip: '#A8574F', glasses: true } },
+  { ix: 2, id: 'valeria', first: 'Valéria', age: 26, hood: 'Bela Vista', km: 4, bike: 15, job: 'Illustrator', likesYou: true, verified: false, voice: '0:09',
+    vals: ['Local Music', 'Climate & Outdoors', 'Volunteering', 'Progressive'], q: 'About me…', a: 'I know every bakery in Bela Vista by smell, and I will share the good ones.', date: 'wine',
+    sunday: 'Community garden in the morning, samba in Bixiga by night.', song: 'Malemolência', artist: 'Céu', vibe: 'SAMBA · SKETCHBOOKS',
+    look: { skin: '#8D5A3F', shade: '#69402C', hair: '#140A08', style: 'curly', top: '#0F0F10', lip: '#7A2E35', earrings: '#F43F5E' } },
+];
+const ME = { look: { skin: '#A8714F', shade: '#82533A', hair: '#1A0F0A', style: 'long', top: '#7C2D12', lip: '#8E3B3B', earrings: '#FCD34D' } };
+const BG = [['#FFE1D6', '#F08A6E', '#D92D3A'], ['#FBE7DA', '#E8A58A', '#B5523C'], ['#FCE8E9', '#EE9AA0', '#C2414C'], ['#FFF1E8', '#F5B08F', '#E05A47'], ['#5A1D22', '#8E1622', '#D92D3A'], ['#FDE7DC', '#F3A27F', '#C84B31']];
+
+/* ---------- state ---------- */
+const ST = { mode: 'all', flip: 'welcome', pick: 'C', fv: 'C', h: ['C', 'D'], mine: new Set(['Climate & Outdoors', 'Bookshops & Coffee', 'Community Gardens']), look: 1, match: 'maya', liked: null };
+try { const s = JSON.parse(localStorage.getItem('comradia-d1-layouts') || '{}');
+  if (['all', 'flow', 'h2h'].includes(s.mode)) ST.mode = s.mode; if (['welcome', 'discover'].includes(s.flip)) ST.flip = s.flip;
+  if (V[s.pick]) ST.pick = s.pick; if (V[s.fv]) ST.fv = s.fv; if (Array.isArray(s.h) && s.h.every(x => V[x])) ST.h = s.h; } catch (_) { }
+const save = () => { try { localStorage.setItem('comradia-d1-layouts', JSON.stringify({ mode: ST.mode, flip: ST.flip, pick: ST.pick, fv: ST.fv, h: ST.h })); } catch (_) { } };
+const DECK = {}, CHAT = {};
+const deckOf = id => DECK[id] || (DECK[id] = { i: 0, sl: 0, tab: 0, qx: false, ven: null });
+const chatOf = id => CHAT[id] || (CHAT[id] = { venue: 'market', state: 'draft', extra: [] });
+const shared = p => p.vals.filter(v => ST.mine.has(v));
+const mp = () => P.find(x => x.id === ST.match);
+const pills = (list, n = 4) => list.slice(0, n).map(v => `<span class="pill ${ST.mine.has(v) ? 'sh' : ''}">${VIC[v]} ${v}</span>`).join('');
+const sortShared = p => [...shared(p), ...p.vals.filter(v => !ST.mine.has(v))];
+
+/* ---------- icons ---------- */
+const PATH = { x: 'M6 6l12 12M18 6L6 18', heart: 'M12 21s-7.5-4.6-9.6-9.2C.9 8.4 3 4.5 6.8 4.5c2.1 0 3.6 1.1 5.2 3 1.6-1.9 3.1-3 5.2-3 3.8 0 5.9 3.9 4.4 7.3C19.5 16.4 12 21 12 21z', spark: 'M12 2.5l2.4 6.6 6.6 2.4-6.6 2.4L12 20.5l-2.4-6.6L3 11.5l6.6-2.4z', filter: 'M4 7h10M18 7h2M4 17h4M12 17h8M16 5v4M10 15v4', chat: 'M4 5h16v11H9l-5 4z', user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21c1.5-4 4.5-6 8-6s6.5 2 8 6', cards: 'M8 3h9a2 2 0 0 1 2 2v13M5 7h9a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z', check: 'M5 12.5l4.5 4.5L19 7', back: 'M15 5l-7 7 7 7', cal: 'M5 6h14v14H5zM5 10h14M9 3v4M15 3v4', send: 'M4 12l16-8-6 16-2.5-6.5z', video: 'M3 7h12v10H3zM15 10l6-3v10l-6-3', arrow: 'M5 12h14M13 6l6 6-6 6', play: 'M8 5.5v13l11-6.5z', pause: 'M7 5h3.5v14H7zM13.5 5H17v14h-3.5z', pin: 'M12 21s-6.5-5.8-6.5-11.2a6.5 6.5 0 0 1 13 0C18.5 15.2 12 21 12 21zM12 12.3a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z' };
+const FILLED = new Set(['heart', 'spark', 'play', 'pause']);
+const I = (n, s = 22, w = 2) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" aria-hidden="true" ${FILLED.has(n) ? 'fill="currentColor"' : `fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"`}><path d="${PATH[n]}"/></svg>`;
+const VB = p => p.verified ? `<span class="vb" title="Photo verified">${I('check', 12, 3)}</span>` : '';
+
+/* ---------- illustrations ---------- */
+let uid = 0;
+function portrait(L, bg) {
+  const k = 'r' + (++uid);
+  const hairBack = { long: `<path d="M112 250C100 150 170 118 205 122C262 126 306 168 294 258C296 330 318 400 334 470C304 492 272 488 262 470C270 400 280 330 270 272L135 272C125 330 132 400 140 470C125 492 94 492 66 470C84 400 106 330 112 250Z" fill="${L.hair}"/>`,
+    curly: (() => { let s = `<circle cx="200" cy="232" r="112" fill="${L.hair}"/>`; for (let a = 0; a < 360; a += 24) { const r = a * Math.PI / 180; s += `<circle cx="${(200 + Math.cos(r) * 108).toFixed(1)}" cy="${(232 + Math.sin(r) * 100).toFixed(1)}" r="${30 + (a % 48 ? 4 : 0)}" fill="${L.hair}"/>`; } return s; })() }[L.style] || '';
+  const hairFront = { long: `<path d="M120 262C116 190 156 158 206 158C250 158 286 190 282 262C270 222 246 198 218 190C196 214 156 226 126 236C122 246 121 254 120 262Z" fill="${L.hair}"/>`,
+    curly: `<path d="M122 250C120 196 160 168 202 168C246 168 282 196 278 250C258 214 232 200 202 200C170 200 142 216 122 250Z" fill="${L.hair}"/>`,
+    short: `<path d="M120 262C112 176 160 146 204 148C258 150 292 184 282 262C278 228 262 206 242 198C214 212 160 210 130 228C124 240 121 252 120 262Z" fill="${L.hair}"/>` }[L.style] || '';
+  const beard = L.beard ? `<path d="M128 296C132 362 168 388 200 390C232 388 268 362 272 296C262 332 240 344 222 340C212 336 188 336 178 340C160 344 138 332 128 296Z" fill="${L.hair}" opacity=".9"/><path d="M178 326Q200 316 222 326Q200 332 178 326Z" fill="${L.hair}"/>` : '';
+  const glasses = L.glasses ? `<g fill="none" stroke="#111" stroke-width="4"><rect x="148" y="256" width="44" height="32" rx="12"/><rect x="208" y="256" width="44" height="32" rx="12"/><path d="M192 268h16"/></g>` : '';
+  const ear = L.earrings ? `<circle cx="124" cy="314" r="6" fill="${L.earrings}"/><circle cx="276" cy="314" r="6" fill="${L.earrings}"/>` : '';
+  return `<svg class="pt" viewBox="0 0 400 600" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs>
+    <radialGradient id="${k}b" cx="30%" cy="18%" r="95%"><stop offset="0" stop-color="${bg[0]}"/><stop offset=".45" stop-color="${bg[1]}"/><stop offset="1" stop-color="${bg[2]}"/></radialGradient>
+    <linearGradient id="${k}s" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${L.skin}"/><stop offset="1" stop-color="${L.shade}"/></linearGradient>
+    <linearGradient id="${k}t" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${L.top}"/><stop offset="1" stop-color="#000" stop-opacity=".85"/></linearGradient></defs>
+  <rect width="400" height="600" fill="url(#${k}b)"/><circle cx="330" cy="90" r="70" fill="#fff" opacity=".14"/>
+  <path d="M-20 600C10 520 60 470 120 450L280 450C340 470 390 520 420 600Z" fill="#000" opacity=".18"/>
+  ${hairBack}<path d="M24 600C34 486 104 444 170 428Q200 448 230 428C296 444 366 486 376 600Z" fill="url(#${k}t)"/>
+  <path d="M172 330L172 424Q200 446 228 424L228 330Z" fill="${L.shade}"/>
+  <ellipse cx="124" cy="286" rx="13" ry="20" fill="${L.shade}"/><ellipse cx="276" cy="286" rx="13" ry="20" fill="${L.shade}"/>
+  <ellipse cx="200" cy="272" rx="78" ry="96" fill="url(#${k}s)"/>${beard}
+  <ellipse cx="160" cy="306" rx="16" ry="9" fill="#F43F5E" opacity=".18"/><ellipse cx="240" cy="306" rx="16" ry="9" fill="#F43F5E" opacity=".18"/>
+  <path d="M154 250Q170 242 186 248M214 248Q230 242 246 250" stroke="${L.hair}" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <path d="M156 272Q170 260 184 272Q170 280 156 272Z" fill="#1b0d10"/><path d="M216 272Q230 260 244 272Q230 280 216 272Z" fill="#1b0d10"/><circle cx="173" cy="269" r="2.2" fill="#fff" opacity=".9"/><circle cx="233" cy="269" r="2.2" fill="#fff" opacity=".9"/>
+  <path d="M200 280Q195 304 205 311" stroke="${L.shade}" stroke-width="3.5" fill="none" stroke-linecap="round"/><path d="M180 334Q200 346 220 334Q200 354 180 334Z" fill="${L.lip}"/>
+  ${glasses}${hairFront}${ear}</svg>`;
+}
+const pt = (p, b) => portrait(p.look, BG[b ?? p.ix]);
+const ptMe = () => portrait(ME.look, BG[3]);
+const sun = cls => { const g = 'sg' + (++uid); return `<svg class="${cls}" viewBox="0 0 280 280" aria-hidden="true"><defs><radialGradient id="${g}" cx=".38" cy=".35"><stop offset="0" stop-color="#FFD9C7"/><stop offset=".6" stop-color="#F08A6E"/><stop offset="1" stop-color="#E05A47"/></radialGradient></defs><g class="rays">${Array.from({ length: 16 }, (_, i) => `<rect x="136" y="4" width="8" height="30" rx="4" fill="#E05A47" opacity=".4" transform="rotate(${i * 22.5} 140 140)"/>`).join('')}</g><circle cx="140" cy="140" r="86" fill="url(#${g})"/></svg>`; };
+const topo = cls => `<svg class="topo ${cls}" viewBox="0 0 330 330" aria-hidden="true" fill="none" stroke="#D92D3A" stroke-width="1.2">${[40, 70, 100, 130, 160].map((r, i) => `<path d="M${165 - r} 165c0-${r * .8} ${r * .5}-${r} ${r}-${r * .95}s${r * .95} ${r * .3} ${r} ${r * .95}-${r * .4} ${r * 1.05}-${r} ${r}-${r}-${r * .3}-${r}-${r}z" opacity="${.5 - i * .07}"/>`).join('')}</svg>`;
+const grid = () => { const g = 'gp' + (++uid); return `<svg class="gbg" aria-hidden="true"><defs><pattern id="${g}" width="28" height="28" patternUnits="userSpaceOnUse"><path d="M28 0H0V28" fill="none" stroke="#F1DEDB" stroke-width="1"/></pattern></defs><rect width="100%" height="100%" fill="url(#${g})"/></svg>`; };
+const vinyl = () => `<svg class="vinyl" viewBox="0 0 60 60" aria-hidden="true"><circle cx="30" cy="30" r="29" fill="#231214"/>${[25, 21, 17].map(r => `<circle cx="30" cy="30" r="${r}" fill="none" stroke="#45292c" stroke-width="1"/>`).join('')}<circle cx="30" cy="30" r="10" fill="#D92D3A"/><circle cx="30" cy="30" r="2" fill="#FBF6F4"/><path d="M13 17a22 22 0 0 1 10-7" stroke="#fff" stroke-opacity=".3" stroke-width="2" fill="none"/></svg>`;
+const sb = `<div class="isl"></div><div class="sb"><span>9:41</span><span class="r"><svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" width="3" height="12" rx="1"/></svg><svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor"><path d="M8 2.2c2.3 0 4.4.9 6 2.4l1.2-1.3A10.2 10.2 0 0 0 8 .4C5.2.4 2.7 1.5.8 3.3L2 4.6a8.4 8.4 0 0 1 6-2.4zm0 3.6c1.3 0 2.5.5 3.4 1.3l1.3-1.3A6.6 6.6 0 0 0 8 4c-1.8 0-3.4.7-4.7 1.8l1.3 1.3C5.5 6.3 6.7 5.8 8 5.8zm0 3.5c-.6 0-1.1.2-1.5.6L8 11.5l1.5-1.6c-.4-.4-.9-.6-1.5-.6z"/></svg><svg width="27" height="13" viewBox="0 0 27 13"><rect x=".5" y=".5" width="23" height="12" rx="3.5" fill="none" stroke="currentColor" opacity=".4"/><rect x="2" y="2" width="18" height="9" rx="2" fill="currentColor"/></svg></span></div>`;
+const tabbar = () => `<nav class="tb"><span class="on">${I('cards', 18, 2)} Discover</span><span>${I('chat', 18, 2)}</span><span>${I('user', 18, 2)}</span></nav>`;
+const stamps = `<div class="stamp like">LIKE</div><div class="stamp pass">PASS</div>`;
+
+/* =================== S1 · WELCOME =================== */
+const W = {
+  A: () => `<div class="scr aw">${topo('')}
+    <div class="aw-top mono rv"><span>FIELD NOTE 001</span><span>SÃO PAULO · 24°C</span></div>
+    <div class="aw-stage rv" style="--d:1">${sun('aw-sun')}<div class="aw-arch">${pt(P[0])}</div><span class="aw-crown mono">03 KM · PINHEIROS</span></div>
+    <h1 class="rv" style="--d:2">Meet someone who <em>gives a damn.</em></h1>
+    <div class="aw-sheet rv" style="--d:3"><p>Thoughtful dating for people who care about the world, their neighbourhood, and a great first date.</p>
+      <button class="btn pri" data-go="2">Find Your Person ${I('arrow', 18, 2.2)}</button><div class="sub"><b>I already have an account</b></div></div></div>`,
+  B: () => `<div class="scr bw">${grid()}
+    <div class="bw-top rv"><span class="bw-wm">comradia</span><span class="hand">made in São Paulo</span></div>
+    <h1 class="rv" style="--d:1"><span class="ser">Real chemistry.</span><br>Shared values.</h1>
+    <div class="bw-fan rv" style="--d:2">
+      ${[1, 2, 0].map(i => `<button class="pol p${i}" data-pol="${i}" aria-label="Bring ${P[i].first} to the front"><span class="pph">${pt(P[i])}</span><span class="hand">${P[i].first}, ${P[i].hood}</span></button>`).join('')}
+      <div class="bub b1">🧺 Both love Saturday Farmers Markets</div><div class="bub b2">📍 3 km away</div></div>
+    <div class="hand bw-note rv" style="--d:3">that could be you two ↗</div>
+    <button class="btn pri rv" style="--d:4" data-go="2">Find Your Person</button><div class="sub rv" style="--d:5"><b>I already have an account</b></div></div>`,
+  C: () => `<div class="scr cw"><div class="cw-ph">${pt(P[2], 4)}</div><div class="cw-scrim"></div>
+    <div class="cw-top rv"><span class="cw-wm">comradia</span><span>Log in</span></div>
+    <div class="cw-low"><span class="cw-badge glass mono rv">VALÉRIA · 4 KM · BELA VISTA</span>
+      <h1 class="rv" style="--d:1">Real chemistry.<br><i>Shared values.</i></h1>
+      <p class="rv" style="--d:2">Thoughtful dating for people who care about the world, their neighbourhood, and a great first date.</p>
+      <div class="slide glass rv" style="--d:3"><button class="knob hint" data-knob aria-label="Slide to meet people nearby">${I('arrow', 22, 2.4)}</button><span>Slide to Meet People Nearby →</span></div>
+      <div class="sub"><b>I already have an account</b></div></div></div>`,
+  D: () => { const sp = ['🎬 CineSesc', '☕ Pinheiros Vinyl', '🍷 Vila Madalena', '🧺 Benedito Calixto', '🌳 Ibirapuera', '🎶 Bixiga Samba'];
+    return `<div class="scr dw"><div class="dw-top rv"><span class="dw-wm">comradia<b>.</b></span><span>Log in</span></div>
+    <h1 class="rv" style="--d:1">Date people who share <em>your values.</em></h1>
+    <div class="mq rv" style="--d:2"><div class="mq-in">${[...sp, ...sp].map(s => `<span>${s}</span>`).join('')}</div></div>
+    <div class="bento rv" style="--d:3">
+      <div class="bt bt-ph">${pt(P[0])}<span class="bt-nm">Maya, 28</span></div>
+      <div class="bt bt-q"><small>MY IDEAL SUNDAY</small><p>Market, long lunch, record shop.</p></div>
+      <div class="bt bt-vin">${vinyl()}<small>LISTENING TO</small><b>${P[0].song}</b><span>${P[0].artist}</span></div>
+      <div class="bt bt-v"><small>YOU’D SHARE</small><div>${pills(P[0].vals, 3)}</div></div></div>
+    <button class="btn pri rv" style="--d:4" data-go="2">Find Your Person</button><div class="sub rv" style="--d:5"><b>I already have an account</b></div></div>`; },
+  E: () => `<div class="scr ew"><div class="ew-top mono rv"><span>COMRADIA · SÃO PAULO</span><span>PASSPORT Nº 0428</span></div>
+    <h1 class="rv" style="--d:1">Your next date is <em>closer than you think.</em></h1>
+    <p class="lede rv" style="--d:2">See who’s nearby and what you share, before you match.</p>
+    <div class="radar rv" style="--d:3"><svg viewBox="0 0 286 286" aria-hidden="true">${[143, 108, 73, 38].map((r, i) => `<circle cx="143" cy="143" r="${r - 1}" fill="${i % 2 ? '#FBF6F4' : '#FCE8E9'}" stroke="#EFDCDA"/>`).join('')}<path d="M143 4V282M4 143H282" stroke="#EFDCDA" stroke-dasharray="3 5"/>
+      <text x="143" y="22" text-anchor="middle" font-family="DM Mono" font-size="8" fill="#B79A9B">N</text></svg><div class="sweep"></div>
+      ${[[0, 26, 40], [1, 70, 72], [2, 68, 22]].map(([i, x, y]) => `<button class="rpin ${i ? '' : 'on'}" data-rad="${i}" style="left:${x}%;top:${y}%"><span class="pul"></span><span class="rav">${pt(P[i])}</span><span class="rl mono">${P[i].hood.toUpperCase()} · ${P[i].km} KM</span></button>`).join('')}
+      <span class="you"></span><span class="mono">YOU</span></div>
+    <div class="rprev" data-rp>${rprev(0)}</div>
+    <button class="btn pri" data-go="2">Explore Your Neighborhood ${I('arrow', 18, 2.2)}</button><div class="sub"><b>I already have an account</b></div></div>`,
+};
+function rprev(i) { const p = P[i], s = shared(p); return `<div class="av">${pt(p)}</div><div><b>${p.first}, ${p.age}</b><small class="mono">${p.hood.toUpperCase()} · ${p.km} KM · ${p.bike} MIN 🚲</small></div>${s[0] ? `<span class="pill sh">${VIC[s[0]]} ${s[0].split(' ')[0]}</span>` : ''}`; }
+
+/* =================== S5 · DISCOVERY =================== */
+const HEAD = {
+  A: `<div class="dh"><div class="row"><div class="wm"><span>${I('heart', 22)}</span>comradia</div><div class="rt"><span class="mchip mono">NEARBY · 06</span><button class="ib" aria-label="Filters">${I('filter', 18, 1.8)}</button></div></div><div class="wx mono">☀ 24°C · PERFECT EVENING FOR A FIRST DATE</div></div>`,
+  B: `<div class="dh"><div class="row"><div class="wm">comradia</div><div class="rt"><span class="hand b-new">6 new today ✎</span><button class="ib" aria-label="Filters">${I('filter', 18, 1.8)}</button></div></div></div>`,
+  C: `<div class="dh"><div class="row"><div class="wm">comradia</div><div class="rt"><span class="mchip">Nearby</span><button class="ib" aria-label="Filters">${I('filter', 18, 1.8)}</button></div></div></div>`,
+  D: `<div class="dh"><div class="row"><div class="wm">comradia<span>.</span></div><div class="rt"><span class="mchip">Discover · 6</span><button class="ib" aria-label="Filters">${I('filter', 18, 1.8)}</button></div></div></div>`,
+  E: `<div class="dh"><div class="row"><div class="wm"><span>${I('pin', 21, 2)}</span>comradia</div><div class="rt"><span class="mchip mono">PINHEIROS · 5 KM</span><button class="ib" aria-label="Filters">${I('filter', 18, 1.8)}</button></div></div></div>`,
+};
+const DS = {
+  A: () => `<div class="scr d dA">${HEAD.A}<div class="deck"></div><div class="a-dock"><button data-a="pass">${I('x', 18, 2.4)} Pass</button><button class="sp" data-a="note">${I('spark', 17)} Spark</button><button class="lk" data-a="like">${I('heart', 18)} Like</button></div></div>`,
+  B: () => `<div class="scr d dB">${grid()}${HEAD.B}<div class="deck"></div><div class="acts"><button class="pass" data-a="pass" aria-label="Pass">${I('x', 22, 2)}</button><button class="note" data-a="note" aria-label="Spark">${I('spark', 20)}</button><button class="like" data-a="like" aria-label="Like">${I('heart', 24)}</button></div>${tabbar()}</div>`,
+  C: () => `<div class="scr d dC">${HEAD.C}<div class="deck"></div><div class="c-fabs"><button class="pass" data-a="pass" aria-label="Pass">${I('x', 22, 2.2)}</button><button class="note" data-a="note" aria-label="Spark">${I('spark', 20)}</button><button class="like" data-a="like" aria-label="Like">${I('heart', 28)}</button></div>${tabbar()}</div>`,
+  D: () => `<div class="scr d dD">${HEAD.D}<div class="dsc"></div><button class="d-pass" data-a="pass" aria-label="Pass">${I('x', 22, 2.4)}</button>${tabbar()}</div>`,
+  E: () => `<div class="scr d dE">${HEAD.E}<div class="deck"></div><div class="e-acts"><button data-a="pass">${I('x', 16, 2.4)} Pass</button><button class="lk" data-a="like">${I('heart', 16)} Like</button></div></div>`,
+};
+const CARD = {
+  A: (p) => `<div class="cin a"><div class="a-ph">${pt(p)}<span class="tag mono">${String(p.km).padStart(2, '0')} KM · ${p.hood.toUpperCase()}</span></div>
+    <div class="a-nm"><b>${p.first}, ${p.age} ${VB(p)}</b><span class="mono">${p.job.toUpperCase()} · ${shared(p).length} IN COMMON</span></div>
+    <div class="tix"><div class="k mono">CONVERSATION STARTER</div><div class="q">${p.q}</div><div class="ans">${esc(p.a)}</div></div></div>`,
+  B: (p) => `<div class="cin b"><div class="b-ph">${pt(p)}<span class="tag mono">${p.km} KM AWAY</span><span class="hand b-hn">hi from ${p.hood}!</span></div>
+    <div class="b-nm"><span class="ser">${p.first}, ${p.age}</span>${VB(p)}<span class="b-job">${p.job}</span></div>
+    <button class="voice" data-voice aria-label="Play voice intro"><span class="vp">${I('play', 16)}</span><span class="vl">Voice intro</span><span class="wave">${Array.from({ length: 22 }, (_, i) => `<i style="--h:${6 + Math.round(Math.abs(Math.sin(i * 1.7 + p.ix)) * 16)}px;--n:${i}"></i>`).join('')}</span><span class="mono">${p.voice}</span></button>
+    <div class="split"><div class="sp1"><small class="mono">FIRST DATE IDEA</small><i>${VEN[p.date].ic}</i><b>${VEN[p.date].n}</b></div><div class="sp2"><small class="mono">SHARED PASSIONS</small><div>${pills(sortShared(p), 3)}</div></div></div></div>`,
+  C: (p, st) => `<div class="cin c"><div class="c-img ${st.sl === 1 ? 'z' : ''}">${pt(p, [p.ix, p.ix, 3, 5][st.sl])}</div>
+    <div class="bars">${[0, 1, 2, 3].map(i => `<i class="${i <= st.sl ? 'on' : ''}"></i>`).join('')}</div>
+    <span class="c-badge">${p.first}, ${p.age} · ${p.hood} ${VB(p)}</span><span class="c-b2 glass mono">${shared(p).length} THINGS IN COMMON · ${p.km} KM</span>
+    <div class="c-scrim"></div>
+    <button class="c-quote ${st.qx ? 'x' : ''}" data-quote aria-label="Read the full answer"><small class="mono">${st.qx ? 'CONVERSATION STARTER' : 'CONVERSATION STARTER · TAP TO READ'}</small><span class="qa">“${esc(p.a)}”</span>
+      <span class="qx"><i>${VEN[p.date].ic}</i><span>${VEN[p.date].n}<small class="mono">FIRST DATE IDEA</small></span></span></button></div>`,
+  E: (p, st) => { const v = VEN[st.ven || p.date], s = sortShared(p).slice(0, 3);
+    return `<div class="cin e"><div class="e-hd"><div class="e-av">${pt(p)}</div><div><small class="mono">PASSPORT · Nº 04${28 + p.ix}</small><b>${p.first}, ${p.age}</b><span class="mono">${p.job.toUpperCase()} · ${p.hood.toUpperCase()}</span></div>${p.verified ? '<span class="e-stamp mono">VERIFIED</span>' : ''}</div>
+    <div class="e-dist mono"><span>YOU</span><span class="e-line"><i class="bike">🚲</i></span><span>${p.first.toUpperCase()}</span></div>
+    <div class="e-dk mono">${p.km} KM · ${p.bike} MIN BIKE · ${p.bike - 3} MIN METRO</div><div class="perf" style="--nb:var(--bg)"></div>
+    <div class="e-tabs"><button data-tab="0" class="${st.tab ? '' : 'on'}">Photo &amp; Vibe</button><button data-tab="1" class="${st.tab ? 'on' : ''}">3 Things We Share</button></div>
+    <div class="e-body">${st.tab ? s.map((x, i) => `<div class="e-row"><span class="e-st">${VIC[x]}</span><div><small class="mono">${ST.mine.has(x) ? 'YOU BOTH' : `${p.first.toUpperCase()} LOVES`} · 0${i + 1}</small><b>${x}</b></div></div>`).join('')
+      : `<div class="e-photo">${pt(p)}<span class="tag mono">VIBE · ${p.vibe}</span></div>`}</div>
+    <div class="e-inv"><button class="e-ven" data-ecyc aria-label="Change spot">${v.ic} ${v.s} ▾</button><button class="btn pri" data-a="invite">Send a First-Date Invite</button></div></div>`; },
+};
+const bact = (lab, p) => `<div class="bact"><button data-bk="spark" aria-label="Comment on ${lab}">${I('chat', 17, 2)}</button><button data-bk="like" aria-label="Like ${lab}">${I('heart', 18)}</button></div>`;
+const bento = p => `
+  <div class="blk bph" data-lab="photo" data-txt="">${pt(p)}<div class="bph-nm"><b>${p.first}, ${p.age} ${VB(p)}</b><span>${p.job} · ${p.hood} · ${p.km} km</span></div>${bact('photo')}</div>
+  <div class="brow"><div class="blk" data-lab="Ideal Sunday" data-txt="${esc(p.sunday)}"><small>IDEAL SUNDAY</small><p class="fr">${p.sunday}</p>${bact('Ideal Sunday')}</div>
+    <div class="blk vin" data-lab="song" data-txt="${esc(p.song + ' · ' + p.artist)}">${vinyl()}<small>LISTENING TO</small><b>${p.song}</b><span>${p.artist}</span>${bact('song')}</div></div>
+  <div class="blk vals" data-lab="Shared Values" data-txt="${esc(shared(p).join(' · '))}"><small>SHARED VALUES · ${shared(p).length}</small><div>${pills(sortShared(p), 4)}</div>${bact('Shared Values')}</div>
+  <div class="blk" data-lab="answer" data-txt="${esc(p.a)}"><small>${p.q.toUpperCase()}</small><p class="fr">${p.a}</p>${bact('answer')}</div>
+  <div class="blk bph p2" data-lab="second photo" data-txt="">${pt(p, 5)}${bact('second photo')}</div>
+  <div class="blk dt" data-lab="date idea" data-txt="${esc(VEN[p.date].n)}"><i>${VEN[p.date].ic}</i><div><small>FIRST DATE IDEA</small><b>${VEN[p.date].n}</b></div>${bact('date idea')}</div>`;
+
+/* =================== S2 · VALUES =================== */
+const valBody = v => `<div class="lead"><span>${v === 'B' ? '<span class="hand">pick up to 5, we’ll do the matchmaking ✎</span>' : 'Pick up to 5. We’ll show you people who share them.'}</span><span class="cnt mono">${ST.mine.size}/5</span></div>
+  <div class="vals">${VALUES.map(([i, n], k) => `<button class="val ${ST.mine.has(n) ? 'on' : ''}" data-val="${n}" style="--r:${[-2, 1.5, -1, 2.2][k % 4]}deg"><span class="em">${i}</span> ${n}</button>`).join('')}</div>
+  <div class="lkl mono">LOOKING FOR</div><div class="look">${['Something serious', 'See where it goes', 'New friends'].map((t, i) => `<button class="${i === ST.look ? 'on' : ''}" data-look="${i}">${t}</button>`).join('')}</div>
+  <button class="btn pri" data-go="3">${v === 'E' ? 'Stamp my passport' : 'Continue'}</button>`;
+const obt = `<div class="obt"><button class="circ" data-go="1" aria-label="Back">${I('back', 20, 2.2)}</button><div class="prog"><i class="on"></i><i class="on"></i><i></i></div></div>`;
+const VAL = {
+  A: () => `<div class="scr ob oA">${sun('sun2')}${obt}<div class="stp mono">STEP 2 OF 3 · VALUES &amp; INTERESTS</div><h2>What do you<br>care about?</h2>${valBody('A')}<div class="note">You can change these anytime in your profile.</div></div>`,
+  B: () => `<div class="scr ob oB">${grid()}${obt}<div class="stp hand">step 2 of 3, the fun part</div><h2>What do you <i>care about?</i></h2>${valBody('B')}</div>`,
+  C: () => `<div class="scr ob oC"><div class="oC-ph">${pt(P[2], 4)}</div>${obt}<h2>What do you <i>care about?</i></h2>${valBody('C')}</div>`,
+  D: () => `<div class="scr ob oD">${obt}<div class="stp mono">STEP 2 OF 3 · VALUES</div><h2>What do you care about?</h2>${valBody('D')}</div>`,
+  E: () => `<div class="scr ob oE">${obt}<div class="stp mono">STEP 2 OF 3 · COLLECT YOUR STAMPS</div><h2>What do you care about?</h2>${valBody('E')}</div>`,
+};
+
+/* =================== S4 · MATCH =================== */
+const bothTxt = p => { const s = shared(p).slice(0, 2); return s.length ? `You both love <b>${s.join('</b> + <b>')}</b>` : 'New to each other. Say hi 👋'; };
+const cv = '<canvas width="786" height="1704"></canvas>';
+const likedOf = p => ST.liked && ST.liked.who === p.id ? ST.liked : { lab: 'Ideal Sunday', txt: p.sunday };
+const M = {
+  A: () => { const p = mp(); return `<div class="scr mx mA"><svg class="rays2" viewBox="0 0 520 520" aria-hidden="true">${Array.from({ length: 24 }, (_, i) => `<rect x="255" y="0" width="10" height="200" rx="5" fill="#fff" transform="rotate(${i * 15} 260 260)"/>`).join('')}</svg>${cv}
+    <div class="k mono">YOU BOTH SWIPED RIGHT</div><h2>It’s a Match!</h2><div class="lede">You and ${p.first} liked each other.</div>
+    <div class="duo"><div class="arch a1">${ptMe()}</div><div class="arch a2">${pt(p)}</div><div class="hb">${I('heart', 30)}</div></div>
+    <div class="both">${bothTxt(p)}</div><div class="btns"><button class="btn wht" data-go="5">${I('chat', 20, 2)} Send a message</button><button class="btn gh" data-go="3">Keep swiping</button></div></div>`; },
+  B: () => { const p = mp(); return `<div class="scr mx mB">${grid()}${cv}<div class="k hand">it’s mutual!</div><h2>It’s a <i>Match!</i></h2><div class="lede">You and ${p.first} liked each other.</div>
+    <div class="mB-duo"><div class="pol m1"><span class="pph">${ptMe()}</span><span class="hand">you ♥</span></div><div class="pol m2"><span class="pph">${pt(p)}</span><span class="hand">${p.first}</span></div><span class="tape t1"></span><span class="tape t2"></span><div class="hb">${I('heart', 30)}</div></div>
+    <div class="both">${bothTxt(p)}</div><div class="btns"><button class="btn pri" data-go="5">${I('chat', 20, 2)} Send a message</button><button class="btn line" data-go="3">Keep swiping</button></div></div>`; },
+  C: () => { const p = mp(); return `<div class="scr mx mC"><div class="cw-ph">${pt(p, 4)}</div><div class="cw-scrim"></div>${cv}
+    <div class="mC-low"><div class="mC-me">${ptMe()}</div><div class="k mono">YOU BOTH SWIPED RIGHT</div><h2>It’s a<br><i>Match.</i></h2><p>You and ${p.first} liked each other.</p><div class="both">${bothTxt(p)}</div>
+    <div class="btns"><button class="btn wht" data-go="5">${I('chat', 20, 2)} Send a message</button><button class="btn gh" data-go="3">Keep swiping</button></div></div></div>`; },
+  D: () => { const p = mp(), l = likedOf(p); return `<div class="scr mx mD">${cv}<small class="k">NEW MATCH</small><h2>It’s a Match!</h2><p>You and ${p.first} liked each other.</p>
+    <div class="mD-grid"><div class="bt bt-ph">${ptMe()}<span class="bt-nm">You</span></div><div class="bt bt-ph">${pt(p)}<span class="bt-nm">${p.first}</span></div>
+      <div class="bt mD-q"><small>YOU LIKED ${l.lab.toUpperCase()}</small><p>${l.txt ? `“${esc(l.txt)}”` : `${p.first}’s ${l.lab}`}</p></div>
+      <div class="bt bt-v"><small>YOU BOTH LOVE</small><div>${pills(shared(p), 3) || '<span class="pill">Say hi 👋</span>'}</div></div></div>
+    <div class="btns"><button class="btn pri" data-go="5">${I('chat', 20, 2)} Send a message</button><button class="btn line" data-go="3">Keep browsing</button></div></div>`; },
+  E: () => { const p = mp(), s = shared(p).slice(0, 2); return `<div class="scr mx mE">${cv}<div class="k mono">BOARDING · FIRST DATE</div><h2>It’s a Match!</h2><div class="lede">You and ${p.first} are ${p.km} km apart.</div>
+    <div class="bp"><div class="bp-h mono"><span>COMRADIA PASSPORT</span><span>MATCH Nº 0428</span></div>
+      <div class="bp-r"><div><div class="bp-av">${ptMe()}</div><b>YOU</b><small class="mono">CONSOLAÇÃO</small></div>
+        <div class="bp-mid">${I('heart', 24)}<span class="bp-l"></span><small class="mono">${p.km} KM · ${p.bike} MIN 🚲</small></div>
+        <div><div class="bp-av">${pt(p)}</div><b>${p.first.toUpperCase()}</b><small class="mono">${p.hood.toUpperCase()}</small></div></div>
+      <div class="perf"></div><div class="bp-f"><small class="mono">YOU BOTH LOVE</small><div>${s.length ? s.join(' · ') : 'Say hi 👋'}</div></div><span class="bp-stamp mono">MATCHED ✓</span></div>
+    <div class="btns"><button class="btn wht" data-go="5">${I('chat', 20, 2)} Send a message</button><button class="btn gh" data-go="3">Keep exploring</button></div></div>`; },
+};
+
+/* =================== CHAT · DATE INVITE =================== */
+const inviteHTML = id => { const c = chatOf(id), v = VEN[c.venue], p = mp();
+  return `<div class="k mono">SUGGEST A FIRST DATE SPOT</div><div class="vch">${VKEYS.map(k => `<button data-ven="${k}" class="${k === c.venue ? 'on' : ''}" ${c.state !== 'draft' ? 'disabled' : ''}>${VEN[k].ic} ${VEN[k].s}</button>`).join('')}</div>
+  <div class="vd"><i>${v.ic}</i><div><b>${v.n}</b><small class="mono">${v.d}</small></div></div>
+  ${c.state === 'draft' ? `<button class="btn pri" data-invite>Send invite</button>` : `<div class="st ${c.state === 'yes' ? 'ok' : ''}">${c.state === 'yes' ? `✓ ${p.first} said yes, see you there!` : `Waiting for ${p.first}…`}</div>`}`; };
+const chatHead = (v, p) => {
+  const std = av => `<div class="chh"><button class="back" data-go="3" aria-label="Back">${I('back', 22, 2.2)}</button>${av}<div>${v === 'B' ? `<b class="ser">${p.first}</b><small class="hand">matched today ♥</small>` : `<b>${p.first}</b><small>● Active now</small>`}</div><button class="ib" aria-label="Video call">${I('video', 19, 1.8)}</button></div>`;
+  if (v === 'B') return std(`<div class="bav"><span>${pt(p)}</span></div>`);
+  if (v === 'C') return `<div class="cch">${pt(p, 4)}<div class="cch-s"></div><button class="back" data-go="3" aria-label="Back">${I('back', 24, 2.4)}</button><div class="cch-n"><span class="ins">${p.first}</span><small>Active now · ${p.hood}</small></div></div>`;
+  if (v === 'E') return std(`<div class="av">${pt(p)}</div>`) + `<div class="edist mono"><span>YOU</span><span class="e-line"><i class="bike">🚲</i></span><span>${p.first.toUpperCase()} · ${p.km} KM · ${p.bike} MIN</span></div>`;
+  return std(`<div class="av" ${v === 'D' ? 'style="border-radius:14px"' : ''}>${pt(p)}</div>`);
+};
+const CH = id => { const v = q(`.pw[data-ph="${id}"]`).dataset.v, p = mp(), sh = shared(p), c = chatOf(id), l = likedOf(p);
+  return `<div class="scr ch ${v === 'C' ? 'chC' : ''}">${chatHead(v, p)}<div class="msgs">
+    ${v === 'D' ? `<div class="dq"><small class="mono" style="color:var(--pri);font-size:9.5px">♥ YOU LIKED ${l.lab.toUpperCase()}</small><p>${l.txt ? `“${esc(l.txt)}”` : `${p.first}’s ${l.lab}`}</p></div>` : `<div class="pin">💞 You matched today${sh[0] ? ` · both love ${sh[0]}` : ''}</div>`}
+    <div class="day mono">TODAY 18:42</div>
+    <div class="msg them">Okay, a fellow ${(sh[0] || 'good taste').toLowerCase()} person 👀</div>
+    <div class="msg me">Guilty. Your ${VEN[p.date].s.toLowerCase()} idea sold me.</div>
+    <div class="msg them">So… are we doing this? 😄</div>
+    <div class="inv ${v === 'E' ? 'tk' : v === 'B' ? 'pl' : ''}">${inviteHTML(id)}</div>
+    ${c.extra.map(m => `<div class="msg ${m.me ? 'me' : 'them'}">${esc(m.t)}</div>`).join('')}
+  </div><div class="comp"><button class="cal" data-cycle aria-label="Suggest another spot">${I('cal', 20, 2)}</button><input placeholder="Write a message…" aria-label="Message"><button class="send" aria-label="Send">${I('send', 18, 2)}</button></div></div>`; };
+
+const SCR = { welcome: (v) => W[v](), values: v => VAL[v](), discover: v => DS[v](), match: v => M[v](), chat: (v, id) => CH(id) };
+
+/* ---------- phone shell ---------- */
+const ro = new ResizeObserver(es => es.forEach(e => fit(e.target)));
+function fit(pw) { if (!pw.clientWidth) return; const k = Math.min(1, pw.clientWidth / 415); pw.style.height = 874 * k + 'px'; q('.dev', pw).style.transform = `scale(${k})`; pw._k = k; }
+const phone = (id, kind, v) => `<div class="pw" data-ph="${id}" data-kind="${kind}" data-v="${v}"><div class="dev"><div class="ph"></div></div></div>`;
+function paint(pw) {
+  const id = pw.dataset.ph, kind = pw.dataset.kind, v = pw.dataset.v, ph = q('.ph', pw);
+  ph.className = 'ph v' + v + (V[v].light.includes(kind) ? ' lt' : '');
+  ph.innerHTML = sb + SCR[kind](v, id) + '<div class="tst"></div><div class="hi"></div>';
+  if (kind === 'discover') renderDeck(pw);
+  if (kind === 'match') confetti(q('canvas', ph));
+  if (kind === 'chat') { const m = q('.msgs', ph); m.scrollTop = m.scrollHeight; }
+}
+function mount(root) { qa('.pw', root).forEach(pw => { ro.observe(pw); paint(pw); fit(pw); }); }
+
+/* ---------- deck mechanics ---------- */
+function renderDeck(pw) {
+  const v = pw.dataset.v, st = deckOf(pw.dataset.ph), p = P[st.i % 3], n = P[(st.i + 1) % 3];
+  if (v === 'D') { const s = q('.dsc', pw); s.innerHTML = bento(p); s.scrollTop = 0; return; }
+  const deck = q('.deck', pw);
+  deck.innerHTML = `<div class="card back">${CARD[v](n, { sl: 0, tab: 0, qx: false })}</div><div class="card top">${CARD[v](p, st)}${stamps}</div>`;
+  bindCard(pw, q('.card.top', deck));
+}
+function refreshTop(pw) { const st = deckOf(pw.dataset.ph), c = q('.card.top', pw); if (c) c.innerHTML = CARD[pw.dataset.v](P[st.i % 3], st) + stamps; }
+function bindCard(pw, card) {
+  let d = null;
+  card.addEventListener('pointerdown', e => {
+    if (e.button || e.target.closest('button')) return; // buttons inside the card keep their own click
+    d = { x: e.clientX, y: e.clientY, k: pw._k || 1, id: e.pointerId, mv: 0, dx: 0 };
+    try { card.setPointerCapture(e.pointerId); } catch (_) { } card.style.transition = 'none'; card.classList.add('drag');
+  });
+  card.addEventListener('pointermove', e => {
+    if (!d || e.pointerId !== d.id) return;
+    const dx = (e.clientX - d.x) / d.k, dy = (e.clientY - d.y) / d.k; d.mv = Math.max(d.mv, Math.abs(dx) + Math.abs(dy)); d.dx = dx;
+    card.style.transform = `translate(${dx}px,${dy * .35}px) rotate(${dx * .06}deg)`;
+    q('.stamp.like', card).style.opacity = Math.max(0, Math.min(1, dx / 90)); q('.stamp.pass', card).style.opacity = Math.max(0, Math.min(1, -dx / 90));
+  });
+  const up = e => {
+    if (!d || e.pointerId !== d.id) return; card.classList.remove('drag'); const { dx, mv } = d; d = null;
+    if (Math.abs(dx) > 110) return fling(pw, card, dx > 0 ? 'like' : 'pass');
+    card.style.transition = 'transform .55s var(--spring)'; card.style.transform = ''; qa('.stamp', card).forEach(s => s.style.opacity = 0);
+    if (mv < 6 && pw.dataset.v === 'C') { const st = deckOf(pw.dataset.ph), r = card.getBoundingClientRect(); st.sl = (st.sl + (e.clientX - r.left < r.width * .35 ? 3 : 1)) % 4; refreshTop(pw); }
+  };
+  card.addEventListener('pointerup', up); card.addEventListener('pointercancel', up);
+}
+function fling(pw, card, a) {
+  const st = deckOf(pw.dataset.ph), p = P[st.i % 3], ven = VEN[st.ven || p.date];
+  const s = q(`.stamp.${a}`, card); if (s) s.style.opacity = 1;
+  card.style.transition = 'transform .5s cubic-bezier(.3,.6,.4,1)'; card.style.pointerEvents = 'none';
+  card.style.transform = a === 'like' ? 'translate(560px,40px) rotate(28deg)' : a === 'pass' ? 'translate(-560px,40px) rotate(-28deg)' : 'translate(0,-900px) rotate(-4deg)';
+  react(pw, p, a === 'pass' ? 'Passed' : a === 'like' ? null : a === 'invite' ? `✉ Invite sent: ${ven.n}` : `✦ Spark sent to ${p.first}`, a !== 'pass');
+  setTimeout(() => { st.i++; st.sl = 0; st.qx = false; st.tab = 0; st.ven = null; renderDeck(pw); }, 380);
+}
+function react(pw, p, msg, liked) {
+  const mutual = liked && p.likesYou;
+  toast(pw, msg || (mutual ? `${p.first} liked you too ♥` : `You liked ${p.first}`));
+  if (!mutual) return;
+  ST.match = p.id;
+  if (pw.closest('#flow')) setTimeout(() => go(pw, 4), 750); else setTimeout(() => toast(pw, `It’s a Match with ${p.first}! 🎉`), 1000);
+}
+function toast(pw, t) { const el = q('.tst', pw); if (!el) return; el.textContent = t; el.classList.add('on'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('on'), 1600); }
+function nextBento(pw) { const st = deckOf(pw.dataset.ph); st.i++; renderDeck(pw); }
+
+/* ---------- navigation ---------- */
+const FLOW = [['f1', 'welcome', 'Welcome', 'S1'], ['f2', 'values', 'Values & interests', 'Onboarding step 2 of 3'], ['f3', 'discover', 'Discovery', 'S5'], ['f4', 'match', 'It’s a Match!', 'Celebration'], ['f5', 'chat', 'Chat & first date spot', 'Message + date invite']];
+const edges = v => [{ f: 1, t: 2, l: { A: 'Find Your Person', B: 'Find Your Person', C: 'Slide to meet', D: 'Find Your Person', E: 'Explore Your Neighborhood' }[v] }, { f: 2, t: 3, l: v === 'E' ? 'Stamp my passport' : 'Continue' },
+  { f: 3, t: 4, l: { A: 'Like ♥, it’s mutual', B: 'Like ♥, it’s mutual', C: 'Like ♥, it’s mutual', D: 'Like a block ♥, mutual', E: 'Like or invite, mutual' }[v] }, { f: 4, t: 5, l: 'Send a message' }, { f: 4, t: 3, l: 'Keep swiping', back: true }];
+function go(pw, n) {
+  const flow = pw.closest('#flow');
+  if (!flow) { // standalone phones flip between S1 and S5 only
+    if (n <= 3) { pw.dataset.kind = n === 1 ? 'welcome' : 'discover'; paint(pw); syncFlips(); }
+    else toast(pw, 'Open “5-screen flow” to see this step');
+    return;
+  }
+  const from = +pw.dataset.ph.slice(1), target = q(`.pw[data-ph="f${n}"]`, flow);
+  const ei = edges(ST.fv).findIndex(e => (e.f === from && e.t === n) || (e.f === n && e.t === from && !e.back));
+  if (ei > -1) [q(`.edge[data-e="${ei}"]`), q(`.elab[data-e="${ei}"]`)].forEach(x => { if (!x) return; x.classList.add('flash'); setTimeout(() => x.classList.remove('flash'), 1400); });
+  if (n === 4 || n === 5) paint(target);
+  if (n === 3) renderDeck(target);
+  target.classList.remove('beat'); void target.offsetWidth; target.classList.add('beat');
+  const fl = q('#flow'), r = target.getBoundingClientRect(), fr = fl.getBoundingClientRect();
+  if (r.left < fr.left || r.right > fr.right) fl.scrollBy({ left: r.left - fr.left - fr.width / 2 + r.width / 2, behavior: 'smooth' });
+}
+function drawArcs() {
+  const fl = q('#flow'), svg = q('#arcs'), fb = fl.getBoundingClientRect(); if (!fb.width || !q('#frow .pw')) return;
+  const W2 = fl.scrollWidth, H2 = fl.scrollHeight; svg.setAttribute('width', W2); svg.setAttribute('height', H2); svg.setAttribute('viewBox', `0 0 ${W2} ${H2}`);
+  const box = n => { const el = q(`.pw[data-ph="f${n}"]`, fl), r = el.getBoundingClientRect(), cb = el.closest('.col').getBoundingClientRect().bottom - fb.top; return { l: r.left - fb.left + fl.scrollLeft, t: r.top - fb.top, b: cb, w: r.width }; };
+  let paths = '<defs><marker id="ahd" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#D92D3A"/></marker></defs>', labs = '';
+  edges(ST.fv).forEach((e, i) => {
+    const a = box(e.f), b = box(e.t); let d, lx, ly;
+    if (!e.back) { const x1 = a.l + a.w * .72, x2 = b.l + b.w * .28, y = a.t - 6, h = 64; d = `M${x1},${y} C${x1},${y - h} ${x2},${y - h} ${x2},${y}`; lx = (x1 + x2) / 2; ly = y - h * .75; }
+    else { const x1 = a.l + a.w * .3, x2 = b.l + b.w * .7, y = a.b + 8, h = 44; d = `M${x1},${y} C${x1},${y + h} ${x2},${y + h} ${x2},${y}`; lx = (x1 + x2) / 2; ly = y + h * .75; }
+    paths += `<g class="edge ${e.back ? 'back' : ''}" data-e="${i}"><path class="base" d="${d}" marker-end="url(#ahd)"/><path class="pulse" d="${d}"/></g>`;
+    labs += `<div class="elab" data-e="${i}" style="left:${lx}px;top:${ly}px"><em>${e.f}→${e.t}</em>${e.l}</div>`;
+  });
+  svg.innerHTML = paths; q('#elabs').innerHTML = labs;
+}
+
+/* ---------- interactions inside phones ---------- */
+document.addEventListener('click', e => {
+  const pw = e.target.closest('.pw'); if (!pw) return; const t = e.target, id = pw.dataset.ph, v = pw.dataset.v;
+  const kb = t.closest('[data-knob]');
+  if (kb) { if (kb._drag) { kb._drag = false; return; } return slideDone(pw, kb); }
+  const g = t.closest('[data-go]'); if (g) return go(pw, +g.dataset.go);
+  const val = t.closest('[data-val]');
+  if (val) { const n = val.dataset.val;
+    if (ST.mine.has(n)) ST.mine.delete(n);
+    else if (ST.mine.size >= 5) { val.classList.remove('shake'); void val.offsetWidth; val.classList.add('shake'); return toast(pw, 'Up to 5. Unpick one first'); }
+    else ST.mine.add(n);
+    val.classList.toggle('on', ST.mine.has(n)); q('.cnt', pw).textContent = `${ST.mine.size}/5`;
+    qa('.pw[data-kind="discover"]').forEach(renderDeck); return; }
+  const lk = t.closest('[data-look]'); if (lk) { ST.look = +lk.dataset.look; qa('[data-look]', pw).forEach(b => b.classList.toggle('on', b === lk)); return; }
+  const pol = t.closest('[data-pol]');
+  if (pol) { const i = +pol.dataset.pol, p = P[i], s = shared(p); qa('.pol', pw).forEach(x => x.classList.toggle('front', x === pol));
+    q('.bub.b1', pw).textContent = `${VIC[s[0] || p.vals[0]]} Both love ${s[0] || p.vals[0]}`; q('.bub.b2', pw).textContent = `📍 ${p.km} km away`; return; }
+  const rad = t.closest('[data-rad]'); if (rad) { qa('.rpin', pw).forEach(x => x.classList.toggle('on', x === rad)); q('[data-rp]', pw).innerHTML = rprev(+rad.dataset.rad); return; }
+  const blkBtn = t.closest('[data-bk]');
+  if (blkBtn) { const blk = blkBtn.closest('.blk'), st = deckOf(id), p = P[st.i % 3], lab = blk.dataset.lab, spark = blkBtn.dataset.bk === 'spark';
+    blk.classList.add('liked'); blkBtn.classList.remove('bump'); void blkBtn.offsetWidth; blkBtn.classList.add('bump');
+    ST.liked = { who: p.id, lab: lab === 'photo' || lab === 'second photo' ? 'photo' : lab, txt: blk.dataset.txt };
+    react(pw, p, spark ? `💬 Comment sent on ${p.first}’s ${lab}` : `♥ You liked ${p.first}’s ${lab}`, true);
+    if (!p.likesYou || !pw.closest('#flow')) setTimeout(() => nextBento(pw), 1300); return; }
+  const a = t.closest('[data-a]');
+  if (a) { a.classList.remove('bump'); void a.offsetWidth; a.classList.add('bump');
+    if (v === 'D') { toast(pw, 'Passed'); return setTimeout(() => nextBento(pw), 250); }
+    const c = q('.card.top', pw); if (c) fling(pw, c, a.dataset.a); return; }
+  const voice = t.closest('[data-voice]');
+  if (voice) { const on = voice.classList.toggle('play'); q('.vp', voice).innerHTML = I(on ? 'pause' : 'play', 16); clearTimeout(voice._t);
+    if (on) voice._t = setTimeout(() => { voice.classList.remove('play'); const vp = q('.vp', voice); if (vp) vp.innerHTML = I('play', 16); }, 5000); return; }
+  if (t.closest('[data-quote]')) { const st = deckOf(id); st.qx = !st.qx; refreshTop(pw); return; }
+  const tab = t.closest('[data-tab]'); if (tab) { deckOf(id).tab = +tab.dataset.tab; refreshTop(pw); return; }
+  if (t.closest('[data-ecyc]')) { const st = deckOf(id), p = P[st.i % 3], cur = st.ven || p.date; st.ven = VKEYS[(VKEYS.indexOf(cur) + 1) % VKEYS.length]; refreshTop(pw); return; }
+  const ven = t.closest('[data-ven]'); if (ven) { chatOf(id).venue = ven.dataset.ven; q('.inv', pw).innerHTML = inviteHTML(id); return; }
+  if (t.closest('[data-cycle]')) { const c = chatOf(id); c.state = 'draft'; c.venue = VKEYS[(VKEYS.indexOf(c.venue) + 1) % VKEYS.length]; q('.inv', pw).innerHTML = inviteHTML(id); q('.msgs', pw).scrollTop = 0; return; }
+  if (t.closest('[data-invite]')) { const c = chatOf(id); c.state = 'wait'; q('.inv', pw).innerHTML = inviteHTML(id);
+    setTimeout(() => { c.state = 'yes'; const inv = q('.inv', pw); if (inv) inv.innerHTML = inviteHTML(id); toast(pw, 'It’s a date 🎉'); }, 1500); return; }
+  if (t.closest('.send')) sendMsg(pw);
+});
+document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches('.comp input')) sendMsg(e.target.closest('.pw')); });
+function sendMsg(pw) {
+  const inp = q('.comp input', pw), txt = inp.value.trim() || 'Can’t wait. I’ll be the one with the tote bag 😄', c = chatOf(pw.dataset.ph), m = q('.msgs', pw);
+  inp.value = ''; c.extra.push({ me: true, t: txt });
+  m.insertAdjacentHTML('beforeend', `<div class="msg me">${esc(txt)}</div><div class="typing"><i></i><i></i><i></i></div>`); m.scrollTop = m.scrollHeight;
+  setTimeout(() => { const ty = q('.typing', m); if (ty) ty.remove(); const r = 'Haha perfect. See you Saturday ☀️'; c.extra.push({ me: false, t: r }); m.insertAdjacentHTML('beforeend', `<div class="msg them">${r}</div>`); m.scrollTop = m.scrollHeight; }, 1400);
+}
+/* slide-to-meet (variant C) */
+function slideDone(pw, kb) { const max = kb.parentElement.clientWidth - kb.offsetWidth - 10; kb.classList.remove('hint'); kb.style.transition = 'transform .4s var(--spring)'; kb.style.transform = `translateX(${max}px)`; kb.parentElement.style.setProperty('--sp', 1); setTimeout(() => go(pw, 2), 320); }
+document.addEventListener('pointerdown', e => {
+  const kb = e.target.closest('[data-knob]'); if (!kb || e.button) return;
+  const pw = kb.closest('.pw'), tr = kb.parentElement, k = pw._k || 1, max = tr.clientWidth - kb.offsetWidth - 10, x0 = e.clientX; let dx = 0;
+  kb._drag = false; kb.classList.remove('hint'); try { kb.setPointerCapture(e.pointerId); } catch (_) { } kb.style.transition = 'none';
+  const mv = ev => { dx = Math.max(0, Math.min(max, (ev.clientX - x0) / k)); if (dx > 4) kb._drag = true; kb.style.transform = `translateX(${dx}px)`; tr.style.setProperty('--sp', dx / max); };
+  const up = () => { kb.removeEventListener('pointermove', mv); kb.removeEventListener('pointerup', up); kb.removeEventListener('pointercancel', up);
+    if (!kb._drag) return; if (dx > max * .7) slideDone(pw, kb); else { kb.style.transition = 'transform .45s var(--spring)'; kb.style.transform = ''; tr.style.setProperty('--sp', 0); } };
+  kb.addEventListener('pointermove', mv); kb.addEventListener('pointerup', up); kb.addEventListener('pointercancel', up);
+});
+
+/* ---------- confetti ---------- */
+function confetti(c) {
+  const ctx = c.getContext('2d'), Wc = c.width, Hc = c.height, cols = ['#FFD9C7', '#ffffff', '#FCE8E9', '#FFD166', '#E05A47'];
+  const parts = Array.from({ length: 110 }, (_, i) => ({ x: Wc / 2 + (Math.random() - .5) * 240, y: Hc * .36, vx: (Math.random() - .5) * 24, vy: -Math.random() * 28 - 8, r: 8 + Math.random() * 10, c: cols[i % 5], rot: Math.random() * 6, vr: (Math.random() - .5) * .3, s: i % 3 }));
+  const t0 = performance.now();
+  const frame = now => {
+    ctx.clearRect(0, 0, Wc, Hc);
+    parts.forEach(p => { p.vy += .65; p.vx *= .985; p.x += p.vx; p.y += p.vy; p.rot += p.vr; ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.c; ctx.globalAlpha = Math.max(0, 1 - (now - t0) / 3200);
+      if (p.s === 0) { ctx.beginPath(); ctx.ellipse(0, 0, p.r / 2, p.r / 4.5, 0, 0, 7); ctx.fill(); } else if (p.s === 1) { ctx.beginPath(); ctx.arc(0, 0, p.r / 3, 0, 7); ctx.fill(); } else ctx.fillRect(-p.r / 2, -p.r / 6, p.r, p.r / 3);
+      ctx.restore(); });
+    if (now - t0 < 3300) requestAnimationFrame(frame); else ctx.clearRect(0, 0, Wc, Hc);
+  };
+  requestAnimationFrame(frame);
+}
+
+/* ---------- page: views, picking, handoff ---------- */
+const app = q('#app');
+const specHTML = v => { const s = V[v].spec; return `<dl class="spec"><div><dt>Hero architecture</dt><dd>${s.hero}</dd></div><div><dt>Card mechanic</dt><dd>${s.card}</dd></div><div><dt>Typography</dt><dd>${s.type}</dd></div><div><dt>Best for</dt><dd>${s.best}</dd></div></dl>`; };
+const headHTML = v => `<div class="vh"><span class="k">${v}</span><div>D1-${v} · ${V[v].n}<small>${V[v].t}</small></div>${V[v].rec ? '<span class="rec">Recommended</span>' : ''}</div>`;
+const pickBtn = v => `<button class="use" data-pick="${v}">${ST.pick === v ? `✓ Picked D1-${v}` : `Pick D1-${v}`}</button>`;
+function buildAll() {
+  q('#vgrid').innerHTML = VK.map(v => `<div class="vcol ${ST.pick === v ? 'pk' : ''}" data-v="${v}">${headHTML(v)}
+    <div class="pflip"><button data-pf="welcome">S1 · Welcome</button><button data-pf="discover">S5 · Discovery</button></div>
+    ${phone('a' + v, ST.flip, v)}${specHTML(v)}${pickBtn(v)}</div>`).join('');
+  mount(q('#vgrid')); syncFlips();
+}
+function syncFlips() { qa('.vcol').forEach(c => { const k = q('.pw', c).dataset.kind; qa('[data-pf]', c).forEach(b => b.classList.toggle('on', b.dataset.pf === k)); }); }
+function buildFlow() {
+  FLOW.forEach(([id]) => { delete DECK[id]; delete CHAT[id]; });
+  q('#frow').innerHTML = FLOW.map(([id, kind, n, sub], i) => `<div class="col">${phone(id, kind, ST.fv)}<div class="cap"><b>${i + 1}</b><div>${n}<small>D1-${ST.fv} · ${sub}</small></div></div></div>`).join('');
+  q('#fspec').innerHTML = headHTML(ST.fv) + specHTML(ST.fv).replace('<dl class="spec">', '<dl class="spec">') + pickBtn(ST.fv);
+  qa('#fpick button').forEach(b => b.classList.toggle('on', b.dataset.fv === ST.fv));
+  mount(q('#frow')); requestAnimationFrame(drawArcs);
+}
+function buildH2H() {
+  q('#hgrid').innerHTML = ST.h.map((v, i) => `<div class="hcol ${ST.pick === v ? 'pk' : ''}"><div class="seg">${VK.map(x => `<button data-hs="${i}" data-v="${x}" class="${x === v ? 'on' : ''}">D1-${x}</button>`).join('')}</div>
+    ${headHTML(v)}<div class="two">${phone(`h${i}${v}w`, 'welcome', v)}${phone(`h${i}${v}d`, 'discover', v)}</div>${specHTML(v)}${pickBtn(v)}</div>`).join('');
+  mount(q('#hgrid'));
+}
+function setMode(m) {
+  ST.mode = m; save(); ['all', 'flow', 'h2h'].forEach(x => app.classList.toggle('m-' + x, x === m));
+  qa('#mode button').forEach(b => b.classList.toggle('on', b.dataset.m === m));
+  if (m === 'all' && !q('#vgrid .pw')) buildAll();
+  if (m === 'flow') { if (!q('#frow .pw')) buildFlow(); requestAnimationFrame(drawArcs); }
+  if (m === 'h2h' && !q('#hgrid .pw')) buildH2H();
+}
+function setFlip(s) {
+  ST.flip = s; save(); qa('#flip button').forEach(b => b.classList.toggle('on', b.dataset.s === s));
+  qa('#vgrid .pw').forEach(pw => { if (pw.dataset.kind !== s) { pw.dataset.kind = s; paint(pw); } }); syncFlips();
+}
+function setPick(v) {
+  ST.pick = v; save();
+  qa('[data-pick]').forEach(b => { const x = b.dataset.pick; b.textContent = x === v ? `✓ Picked D1-${x}` : `Pick D1-${x}`; });
+  qa('.vcol').forEach(c => c.classList.toggle('pk', c.dataset.v === v));
+  qa('.hcol').forEach((c, i) => c.classList.toggle('pk', ST.h[i] === v));
+  renderHand();
+}
+const promptFor = v => { const x = V[v]; return `Apply D1-${v} "${x.n}" to Comradia, in the D1 palette (blush alabaster #FBF6F4, espresso ink #231214, crimson #D92D3A, terracotta #E05A47, rose blush #FCE8E9) with warm everyday dating copy. Hero: ${x.spec.hero} Card: ${x.spec.card} Type: ${x.spec.type} Carry this layout language across all 11 screens of the flow chart.`; };
+function renderHand() { const x = V[ST.pick];
+  q('#hT').innerHTML = `Picked: D1-${ST.pick} · ${x.n}<small>${x.rec ? 'Recommended. ' : ''}Copy this and send it to me to roll it out</small>`;
+  q('#hChip').textContent = promptFor(ST.pick); q('#hCopy').textContent = `Copy “Apply D1-${ST.pick}”`; }
+q('#hCopy').onclick = async () => {
+  const b = q('#hCopy');
+  try { await navigator.clipboard.writeText(promptFor(ST.pick)); b.textContent = 'Copied ✓'; }
+  catch (_) { const r = document.createRange(); r.selectNodeContents(q('#hChip')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); b.textContent = 'Selected, press ⌘C'; }
+  setTimeout(renderHand, 1800);
+};
+// page-level controls (outside phones)
+q('#pal').innerHTML = [['#FBF6F4', 'Ground'], ['#231214', 'Ink'], ['#D92D3A', 'Crimson'], ['#E05A47', 'Terracotta'], ['#FCE8E9', 'Blush']].map(([c, n]) => `<i title="${n} ${c}" style="background:${c}"></i>`).join('') + '<span>D1 · CRIMSON TERRACOTTA</span>';
+q('#fpick').innerHTML = VK.map(v => `<button data-fv="${v}">D1-${v}</button>`).join('');
+app.addEventListener('click', e => {
+  const t = e.target; if (t.closest('.pw')) return;
+  const m = t.closest('[data-m]'); if (m) return setMode(m.dataset.m);
+  const f = t.closest('[data-s]'); if (f && f.closest('#flip')) return setFlip(f.dataset.s);
+  const pf = t.closest('[data-pf]'); if (pf) { const pw = q('.pw', pf.closest('.vcol')); pw.dataset.kind = pf.dataset.pf; paint(pw); syncFlips(); return; }
+  const fv = t.closest('[data-fv]'); if (fv) { ST.fv = fv.dataset.fv; save(); buildFlow(); return; }
+  const hs = t.closest('[data-hs]'); if (hs) { ST.h[+hs.dataset.hs] = hs.dataset.v; save(); buildH2H(); return; }
+  const pk = t.closest('[data-pick]'); if (pk) return setPick(pk.dataset.pick);
+});
+new ResizeObserver(() => ST.mode === 'flow' && drawArcs()).observe(q('#flow'));
+q('#flow').addEventListener('scroll', drawArcs, { passive: true });
+
+setFlip(ST.flip); setMode(ST.mode); renderHand();
+window.__d1 = { ST, go, setMode, setFlip, setPick, DECK, CHAT };
+})();
+</script>
+</body>
+</html>

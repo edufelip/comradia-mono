@@ -1,0 +1,1887 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Comradia — Interactive Prototype</title>
+<style>
+  :root {
+    --bg: #f8f5f2;
+    --surface: #ffffff;
+    --raised: #fdfcfb;
+    --sunken: #f1ebe5;
+    --ink: #181211;
+    --muted: #5c524f;
+    --faint: #8a7e7a;
+    --line: #e6dfd9;
+    --accent: #c83232;
+    --accent-2: #e0533c;
+    --accent-soft: rgba(200, 50, 50, 0.12);
+    --ok: #1f7a4c;
+    --ok-soft: #e3efe6;
+    --bad: #b3261e;
+    --bad-soft: #fee2e2;
+    --warn: #b45309;
+    --warn-soft: #ffedd5;
+    --open: #7c3aed;
+    --open-soft: #f3e8ff;
+    --shadow: 0 1px 2px rgba(24, 18, 17, 0.04), 0 8px 28px rgba(24, 18, 17, 0.06);
+    --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+    --spring: cubic-bezier(0.2, 0.9, 0.25, 1.05);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #110d0d;
+      --surface: #1c1616;
+      --raised: #241c1c;
+      --sunken: #282020;
+      --ink: #ffffff;
+      --muted: #c4b8b8;
+      --faint: #9c8e8e;
+      --line: #362b2b;
+      --accent: #f87171;
+      --accent-2: #fb923c;
+      --accent-soft: rgba(248, 113, 113, 0.16);
+      --ok: #4ade80;
+      --ok-soft: #16301f;
+      --bad: #f87171;
+      --bad-soft: rgba(127, 29, 29, 0.45);
+      --warn: #fbbf24;
+      --warn-soft: #3a2610;
+      --open: #c084fc;
+      --open-soft: rgba(88, 28, 135, 0.4);
+      --shadow: 0 2px 6px rgba(0, 0, 0, 0.35), 0 12px 32px rgba(0, 0, 0, 0.45);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #110d0d;
+    --surface: #1c1616;
+    --raised: #241c1c;
+    --sunken: #282020;
+    --ink: #ffffff;
+    --muted: #c4b8b8;
+    --faint: #9c8e8e;
+    --line: #362b2b;
+    --accent: #f87171;
+    --accent-2: #fb923c;
+    --accent-soft: rgba(248, 113, 113, 0.16);
+    --ok: #4ade80;
+    --ok-soft: #16301f;
+    --bad: #f87171;
+    --bad-soft: rgba(127, 29, 29, 0.45);
+    --warn: #fbbf24;
+    --warn-soft: #3a2610;
+    --open: #c084fc;
+    --open-soft: rgba(88, 28, 135, 0.4);
+    --shadow: 0 2px 6px rgba(0, 0, 0, 0.35), 0 12px 32px rgba(0, 0, 0, 0.45);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    letter-spacing: -0.01em;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  .wrap {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 20px 16px 88px;
+  }
+
+  /* Top sticky toolbar */
+  .topbar {
+    position: sticky;
+    top: 10px;
+    z-index: 40;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 8px 14px;
+    box-shadow: var(--shadow);
+    margin-bottom: 36px;
+  }
+
+  .brand-lock {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    font-size: 15px;
+  }
+
+  .brand-star {
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+  }
+
+  .top-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .seg {
+    position: relative;
+    display: inline-flex;
+    background: var(--sunken);
+    border-radius: 999px;
+    padding: 3px;
+    gap: 2px;
+  }
+
+  .seg button {
+    position: relative;
+    z-index: 1;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 11px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: color 0.2s var(--ease);
+  }
+
+  .seg button[aria-pressed="true"] {
+    background: var(--surface);
+    color: var(--ink);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Hero */
+  .hero {
+    text-align: center;
+    margin-bottom: 56px;
+  }
+
+  .eyebrow {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    background: var(--accent-soft);
+    padding: 5px 12px;
+    border-radius: 999px;
+    margin-bottom: 14px;
+  }
+
+  h1 {
+    font-size: clamp(32px, 5vw, 56px);
+    line-height: 1.08;
+    letter-spacing: -0.025em;
+    margin: 0 0 14px;
+    font-weight: 700;
+  }
+
+  .grad-text {
+    background: linear-gradient(120deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .hero-lead {
+    max-width: 640px;
+    margin: 0 auto 18px;
+    font-size: 18px;
+    color: var(--muted);
+  }
+
+  .hero-meta {
+    font-size: 12.5px;
+    color: var(--faint);
+  }
+
+  /* Before / After scenes */
+  .ba-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+    gap: 18px;
+    margin-top: 28px;
+  }
+
+  .card {
+    background: var(--surface);
+    border-radius: 24px;
+    padding: 20px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--line);
+  }
+
+  .ba-tag {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 4px 10px;
+    border-radius: 999px;
+    margin-bottom: 10px;
+  }
+
+  .ba-tag.bad {
+    background: var(--bad-soft);
+    color: var(--bad);
+  }
+
+  .ba-tag.good {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  .scene-svg {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 16px;
+    background: var(--sunken);
+    margin-bottom: 10px;
+  }
+
+  .ba-caption {
+    font-weight: 600;
+    font-size: 14.5px;
+    margin: 0;
+  }
+
+  /* Section headings */
+  .sec-head {
+    text-align: center;
+    margin: 56px 0 24px;
+  }
+
+  .sec-head h2 {
+    font-size: clamp(24px, 3.8vw, 38px);
+    margin: 0 0 8px;
+    letter-spacing: -0.02em;
+  }
+
+  .sec-head p {
+    color: var(--muted);
+    margin: 0 auto;
+    max-width: 560px;
+  }
+
+  /* Problems grid */
+  .prob-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+  }
+
+  .prob-card {
+    text-align: left;
+    cursor: pointer;
+    transition: transform 0.2s var(--spring), border-color 0.2s var(--ease);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .prob-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--accent);
+  }
+
+  .prob-icon-tile {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .prob-title {
+    font-weight: 700;
+    font-size: 17px;
+    margin: 0;
+  }
+
+  .prob-body {
+    color: var(--muted);
+    font-size: 14px;
+    margin: 0;
+  }
+
+  .prob-fix {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ok);
+    background: var(--ok-soft);
+    padding: 8px 10px;
+    border-radius: 10px;
+    margin-top: auto;
+  }
+
+  .prob-cta {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+  }
+
+  /* Filter & Search bar */
+  .filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .chip {
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--muted);
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+
+  .chip[aria-pressed="true"] {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+
+  .search-input {
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+    font: inherit;
+    font-size: 13px;
+    padding: 7px 14px;
+    border-radius: 999px;
+    min-width: 200px;
+  }
+
+  /* Scenario Picker Grid */
+  .scenario-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 10px;
+    margin-bottom: 22px;
+  }
+
+  .scen-tile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-align: left;
+    padding: 12px 14px;
+    border-radius: 18px;
+    border: 1.5px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+    font: inherit;
+    cursor: pointer;
+    transition: transform 0.18s var(--ease), border-color 0.18s var(--ease);
+  }
+
+  .scen-tile[aria-selected="true"] {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+
+  .scen-icon {
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+    border-radius: 11px;
+    background: var(--sunken);
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .scen-meta {
+    min-width: 0;
+  }
+
+  .scen-title {
+    font-weight: 700;
+    font-size: 13.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .scen-area {
+    font-size: 11.5px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  /* Stage */
+  .stage {
+    border-radius: 28px;
+    padding: 22px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow);
+  }
+
+  .stage-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 18px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .stage-title {
+    font-size: 20px;
+    font-weight: 700;
+    margin: 0 0 4px;
+  }
+
+  .stage-q {
+    font-size: 14px;
+    color: var(--muted);
+    margin: 0;
+  }
+
+  /* Workspace Grid: Left Phone Prototype + Right Outcomes & Flow */
+  .workspace-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    align-items: start;
+    margin-bottom: 22px;
+  }
+
+  /* Phone / App Simulator Frame */
+  .phone-frame {
+    background: var(--bg);
+    border: 2px solid var(--line);
+    border-radius: 26px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 490px;
+  }
+
+  .phone-statusbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+    padding: 0 4px;
+  }
+
+  .phone-screen-switcher {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    background: var(--sunken);
+    padding: 4px;
+    border-radius: 12px;
+  }
+
+  .phone-screen-switcher button {
+    flex: 1 1 auto;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 5px 7px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+
+  .phone-screen-switcher button[aria-pressed="true"] {
+    background: var(--surface);
+    color: var(--accent);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+  }
+
+  .phone-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .ds-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .ds-pill-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .ds-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--accent);
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  .ds-badge.neutral {
+    border-color: var(--line);
+    background: var(--sunken);
+    color: var(--ink);
+  }
+
+  .ds-cause-btn {
+    border: 1px solid var(--line);
+    background: var(--sunken);
+    color: var(--ink);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 5px 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.15s var(--ease);
+  }
+
+  .ds-cause-btn:hover,
+  .ds-cause-btn.selected {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  .ds-praxis-box {
+    background: var(--sunken);
+    border: 1px dashed var(--accent);
+    border-radius: 12px;
+    padding: 10px 12px;
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .ds-praxis-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 3px;
+  }
+
+  .ds-btn {
+    border: 0;
+    border-radius: 999px;
+    padding: 10px 16px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+  }
+
+  .ds-btn.primary {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .ds-btn.secondary {
+    background: var(--sunken);
+    color: var(--ink);
+    border: 1px solid var(--line);
+  }
+
+  .ds-input {
+    width: 100%;
+    border: 1px solid var(--line);
+    color: var(--ink);
+    font: inherit;
+    font-size: 13px;
+    padding: 8px 11px;
+    border-radius: 10px;
+  }
+
+  /* Outcomes & Diagram panel */
+  .outcome-col {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .outcome-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 10px;
+  }
+
+  .outcome-card {
+    background: var(--sunken);
+    border-radius: 16px;
+    padding: 14px;
+    border: 1.5px solid transparent;
+  }
+
+  .outcome-card.active {
+    border-color: var(--accent);
+    background: var(--surface);
+  }
+
+  .verdict-pill {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 999px;
+    margin-bottom: 6px;
+  }
+
+  .verdict-pill.Solved {
+    background: var(--ok-soft);
+    color: var(--ok);
+  }
+
+  .verdict-pill.Problem {
+    background: var(--bad-soft);
+    color: var(--bad);
+  }
+
+  .verdict-pill.Catch {
+    background: var(--warn-soft);
+    color: var(--warn);
+  }
+
+  /* Diagram box */
+  .diagram-scroll {
+    width: 100%;
+    overflow-x: auto;
+    background: var(--sunken);
+    border-radius: 18px;
+    padding: 10px;
+    border: 1px solid var(--line);
+  }
+
+  .diagram-svg {
+    width: 100%;
+    min-width: 640px;
+    height: auto;
+    display: block;
+  }
+
+  .swipe-hint {
+    display: none;
+    font-size: 11px;
+    color: var(--faint);
+    text-align: center;
+    margin-top: 4px;
+  }
+
+  @media (max-width: 680px) {
+    .swipe-hint {
+      display: block;
+    }
+  }
+
+  /* Steps row */
+  .steps-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 16px 0 10px;
+  }
+
+  .steps-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 10px;
+  }
+
+  .step-card {
+    background: var(--sunken);
+    border: 1.5px solid var(--line);
+    border-radius: 16px;
+    padding: 12px 14px;
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .step-card.active {
+    border-color: var(--accent);
+    background: var(--surface);
+  }
+
+  .status-chip {
+    display: inline-block;
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 999px;
+    margin-bottom: 6px;
+  }
+
+  .status-chip.works {
+    background: var(--ok-soft);
+    color: var(--ok);
+  }
+
+  .status-chip.proposed {
+    background: var(--open-soft);
+    color: var(--open);
+  }
+
+  .tech-line {
+    margin-top: 6px;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 11.5px;
+    color: var(--accent);
+    background: var(--accent-soft);
+    padding: 4px 8px;
+    border-radius: 6px;
+    word-break: break-word;
+  }
+
+  .in-short {
+    margin-top: 14px;
+    padding: 12px 16px;
+    background: var(--sunken);
+    border-radius: 14px;
+    font-size: 14px;
+  }
+
+  /* Decision table */
+  .table-wrap {
+    overflow-x: auto;
+    background: var(--surface);
+    border-radius: 20px;
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 540px;
+  }
+
+  th, td {
+    text-align: left;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--line);
+    font-size: 13.5px;
+  }
+
+  th {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    background: var(--sunken);
+  }
+
+  footer {
+    margin-top: 48px;
+    text-align: center;
+    font-size: 12.5px;
+    color: var(--faint);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <!-- Sticky Topbar -->
+  <header class="topbar">
+    <div class="brand-lock">
+      <span class="brand-star" aria-hidden="true">★</span>
+      <span>Comradia</span>
+      <span style="font-size:12px;color:var(--muted);font-weight:500;">comradia-mono</span>
+    </div>
+    <div class="top-controls">
+      <div class="seg" id="langSeg" role="group" aria-label="Language">
+        <button type="button" data-lang="en-US" aria-pressed="true">EN-US</button>
+        <button type="button" data-lang="pt-BR" aria-pressed="false">PT-BR</button>
+      </div>
+      <div class="seg" id="levelSeg" role="group" aria-label="Reading level">
+        <button type="button" data-level="simple" aria-pressed="true" id="lblSimple">Simple</button>
+        <button type="button" data-level="technical" aria-pressed="false" id="lblTech">Technical</button>
+      </div>
+      <div class="seg" id="themeSeg" role="group" aria-label="Theme">
+        <button type="button" data-theme-val="light" aria-pressed="true">Light</button>
+        <button type="button" data-theme-val="dark" aria-pressed="false">Dark</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 1. Hero -->
+  <section class="hero">
+    <span class="eyebrow" id="heroEyebrow">Interactive Prototype · edufelip/comradia-mono</span>
+    <h1>
+      <span>Comradia.</span>
+      <span class="grad-text" id="heroHeadlineGrad">Where solidarity meets romance.</span>
+    </h1>
+    <p class="hero-lead" id="heroLead">
+      Skip the political dealbreakers. Match over <strong>shared causes</strong>, <strong>praxis prompts</strong>, and <strong>mutual aid</strong> — built on the MyChampions Expo 54 + Bun/Elysia + Drizzle stack.
+    </p>
+    <p class="hero-meta" id="heroMeta">
+      As of 2026-11-10 · Repo wired to GitHub (edufelip/comradia-mono) · 6 interactive scenarios below
+    </p>
+
+    <!-- Before / After Illustrated Hero Scenes -->
+    <div class="ba-grid">
+      <div class="card">
+        <span class="ba-tag bad" id="baTodayTag">Today · Mainstream Swipe Apps</span>
+        <svg class="scene-svg" viewBox="0 0 420 150" aria-label="Mainstream dating swipe fatigue illustration">
+          <defs>
+            <linearGradient id="grad-hero-today" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#b3261e" />
+              <stop offset="100%" stop-color="#f59e0b" />
+            </linearGradient>
+          </defs>
+          <rect x="20" y="30" width="90" height="90" rx="18" fill="#282020" stroke="#8a7e7a" stroke-width="1.5" />
+          <text x="65" y="72" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="700">Photo Deck</text>
+          <text x="65" y="90" text-anchor="middle" fill="#c4b8b8" font-size="10">100 swipes</text>
+          <path id="path-today" d="M115 75 C 175 75, 215 75, 275 75" stroke="#b3261e" stroke-width="2" stroke-dasharray="4 6" fill="none" />
+          <circle r="5" fill="url(#grad-hero-today)">
+            <animateMotion dur="2.2s" repeatCount="indefinite" path="M115 75 C 175 75, 215 75, 275 75" />
+          </circle>
+          <line x1="210" y1="52" x2="230" y2="98" stroke="#b3261e" stroke-width="3" />
+          <rect x="280" y="30" width="120" height="90" rx="18" fill="#282020" stroke="#b3261e" stroke-width="1.5" />
+          <text x="340" y="70" text-anchor="middle" fill="#f87171" font-size="12" font-weight="700">Date 3 Clash</text>
+          <text x="340" y="90" text-anchor="middle" fill="#c4b8b8" font-size="10">Hidden values</text>
+        </svg>
+        <p class="ba-caption" id="baTodayCap">Endless photo swiping hides dealbreakers until an awkward third date.</p>
+      </div>
+
+      <div class="card">
+        <span class="ba-tag good" id="baWithTag">With Comradia · Cause & Praxis First</span>
+        <svg class="scene-svg" viewBox="0 0 420 150" aria-label="Comradia cause-first matching illustration">
+          <defs>
+            <linearGradient id="grad-hero-with" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#c83232" />
+              <stop offset="100%" stop-color="#e0533c" />
+            </linearGradient>
+          </defs>
+          <rect x="20" y="30" width="105" height="90" rx="18" fill="#282020" stroke="#c83232" stroke-width="1.5" />
+          <text x="72" y="68" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="700">Cause + Praxis</text>
+          <text x="72" y="88" text-anchor="middle" fill="#f87171" font-size="10">#Climate · Union</text>
+          <path d="M130 75 C 185 75, 220 75, 275 75" stroke="#1f7a4c" stroke-width="2.2" stroke-dasharray="4 6" fill="none" />
+          <circle r="5" fill="url(#grad-hero-with)">
+            <animateMotion dur="2s" repeatCount="indefinite" path="M130 75 C 185 75, 220 75, 275 75" />
+          </circle>
+          <rect x="280" y="30" width="120" height="90" rx="18" fill="url(#grad-hero-with)" />
+          <text x="340" y="68" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="700">Solidarity Match</text>
+          <text x="340" y="88" text-anchor="middle" fill="#ffe4e6" font-size="10">Note opens chat</text>
+        </svg>
+        <p class="ba-caption" id="baWithCap">Tap any Cause or Praxis Prompt to send a Solidarity Note that starts the chat.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. Three Problems -->
+  <section>
+    <div class="sec-head">
+      <h2 id="probHeading">Three problems. One solidarity-first design.</h2>
+      <p id="probSub">Click any card to filter the interactive scenario player below.</p>
+    </div>
+    <div class="prob-grid" id="problemsGrid"></div>
+  </section>
+
+  <!-- 3. Scenario Player & Clickable App Simulator -->
+  <section id="playerSection">
+    <div class="sec-head">
+      <h2 id="playerHeading">Play it out & test the live prototype.</h2>
+      <p id="playerSub">Every scenario below is wired to an interactive screen on the left and the monorepo architecture diagram on the right.</p>
+    </div>
+
+    <div class="filter-bar">
+      <div class="filter-chips" id="filterChips" role="group" aria-label="Filter scenarios by area"></div>
+      <input type="search" id="scenarioSearch" class="search-input" placeholder="Search scenarios..." aria-label="Search scenarios" />
+    </div>
+
+    <div class="scenario-grid" id="scenarioGrid" role="listbox" aria-label="Scenarios"></div>
+
+    <div class="stage">
+      <div class="stage-header">
+        <div>
+          <h3 class="stage-title" id="stageTitle"></h3>
+          <p class="stage-q" id="stageQuestion"></p>
+        </div>
+        <div class="seg" id="modeSeg" role="group" aria-label="Compare Today vs With Comradia">
+          <button type="button" data-mode="with" aria-pressed="true" id="btnModeWith">With Comradia</button>
+          <button type="button" data-mode="today" aria-pressed="false" id="btnModeToday">Today (Without)</button>
+        </div>
+      </div>
+
+      <div class="workspace-grid">
+        <!-- Left: Clickable Interactive App / Website Prototype -->
+        <div class="phone-frame" id="phoneFrame">
+          <div class="phone-statusbar">
+            <span>Comradia OS</span>
+            <span id="phonePortBadge">:3410 API · :8081 Expo</span>
+          </div>
+          <div class="phone-screen-switcher" id="screenSwitcher" role="tablist" aria-label="Prototype screens">
+            <button type="button" data-screen="waitlist" aria-pressed="false">1. Waitlist</button>
+            <button type="button" data-screen="onboarding-identity" aria-pressed="false">2. Identity</button>
+            <button type="button" data-screen="onboarding-causes" aria-pressed="false">3. Causes</button>
+            <button type="button" data-screen="discovery" aria-pressed="true">4. Comrades</button>
+            <button type="button" data-screen="matches" aria-pressed="false">5. Solidarity</button>
+            <button type="button" data-screen="profile" aria-pressed="false">6. Praxis</button>
+          </div>
+          <div class="phone-body" id="phoneBody"></div>
+        </div>
+
+        <!-- Right: Outcome comparison + Full-width SVG diagram + Step cards -->
+        <div class="outcome-col">
+          <div class="outcome-grid">
+            <div class="outcome-card" id="outCardToday">
+              <span class="verdict-pill Problem" id="outVerdictToday"></span>
+              <div style="font-size:13.5px;font-weight:600;" id="outTextToday"></div>
+            </div>
+            <div class="outcome-card active" id="outCardWith">
+              <span class="verdict-pill Solved" id="outVerdictWith"></span>
+              <div style="font-size:13.5px;font-weight:600;" id="outTextWith"></div>
+            </div>
+          </div>
+
+          <div class="diagram-scroll">
+            <svg class="diagram-svg" id="archSvg" viewBox="0 0 760 250" aria-label="Comradia monorepo architecture flow">
+              <defs>
+                <linearGradient id="grad-diag-node" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stop-color="#c83232" />
+                  <stop offset="100%" stop-color="#e0533c" />
+                </linearGradient>
+              </defs>
+              <!-- Monorepo boundary -->
+              <rect x="155" y="16" width="585" height="218" rx="20" fill="none" stroke="#c83232" stroke-width="1.5" stroke-dasharray="6 6" opacity="0.55" />
+              <text x="172" y="36" fill="#c83232" font-size="11" font-weight="700">comradia-mono (Bun 1.3.14 + Docker local stack)</text>
+
+              <!-- Edges -->
+              <path id="e-user-web" data-edge="e-user-web" d="M115 95 C 155 65, 185 65, 220 65" stroke="#8a7e7a" stroke-width="2.2" fill="none" />
+              <path id="e-user-mobile" data-edge="e-user-mobile" d="M115 145 C 155 175, 185 175, 220 175" stroke="#8a7e7a" stroke-width="2.2" fill="none" />
+              <path id="e-web-api" data-edge="e-web-api" d="M340 65 C 380 65, 400 110, 435 120" stroke="#8a7e7a" stroke-width="2.2" fill="none" />
+              <path id="e-mobile-api" data-edge="e-mobile-api" d="M340 175 C 380 175, 400 135, 435 125" stroke="#8a7e7a" stroke-width="2.2" fill="none" />
+              <path id="e-api-db" data-edge="e-api-db" d="M555 125 L 615 125" stroke="#8a7e7a" stroke-width="2.2" fill="none" />
+
+              <!-- Polygon arrowheads layer -->
+              <g id="arrowLayer"></g>
+
+              <!-- Nodes -->
+              <g id="n-user" transform="translate(20, 85)">
+                <rect width="95" height="70" rx="14" fill="#282020" stroke="#8a7e7a" stroke-width="1.5" />
+                <text x="47" y="34" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="700">Comrade</text>
+                <text x="47" y="52" text-anchor="middle" fill="#c4b8b8" font-size="10">Web / iOS / Android</text>
+              </g>
+
+              <g id="n-web" transform="translate(220, 35)">
+                <rect width="120" height="62" rx="14" fill="#282020" stroke="#8a7e7a" stroke-width="1.5" />
+                <text x="60" y="28" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="700">apps/website</text>
+                <text x="60" y="45" text-anchor="middle" fill="#c4b8b8" font-size="10">Static HTML :3510</text>
+              </g>
+
+              <g id="n-mobile" transform="translate(220, 145)">
+                <rect width="120" height="66" rx="14" fill="url(#grad-diag-node)" />
+                <text x="60" y="28" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="700">apps/mobile</text>
+                <text x="60" y="46" text-anchor="middle" fill="#ffe4e6" font-size="10">Expo 54 + Zustand</text>
+              </g>
+
+              <g id="n-api" transform="translate(435, 92)">
+                <rect width="120" height="66" rx="14" fill="url(#grad-diag-node)" />
+                <text x="60" y="28" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="700">apps/server</text>
+                <text x="60" y="46" text-anchor="middle" fill="#ffe4e6" font-size="10">Bun + Elysia :3410</text>
+              </g>
+
+              <g id="n-db" transform="translate(615, 92)">
+                <rect width="110" height="66" rx="14" fill="#282020" stroke="#1f7a4c" stroke-width="1.8" />
+                <text x="55" y="28" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="700">Postgres 16</text>
+                <text x="55" y="46" text-anchor="middle" fill="#4ade80" font-size="10">Drizzle :15442</text>
+              </g>
+
+              <!-- Animated packet -->
+              <circle id="packetDot" r="6" fill="#c83232" opacity="0" />
+            </svg>
+            <div class="swipe-hint">Swipe sideways to inspect full architecture diagram ›</div>
+          </div>
+
+          <div class="steps-bar">
+            <span style="font-size:12.5px;font-weight:700;color:var(--muted);" id="stepsHeading">Step-by-step trace (click any step):</span>
+            <button type="button" class="ds-btn secondary" id="btnNextStep" style="padding:5px 12px;font-size:12px;">Next Step ›</button>
+          </div>
+          <div class="steps-grid" id="stepsGrid"></div>
+          <div class="in-short" id="inShortBox"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. Open Decisions & Status Matrix -->
+  <section>
+    <div class="sec-head">
+      <h2 id="matrixHeading">What is shipped vs. what we build next</h2>
+      <p id="matrixSub">Honest status of every layer in ~/Projects/comradia-mono right now.</p>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Capability / Layer</th>
+            <th>Status</th>
+            <th>Source in comradia-mono</th>
+            <th>Next Action / Decision</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Monorepo + Docker Postgres (:15442) & Redis (:16389)</strong></td>
+            <td><span class="status-chip works">Works in repo</span></td>
+            <td><code>docker-compose.local.yml</code>, <code>scripts/local-db.sh</code></td>
+            <td>Ready for local dev (<code>bun run local:db:up</code>).</td>
+          </tr>
+          <tr>
+            <td><strong>Elysia API + Drizzle Schema (profiles, swipes, matches, messages)</strong></td>
+            <td><span class="status-chip works">Works in repo</span></td>
+            <td><code>apps/server/src/app.ts</code>, <code>src/db/schema.ts</code></td>
+            <td>Run <code>drizzle-kit generate && drizzle-kit migrate</code> and wire DB repo classes.</td>
+          </tr>
+          <tr>
+            <td><strong>Expo 54 Mobile Shell (Comrades, Solidarity, Praxis tabs + DS tokens)</strong></td>
+            <td><span class="status-chip works">Works in repo</span></td>
+            <td><code>apps/mobile/app/(tabs)/*</code>, <code>constants/design-system.ts</code></td>
+            <td>Add the Solidarity Note drawer & Onboarding screens prototyped above.</td>
+          </tr>
+          <tr>
+            <td><strong>Distance / City Filter & Cooperative Dues Model</strong></td>
+            <td><span class="status-chip proposed">To decide</span></td>
+            <td>Product roadmap</td>
+            <td>Decide whether city matching is strict per-city or radius-based, and free vs. sliding-scale solidarity dues.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    <p>Sources: <code>~/Projects/comradia-mono/apps/mobile/constants/design-system.ts</code> · <code>apps/server/src/db/schema.ts</code> · <code>apps/server/src/app.ts</code>. Drawings are illustrations, not product photos.</p>
+  </footer>
+</div>
+
+<script>
+const DATA = {"meta": {"appName": "Comradia", "repo": "edufelip/comradia-mono", "serverPort": 3410, "websitePort": 3510, "postgresPort": 15442, "redisPort": 16389, "tokens": {"light": {"canvas": "#f8f5f2", "surface": "#ffffff", "surfaceMuted": "#f1ebe5", "textPrimary": "#181211", "textSecondary": "#5c524f", "accentPrimary": "#c83232"}, "dark": {"canvas": "#110d0d", "surface": "#1c1616", "surfaceMuted": "#282020", "textPrimary": "#ffffff", "textSecondary": "#c4b8b8", "accentPrimary": "#f87171"}}}, "tendencies": ["Democratic Socialist", "Eco-Socialist", "Social Democrat", "Anarcho-Syndicalist", "Labor / Unionist", "Progressive"], "allCauses": ["Labor Rights", "Climate Justice", "Tenant Union", "Universal Healthcare", "Queer Liberation", "Transit For All", "Public Education", "Free Software", "Mutual Aid", "Zine Libraries"], "candidates": [{"id": "comrade-maya", "displayName": "Maya", "age": 28, "pronouns": "she/her", "city": "São Paulo", "tendency": "Eco-Socialist", "causes": ["Climate Justice", "Transit For All", "Tenant Union"], "bio": "Urban planner by day, community garden organizer by weekend. Looking for someone to bike with and debate degrowth over espresso.", "praxisPrompt": "Ideal first date: solidarity kitchen prep then live samba at a cooperative bar.", "unionMember": true}, {"id": "comrade-lucas", "displayName": "Lucas", "age": 31, "pronouns": "he/him", "city": "Florianópolis", "tendency": "Democratic Socialist", "causes": ["Labor Rights", "Public Education", "Free Software"], "bio": "Public school history teacher & teachers union steward. Big fan of sci-fi, Ursula K. Le Guin, and beach hikes.", "praxisPrompt": "Ask me about my homemade sourdough starter named Rosa Luxemburg.", "unionMember": true}, {"id": "comrade-val", "displayName": "Val", "age": 26, "pronouns": "they/them", "city": "Rio de Janeiro", "tendency": "Anarcho-Syndicalist", "causes": ["Mutual Aid", "Queer Liberation", "Zine Libraries"], "bio": "Riso printer, dog fosterer, and neighborhood mutual-aid coordinator. Swipe left (in a good way) if you love punk shows and feijoada.", "praxisPrompt": "Together we could seize the means of weekend brunch.", "unionMember": false}], "problems": [{"id": "prob-dealbreaker", "icon": "compass", "title": {"en-US": "Values hidden until date three.", "pt-BR": "Valores escondidos até o terceiro encontro."}, "body": {"en-US": "Mainstream apps bury politics under vague tags, wasting evenings on fundamental worldview clashes.", "pt-BR": "Apps comuns escondem política sob tags vagas, gerando encontros frustrantes por visões de mundo incompatíveis."}, "fix": {"en-US": "Fix: Upfront Political Tendency, Union badge, and Core Causes on every profile header.", "pt-BR": "Solução: Tendência Política, selo Sindicalizado e Causas no topo de cada perfil."}}, {"id": "prob-swipe", "icon": "spark", "title": {"en-US": "Mindless photo swiping.", "pt-BR": "Swipes mecânicos só por foto."}, "body": {"en-US": "Binary left/right swipes reward superficial snap judgments instead of shared community commitment.", "pt-BR": "Swipes binários recompensam julgamentos superficiais em vez de afinidade real e engajamento."}, "fix": {"en-US": "Fix: Hinge-style 'Send Solidarity' directly on a specific Cause chip or Praxis Prompt with a note.", "pt-BR": "Solução: 'Enviar Solidariedade' diretamente em uma Causa ou Práxis específica com nota."}}, {"id": "prob-icebreaker", "icon": "chat", "title": {"en-US": "Dead-end 'hey' conversations.", "pt-BR": "Conversas que morrem no 'oi, tudo bem?'."}, "body": {"en-US": "Matches fizzle out when neither person knows what shared interest sparked the match.", "pt-BR": "Matches esfriam quando ninguém sabe qual causa ou ideia em comum gerou a conexão."}, "fix": {"en-US": "Fix: Every match thread opens with the exact Cause or Praxis Prompt you sent solidarity on.", "pt-BR": "Solução: Todo chat já abre com a Causa ou Práxis exata que originou a solidariedade."}}], "scenarios": [{"id": "s1-waitlist", "area": "website", "problemId": "prob-dealbreaker", "icon": "globe", "screenMode": "waitlist", "title": {"en-US": "1. Public Waitlist & City Launch", "pt-BR": "1. Lista de Espera por Cidade"}, "question": {"en-US": "How do progressive singles join the local collective before full city density is reached?", "pt-BR": "Como novos membros entram no coletivo local antes do lançamento completo na cidade?"}, "inShort": {"en-US": "Visitors join the waitlist with email, city, and tendency so local collectives launch with critical mass.", "pt-BR": "Visitantes entram na lista com e-mail, cidade e tendência para lançar coletivos locais com massa crítica."}, "todayOutcome": {"verdict": "Problem", "headline": {"en-US": "Cold launches leave early users in an empty feed with zero local comrades.", "pt-BR": "Lançamentos frios deixam os primeiros usuários em um feed vazio na sua cidade."}}, "withOutcome": {"verdict": "Solved", "headline": {"en-US": "City-by-city waitlist batches signups in early_access_signups and unlocks waves together.", "pt-BR": "A fila por cidade agrupa cadastros em early_access_signups e libera ondas locais juntas."}}, "steps": [{"edge": "e-user-web", "target": "n-web", "status": "Works in repo", "simple": {"en-US": "Visitor opens the Comradia landing page and enters their email, city, and tendency.", "pt-BR": "Visitante abre a página da Comradia e informa e-mail, cidade e tendência."}, "technical": "apps/website/index.html + main.js (:3510) validates email input."}, {"edge": "e-web-api", "target": "n-api", "status": "Works in repo", "simple": {"en-US": "The server validates the address and normalizes the signup payload.", "pt-BR": "O servidor valida o endereço e normaliza os dados de inscrição."}, "technical": "POST /early-access in apps/server/src/app.ts (:3410) -> HTTP 201."}, {"edge": "e-api-db", "target": "n-db", "status": "Works in repo", "simple": {"en-US": "Signup is recorded in Postgres so city launch cohorts can be invited together.", "pt-BR": "A inscrição é salva no Postgres para convidar o coletivo da cidade junto."}, "technical": "INSERT INTO early_access_signups (email, city, tendency) in schema.ts."}]}, {"id": "s2-onboarding-identity", "area": "onboarding", "problemId": "prob-dealbreaker", "icon": "badge", "screenMode": "onboarding-identity", "title": {"en-US": "2. Onboarding: Identity & Tendency", "pt-BR": "2. Onboarding: Identidade e Tendência"}, "question": {"en-US": "How do users express their political alignment warmly without sectarian gatekeeping?", "pt-BR": "Como expressar alinhamento político de forma acolhedora e sem sectarismo?"}, "inShort": {"en-US": "Users pick a welcoming Political Tendency badge and optional Union Member tag in under 30 seconds.", "pt-BR": "Usuários escolhem sua Tendência Política e selo Sindicalizado opcional em menos de 30 segundos."}, "todayOutcome": {"verdict": "Problem", "headline": {"en-US": "Generic 'Liberal / Moderate' tags hide whether someone cares about labor or collective action.", "pt-BR": "Rótulos genéricos não mostram se a pessoa valoriza direitos trabalhistas ou ação coletiva."}}, "withOutcome": {"verdict": "Solved", "headline": {"en-US": "Clear, broad-left tendency pills and union affiliation set instant shared context.", "pt-BR": "Pílulas claras de tendência da esquerda e vínculo sindical criam contexto imediato."}}, "steps": [{"edge": "e-user-mobile", "target": "n-mobile", "status": "Proposed", "simple": {"en-US": "User enters display name, pronouns, city, and selects their primary Political Tendency.", "pt-BR": "Usuário preenche nome, pronomes, cidade e seleciona sua Tendência Política principal."}, "technical": "Expo Router onboarding flow updates local draft profile in Zustand."}, {"edge": "e-mobile-api", "target": "n-api", "status": "Proposed", "simple": {"en-US": "Profile identity and union badge are submitted to the Elysia API.", "pt-BR": "A identidade do perfil e o selo sindical são enviados para a API Elysia."}, "technical": "PUT /profile validates tendency & unionMember via TypeBox schema."}, {"edge": "e-api-db", "target": "n-db", "status": "Works in repo", "simple": {"en-US": "Drizzle ORM persists the tendency and union status on the profiles table.", "pt-BR": "O Drizzle ORM salva a tendência e o status sindical na tabela profiles."}, "technical": "profiles.tendency (text) + profiles.union_member (boolean) in apps/server/src/db/schema.ts."}]}, {"id": "s3-onboarding-causes", "area": "onboarding", "problemId": "prob-dealbreaker", "icon": "heart", "screenMode": "onboarding-causes", "title": {"en-US": "3. Onboarding: Core Causes & Praxis", "pt-BR": "3. Onboarding: Causas e Práxis"}, "question": {"en-US": "How do we replace empty small talk bios with real-world values and date ideas?", "pt-BR": "Como substituir bios vazias por causas reais e ideias autênticas de encontro?"}, "inShort": {"en-US": "Each comrade selects up to 5 Core Causes and writes a Praxis Prompt that acts as a conversation hook.", "pt-BR": "Cada camarada escolhe até 5 Causas Principais e escreve um Prompt de Práxis para puxar conversa."}, "todayOutcome": {"verdict": "Problem", "headline": {"en-US": "Blank bio boxes lead to 'ask me anything' or awkward clichés.", "pt-BR": "Campos de bio em branco geram clichês e perfis sem personalidade."}}, "withOutcome": {"verdict": "Solved", "headline": {"en-US": "Structured Cause chips + a Praxis Prompt give every profile 4–6 specific hooks to reply to.", "pt-BR": "Chips de Causas + Prompt de Práxis dão a cada perfil 4 a 6 ganchos reais de conversa."}}, "steps": [{"edge": "e-user-mobile", "target": "n-mobile", "status": "Proposed", "simple": {"en-US": "User toggles up to 5 Core Causes and answers their Praxis & First Date prompt.", "pt-BR": "Usuário escolhe até 5 Causas e responde ao prompt de Práxis e Primeiro Encontro."}, "technical": "Causes array (max 5) + praxisPrompt string bound in mobile state."}, {"edge": "e-mobile-api", "target": "n-api", "status": "Proposed", "simple": {"en-US": "API validates cause tags and stores the structured prompt on the user's card.", "pt-BR": "A API valida as tags de causas e salva o prompt estruturado no cartão."}, "technical": "PUT /profile with causes: string[] and praxisPrompt: string."}, {"edge": "e-api-db", "target": "n-db", "status": "Works in repo", "simple": {"en-US": "Postgres stores causes as JSONB alongside the praxis prompt for fast matching.", "pt-BR": "O Postgres armazena as causas em JSONB junto ao prompt de práxis."}, "technical": "profiles.causes (jsonb) + profiles.praxis_prompt (text) in schema.ts."}]}, {"id": "s4-discovery-solidarity", "area": "discovery", "problemId": "prob-swipe", "icon": "cards", "screenMode": "discovery", "title": {"en-US": "4. Discovery: Prompt & Cause Solidarity", "pt-BR": "4. Descoberta: Solidariedade por Causa"}, "question": {"en-US": "How does sending solidarity on a specific Cause or Praxis Prompt replace mindless swiping?", "pt-BR": "Como enviar solidariedade em uma Causa ou Práxis substitui o swipe mecânico?"}, "inShort": {"en-US": "Tap any Cause chip or Praxis Prompt on a comrade's card to attach a personal note and send solidarity.", "pt-BR": "Toque em qualquer Causa ou Práxis no cartão para anexar uma nota pessoal e enviar solidariedade."}, "todayOutcome": {"verdict": "Problem", "headline": {"en-US": "Swiping through 100 faces in 3 minutes causes dating fatigue and zero intentionality.", "pt-BR": "Passar 100 rostos em 3 minutos gera exaustão e zero intencionalidade."}}, "withOutcome": {"verdict": "Solved", "headline": {"en-US": "Prompt-first cards let you filter by Cause and send a targeted Solidarity Note.", "pt-BR": "Cartões focados em causas permitem filtrar e enviar uma Nota de Solidariedade."}}, "steps": [{"edge": "e-mobile-api", "target": "n-api", "status": "Works in repo", "simple": {"en-US": "The Comrades tab fetches candidate cards and highlights shared causes.", "pt-BR": "A aba Camaradas busca perfis e destaca causas em comum."}, "technical": "GET /discovery/feed returns CandidateProfile[] in apps/server/src/app.ts."}, {"edge": "e-user-mobile", "target": "n-mobile", "status": "Works in repo", "simple": {"en-US": "User taps a specific Cause chip or Praxis Prompt and writes an optional Solidarity Note.", "pt-BR": "Usuário toca em uma Causa ou Práxis e escreve uma Nota de Solidariedade opcional."}, "technical": "app/(tabs)/index.tsx + useDiscoveryStore.sendSolidarity(id) in Zustand."}, {"edge": "e-api-db", "target": "n-db", "status": "Works in repo", "simple": {"en-US": "The server records the solidarity action and note in the swipes table.", "pt-BR": "O servidor registra a ação de solidariedade e a nota na tabela swipes."}, "technical": "POST /discovery/swipe -> swipes (actor_user_id, target_user_id, direction='solidarity', note)."}]}, {"id": "s5-mutual-match-chat", "area": "matching", "problemId": "prob-icebreaker", "icon": "chat", "screenMode": "matches", "title": {"en-US": "5. Mutual Solidarity Match & Chat", "pt-BR": "5. Match Mútuo e Chat com Quebra-Gelo"}, "question": {"en-US": "What happens when two comrades send solidarity to each other?", "pt-BR": "O que acontece quando dois camaradas enviam solidariedade um ao outro?"}, "inShort": {"en-US": "A mutual match unlocks a 1-on-1 chat pre-seeded with the Solidarity Note and shared causes.", "pt-BR": "O match mútuo abre um chat 1-a-1 já iniciado com a Nota de Solidariedade e as causas em comum."}, "todayOutcome": {"verdict": "Problem", "headline": {"en-US": "Matches sit silent in a queue because nobody wants to send the first 'hey'.", "pt-BR": "Matches ficam mudos na fila porque ninguém quer mandar o primeiro 'oi'."}}, "withOutcome": {"verdict": "Solved", "headline": {"en-US": "The Solidarity Note automatically becomes the first message in the thread.", "pt-BR": "A Nota de Solidariedade vira automaticamente a primeira mensagem da conversa."}}, "steps": [{"edge": "e-api-db", "target": "n-db", "status": "Works in repo", "simple": {"en-US": "When both users send solidarity, a unique match pair and initial message are created.", "pt-BR": "Quando ambos enviam solidariedade, cria-se o par na tabela matches e a mensagem inicial."}, "technical": "matches (matches_pair_idx) + messages (match_id, sender_user_id, body) in schema.ts."}, {"edge": "e-mobile-api", "target": "n-mobile", "status": "Works in repo", "simple": {"en-US": "The Solidarity tab displays the new match along with the shared causes header.", "pt-BR": "A aba Solidariedade exibe o novo match com o cabeçalho de causas em comum."}, "technical": "app/(tabs)/matches.tsx renders useDiscoveryStore((s) => s.matches)."}, {"edge": "e-user-mobile", "target": "n-mobile", "status": "Proposed", "simple": {"en-US": "Both comrades reply directly in the thread to plan their low-consumption first date.", "pt-BR": "Ambos respondem diretamente na conversa para combinar o primeiro encontro."}, "technical": "POST /matches/:matchId/messages appends to messages table."}]}, {"id": "s6-profile-architecture", "area": "architecture", "problemId": "prob-swipe", "icon": "layers", "screenMode": "profile", "title": {"en-US": "6. Praxis Profile & Monorepo Stack", "pt-BR": "6. Perfil de Práxis e Arquitetura"}, "question": {"en-US": "How do Expo 54, Zustand, Elysia/Bun, and Drizzle/Postgres fit together in comradia-mono?", "pt-BR": "Como Expo 54, Zustand, Elysia/Bun e Drizzle/Postgres se integram no comradia-mono?"}, "inShort": {"en-US": "A single non-workspace monorepo runs Expo 54 mobile/web, Bun 1.3.14 + Elysia API, and Postgres 16.", "pt-BR": "Um monorepo unificado roda Expo 54 mobile/web, API Bun 1.3.14 + Elysia e Postgres 16."}, "todayOutcome": {"verdict": "Works, with a catch", "headline": {"en-US": "Discovery currently runs against in-memory seed candidates until Drizzle migrations are applied.", "pt-BR": "A descoberta roda com dados em memória até aplicarmos as migrações do Drizzle no Postgres."}}, "withOutcome": {"verdict": "Solved", "headline": {"en-US": "Full parity across iOS, Android, Expo Web, and Bun/Postgres with shared TypeBox contracts.", "pt-BR": "Paridade total entre iOS, Android, Expo Web e Bun/Postgres com contratos TypeBox."}}, "steps": [{"edge": "e-user-mobile", "target": "n-mobile", "status": "Works in repo", "simple": {"en-US": "Praxis tab previews your live card using the DsScreen and DsCard primitives.", "pt-BR": "A aba Práxis mostra seu cartão ao vivo usando os componentes DsScreen e DsCard."}, "technical": "apps/mobile/app/(tabs)/profile.tsx + constants/design-system.ts."}, {"edge": "e-mobile-api", "target": "n-api", "status": "Works in repo", "simple": {"en-US": "Mobile app talks to the pinned Bun 1.3.14 Elysia server on port 3410.", "pt-BR": "O app mobile se comunica com o servidor Elysia (Bun 1.3.14) na porta 3410."}, "technical": "apps/server/src/app.ts + scripts/server-bun.sh."}, {"edge": "e-api-db", "target": "n-db", "status": "Works in repo", "simple": {"en-US": "Drizzle ORM connects to local Docker Postgres (:15442) and Redis (:16389).", "pt-BR": "O Drizzle ORM conecta ao Postgres (:15442) e Redis (:16389) via Docker."}, "technical": "docker-compose.local.yml + apps/server/src/db/client.ts."}]}]};
+
+(function () {
+  const $ = (sel) => document.querySelector(sel);
+  const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
+  // State
+  let lang = 'en-US';
+  let level = 'simple';
+  let activeFilter = 'all';
+  let searchQuery = '';
+  let activeScenarioId = DATA.scenarios[0].id;
+  let activeMode = 'with';
+  let activeStepIdx = 0;
+  let activeScreen = 'discovery';
+
+  // Interactive Prototype State
+  let waitlistCount = 142;
+  let waitlistJoined = false;
+  let myProfile = {
+    displayName: 'Alex',
+    age: 29,
+    pronouns: 'they/she',
+    city: 'São Paulo',
+    tendency: 'Democratic Socialist',
+    unionMember: true,
+    causes: ['Labor Rights', 'Climate Justice', 'Transit For All', 'Universal Healthcare'],
+    praxisPrompt: 'Ideal first date: browsing a cooperative bookstore then grabbing pastel at the street market.'
+  };
+  let deckCandidates = DATA.candidates.map((c) => ({ ...c }));
+  let activeCauseFilter = 'All';
+  let composingTarget = null; // { candidate, hookLabel, note }
+  let matches = [
+    {
+      candidate: DATA.candidates[0],
+      hookLabel: '#Climate Justice',
+      note: 'Fellow urbanist! Would love to hear about your community garden.',
+      messages: [
+        { sender: 'me', text: 'Fellow urbanist! Would love to hear about your community garden.' },
+        { sender: 'them', text: 'Solidarity! We meet every Saturday morning in Pinheiros — let’s grab an espresso after!' }
+      ]
+    }
+  ];
+  let activeMatchIdx = 0;
+
+  const ICONS = {
+    compass: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>',
+    spark: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>',
+    chat: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+    globe: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
+    badge: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15l-3.5 2 1-4L6 10l4-.3L12 6l2 3.7 4 .3-3.5 3 1 4z"/><circle cx="12" cy="12" r="10"/></svg>',
+    heart: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>',
+    cards: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="3"/><line x1="7" y1="9" x2="17" y2="9"/><line x1="7" y1="13" x2="13" y2="13"/></svg>',
+    layers: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>'
+  };
+
+  function reduceMotion() {
+    return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+
+  if (reduceMotion()) {
+    $$('svg').forEach((s) => {
+      if (typeof s.pauseAnimations === 'function') s.pauseAnimations();
+    });
+  }
+
+  // Draw polygon arrowheads on diagram paths
+  function buildArrowheads() {
+    const layer = $('#arrowLayer');
+    if (!layer) return;
+    layer.innerHTML = '';
+    $$('#archSvg path[data-edge]').forEach((p) => {
+      const len = p.getTotalLength();
+      if (len < 10) return;
+      const tip = p.getPointAtLength(len);
+      const prev = p.getPointAtLength(len - 8);
+      const angle = Math.atan2(tip.y - prev.y, tip.x - prev.x) * (180 / Math.PI);
+      const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+      poly.setAttribute('points', '0,0 -9,-4.5 -9,4.5');
+      poly.setAttribute('fill', p.getAttribute('stroke') || '#8a7e7a');
+      poly.setAttribute('data-arrow-for', p.getAttribute('data-edge'));
+      poly.setAttribute('transform', `translate(${tip.x},${tip.y}) rotate(${angle})`);
+      layer.appendChild(poly);
+    });
+  }
+
+  function renderProblems() {
+    const grid = $('#problemsGrid');
+    grid.innerHTML = DATA.problems
+      .map(
+        (p) => `
+      <button type="button" class="card prob-card" data-prob="${p.id}">
+        <div class="prob-icon-tile">${ICONS[p.icon] || ''}</div>
+        <h3 class="prob-title">${p.title[lang]}</h3>
+        <p class="prob-body">${p.body[lang]}</p>
+        <div class="prob-fix">${p.fix[lang]}</div>
+        <span class="prob-cta">${lang === 'pt-BR' ? 'Ver cenários ›' : 'See scenarios ›'}</span>
+      </button>
+    `
+      )
+      .join('');
+
+    $$('#problemsGrid [data-prob]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const pid = btn.getAttribute('data-prob');
+        const matchScen = DATA.scenarios.find((s) => s.problemId === pid);
+        activeFilter = 'all';
+        searchQuery = '';
+        $('#scenarioSearch').value = '';
+        if (matchScen) {
+          activeScenarioId = matchScen.id;
+          activeScreen = matchScen.screenMode;
+          activeStepIdx = 0;
+        }
+        renderAll();
+        $('#playerSection').scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth' });
+      });
+    });
+  }
+
+  function getFilteredScenarios() {
+    return DATA.scenarios.filter((s) => {
+      const areaOk = activeFilter === 'all' || s.area === activeFilter;
+      if (!areaOk) return false;
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        s.title[lang].toLowerCase().includes(q) ||
+        s.question[lang].toLowerCase().includes(q) ||
+        s.inShort[lang].toLowerCase().includes(q)
+      );
+    });
+  }
+
+  function renderFilters() {
+    const areas = [
+      { id: 'all', label: lang === 'pt-BR' ? 'Todos' : 'All' },
+      { id: 'website', label: 'Website' },
+      { id: 'onboarding', label: 'Onboarding' },
+      { id: 'discovery', label: lang === 'pt-BR' ? 'Descoberta' : 'Discovery' },
+      { id: 'matching', label: 'Match & Chat' },
+      { id: 'architecture', label: 'Stack & API' }
+    ];
+
+    const bar = $('#filterChips');
+    bar.innerHTML = areas
+      .map((a) => {
+        const count =
+          a.id === 'all'
+            ? DATA.scenarios.length
+            : DATA.scenarios.filter((s) => s.area === a.id).length;
+        return `<button type="button" class="chip" data-filter="${a.id}" aria-pressed="${
+          activeFilter === a.id
+        }">${a.label} (${count})</button>`;
+      })
+      .join('');
+
+    $$('#filterChips [data-filter]').forEach((b) => {
+      b.addEventListener('click', () => {
+        activeFilter = b.getAttribute('data-filter');
+        const list = getFilteredScenarios();
+        if (list.length && !list.some((s) => s.id === activeScenarioId)) {
+          activeScenarioId = list[0].id;
+          activeScreen = list[0].screenMode;
+          activeStepIdx = 0;
+        }
+        renderAll();
+      });
+    });
+  }
+
+  function renderScenarioGrid() {
+    const list = getFilteredScenarios();
+    const grid = $('#scenarioGrid');
+    grid.innerHTML = list
+      .map(
+        (s) => `
+      <button type="button" class="scen-tile" role="option" data-scen="${s.id}" aria-selected="${
+          s.id === activeScenarioId
+        }">
+        <div class="scen-icon">${ICONS[s.icon] || ICONS.cards}</div>
+        <div class="scen-meta">
+          <div class="scen-title">${s.title[lang]}</div>
+          <div class="scen-area">${s.area}</div>
+        </div>
+      </button>
+    `
+      )
+      .join('');
+
+    $$('#scenarioGrid [data-scen]').forEach((b) => {
+      b.addEventListener('click', () => {
+        activeScenarioId = b.getAttribute('data-scen');
+        const scen = DATA.scenarios.find((x) => x.id === activeScenarioId);
+        if (scen) {
+          activeScreen = scen.screenMode;
+          activeStepIdx = 0;
+        }
+        renderAll();
+      });
+    });
+  }
+
+  function animateStepEdge(edgeId) {
+    $$('#archSvg path[data-edge]').forEach((p) => {
+      const isAct = p.getAttribute('data-edge') === edgeId;
+      p.setAttribute('stroke', isAct ? '#c83232' : '#8a7e7a');
+      p.setAttribute('stroke-width', isAct ? '3.2' : '2.2');
+    });
+    $$('#arrowLayer polygon').forEach((poly) => {
+      const isAct = poly.getAttribute('data-arrow-for') === edgeId;
+      poly.setAttribute('fill', isAct ? '#c83232' : '#8a7e7a');
+    });
+
+    const pathEl = document.getElementById(edgeId);
+    const dot = $('#packetDot');
+    if (!pathEl || !dot || reduceMotion()) return;
+
+    const total = pathEl.getTotalLength();
+    dot.setAttribute('opacity', '1');
+    const start = performance.now();
+    const dur = 520;
+    function tick(now) {
+      const t = Math.min(1, (now - start) / dur);
+      const pt = pathEl.getPointAtLength(t * total);
+      dot.setAttribute('cx', String(pt.x));
+      dot.setAttribute('cy', String(pt.y));
+      if (t < 1) {
+        requestAnimationFrame(tick);
+      } else {
+        dot.setAttribute('opacity', '0');
+      }
+    }
+    requestAnimationFrame(tick);
+  }
+
+  function renderStage() {
+    const scen = DATA.scenarios.find((s) => s.id === activeScenarioId) || DATA.scenarios[0];
+    $('#stageTitle').textContent = scen.title[lang];
+    $('#stageQuestion').textContent = scen.question[lang];
+
+    $('#outVerdictToday').textContent = scen.todayOutcome.verdict;
+    $('#outVerdictToday').className =
+      'verdict-pill ' + (scen.todayOutcome.verdict.includes('catch') ? 'Catch' : 'Problem');
+    $('#outTextToday').textContent = scen.todayOutcome.headline[lang];
+
+    $('#outVerdictWith').textContent = scen.withOutcome.verdict;
+    $('#outTextWith').textContent = scen.withOutcome.headline[lang];
+
+    $('#outCardToday').classList.toggle('active', activeMode === 'today');
+    $('#outCardWith').classList.toggle('active', activeMode === 'with');
+
+    const stepsGrid = $('#stepsGrid');
+    stepsGrid.innerHTML = scen.steps
+      .map((st, idx) => {
+        const chipClass = st.status === 'Works in repo' ? 'works' : 'proposed';
+        return `
+        <button type="button" class="step-card ${idx === activeStepIdx ? 'active' : ''}" data-step="${idx}">
+          <span class="status-chip ${chipClass}">${st.status}</span>
+          <div style="font-size:13px;font-weight:500;">${st.simple[lang]}</div>
+          ${level === 'technical' ? `<div class="tech-line">${st.technical}</div>` : ''}
+        </button>
+      `;
+      })
+      .join('');
+
+    $$('#stepsGrid [data-step]').forEach((b) => {
+      b.addEventListener('click', () => {
+        activeStepIdx = Number(b.getAttribute('data-step'));
+        renderStage();
+      });
+    });
+
+    const currentStep = scen.steps[activeStepIdx] || scen.steps[0];
+    if (currentStep) {
+      animateStepEdge(currentStep.edge);
+    }
+
+    $('#inShortBox').innerHTML = `<strong>${
+      lang === 'pt-BR' ? 'Em resumo:' : 'In short:'
+    }</strong> ${scen.inShort[lang]}`;
+  }
+
+  function renderPhoneScreen() {
+    $$('#screenSwitcher [data-screen]').forEach((b) => {
+      b.setAttribute('aria-pressed', String(b.getAttribute('data-screen') === activeScreen));
+    });
+
+    const body = $('#phoneBody');
+
+    if (activeScreen === 'waitlist') {
+      body.innerHTML = `
+        <div class="ds-card">
+          <div style="font-size:11px;font-weight:700;color:var(--accent);letter-spacing:0.06em;">DATE LEFT · BUILD SOLIDARITY</div>
+          <div style="font-size:20px;font-weight:700;line-height:1.15;">Where solidarity meets romance.</div>
+          <div style="font-size:13px;color:var(--muted);">Join the city-by-city collective launch. Currently <strong>${waitlistCount}</strong> comrades waiting in your metro.</div>
+          <input id="wlEmail" class="ds-input" type="email" placeholder="you@solidarity.org" value="camarada@solidarity.org" aria-label="Waitlist email" />
+          <div style="display:flex;gap:6px;">
+            <input id="wlCity" class="ds-input" type="text" value="${myProfile.city}" aria-label="City" />
+            <select id="wlTendency" class="ds-input" aria-label="Tendency">
+              ${DATA.tendencies
+                .map(
+                  (t) =>
+                    `<option value="${t}" ${t === myProfile.tendency ? 'selected' : ''}>${t}</option>`
+                )
+                .join('')}
+            </select>
+          </div>
+          <button type="button" class="ds-btn primary" id="btnJoinWaitlist">
+            ${waitlistJoined ? '✓ Added to Collective Queue (+1)' : 'Get Early Access'}
+          </button>
+          ${
+            waitlistJoined
+              ? `<div style="font-size:12px;color:var(--ok);font-weight:600;">POST /early-access -> 201 Created (${waitlistCount} in cohort)</div>`
+              : ''
+          }
+        </div>
+      `;
+      $('#btnJoinWaitlist').addEventListener('click', () => {
+        waitlistCount += 1;
+        waitlistJoined = true;
+        renderPhoneScreen();
+      });
+      return;
+    }
+
+    if (activeScreen === 'onboarding-identity') {
+      body.innerHTML = `
+        <div class="ds-card">
+          <div style="font-size:16px;font-weight:700;">Step 1 · Identity & Political Tendency</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <div>
+              <label style="font-size:11px;color:var(--muted);">Display Name</label>
+              <input id="inpName" class="ds-input" value="${myProfile.displayName}" />
+            </div>
+            <div>
+              <label style="font-size:11px;color:var(--muted);">Pronouns</label>
+              <input id="inpPronouns" class="ds-input" value="${myProfile.pronouns}" />
+            </div>
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--muted);">City</label>
+            <input id="inpCity" class="ds-input" value="${myProfile.city}" />
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">Primary Political Tendency</div>
+            <div class="ds-pill-row" id="tendencyChoices">
+              ${DATA.tendencies
+                .map(
+                  (t) =>
+                    `<button type="button" class="ds-cause-btn ${
+                      myProfile.tendency === t ? 'selected' : ''
+                    }" data-tend="${t}">${t}</button>`
+                )
+                .join('')}
+            </div>
+          </div>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;cursor:pointer;">
+            <input type="checkbox" id="chkUnion" ${myProfile.unionMember ? 'checked' : ''} />
+            Show "Union Member / Sindicalizado(a)" badge
+          </label>
+          <button type="button" class="ds-btn primary" id="btnToCauses">Save & Pick Core Causes ›</button>
+        </div>
+      `;
+      $('#inpName').addEventListener('input', (e) => { myProfile.displayName = e.target.value; });
+      $('#inpPronouns').addEventListener('input', (e) => { myProfile.pronouns = e.target.value; });
+      $('#inpCity').addEventListener('input', (e) => { myProfile.city = e.target.value; });
+      $('#chkUnion').addEventListener('change', (e) => { myProfile.unionMember = e.target.checked; });
+      $$('#tendencyChoices [data-tend]').forEach((b) => {
+        b.addEventListener('click', () => {
+          myProfile.tendency = b.getAttribute('data-tend');
+          renderPhoneScreen();
+        });
+      });
+      $('#btnToCauses').addEventListener('click', () => {
+        activeScreen = 'onboarding-causes';
+        renderPhoneScreen();
+      });
+      return;
+    }
+
+    if (activeScreen === 'onboarding-causes') {
+      body.innerHTML = `
+        <div class="ds-card">
+          <div style="font-size:16px;font-weight:700;">Step 2 · Core Causes (${myProfile.causes.length}/5)</div>
+          <div style="font-size:12px;color:var(--muted);">Tap up to 5 causes that matter to you:</div>
+          <div class="ds-pill-row" id="causePicker">
+            ${DATA.allCauses
+              .map(
+                (c) =>
+                  `<button type="button" class="ds-cause-btn ${
+                    myProfile.causes.includes(c) ? 'selected' : ''
+                  }" data-cause-toggle="${c}">#${c}</button>`
+              )
+              .join('')}
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--muted);font-weight:700;">PRAXIS & FIRST DATE PROMPT</label>
+            <textarea id="inpPraxis" class="ds-input" rows="2">${myProfile.praxisPrompt}</textarea>
+          </div>
+          <button type="button" class="ds-btn primary" id="btnFinishOnboarding">Preview My Praxis Card ›</button>
+        </div>
+      `;
+      $$('#causePicker [data-cause-toggle]').forEach((b) => {
+        b.addEventListener('click', () => {
+          const c = b.getAttribute('data-cause-toggle');
+          if (myProfile.causes.includes(c)) {
+            myProfile.causes = myProfile.causes.filter((x) => x !== c);
+          } else if (myProfile.causes.length < 5) {
+            myProfile.causes = [...myProfile.causes, c];
+          }
+          renderPhoneScreen();
+        });
+      });
+      $('#inpPraxis').addEventListener('input', (e) => {
+        myProfile.praxisPrompt = e.target.value;
+      });
+      $('#btnFinishOnboarding').addEventListener('click', () => {
+        activeScreen = 'profile';
+        renderPhoneScreen();
+      });
+      return;
+    }
+
+    if (activeScreen === 'discovery') {
+      const filteredDeck = deckCandidates.filter(
+        (c) => activeCauseFilter === 'All' || c.causes.includes(activeCauseFilter)
+      );
+      const cand = filteredDeck[0];
+
+      body.innerHTML = `
+        <div class="ds-pill-row">
+          ${['All', 'Climate Justice', 'Labor Rights', 'Mutual Aid']
+            .map(
+              (f) =>
+                `<button type="button" class="ds-cause-btn ${
+                  activeCauseFilter === f ? 'selected' : ''
+                }" data-deck-filter="${f}">${f === 'All' ? 'All Causes' : '#' + f}</button>`
+            )
+            .join('')}
+        </div>
+        ${
+          cand
+            ? `
+          <div class="ds-card">
+            <div>
+              <div style="font-size:19px;font-weight:700;">${cand.displayName}, ${cand.age}</div>
+              <div style="font-size:12px;color:var(--muted);">${cand.pronouns} · ${cand.city}</div>
+            </div>
+            <div class="ds-pill-row">
+              <span class="ds-badge">${cand.tendency}</span>
+              ${cand.unionMember ? `<span class="ds-badge neutral">Union Member</span>` : ''}
+            </div>
+            <div style="font-size:13.5px;">${cand.bio}</div>
+            <button type="button" class="ds-praxis-box" id="btnHookPraxis">
+              <div class="ds-praxis-label">PRAXIS & FIRST DATE (TAP TO REPLY)</div>
+              <div style="font-size:13px;color:var(--ink);">${cand.praxisPrompt}</div>
+            </button>
+            <div style="font-size:11px;color:var(--muted);">Tap any cause below to send targeted solidarity:</div>
+            <div class="ds-pill-row" id="candCauses">
+              ${cand.causes
+                .map(
+                  (c) =>
+                    `<button type="button" class="ds-cause-btn" data-hook-cause="#${c}">#${c} ♥</button>`
+                )
+                .join('')}
+            </div>
+            ${
+              composingTarget && composingTarget.candidate.id === cand.id
+                ? `
+              <div style="background:var(--accent-soft);border:1px solid var(--accent);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px;">
+                <div style="font-size:11.5px;font-weight:700;color:var(--accent);">Sending Solidarity on: ${composingTarget.hookLabel}</div>
+                <input id="inpSolidarityNote" class="ds-input" value="${composingTarget.note}" placeholder="Add a solidarity note..." />
+                <div style="display:flex;gap:6px;">
+                  <button type="button" class="ds-btn secondary" id="btnCancelNote" style="flex:1;">Cancel</button>
+                  <button type="button" class="ds-btn primary" id="btnConfirmSolidarity" style="flex:2;">Confirm & Match ♥</button>
+                </div>
+              </div>
+            `
+                : `
+              <div style="display:flex;gap:8px;margin-top:4px;">
+                <button type="button" class="ds-btn secondary" id="btnPass" style="flex:1;">Pass</button>
+                <button type="button" class="ds-btn primary" id="btnOpenSolidarity" style="flex:2;">Send Solidarity ♥</button>
+              </div>
+            `
+            }
+          </div>
+        `
+            : `
+          <div class="ds-card" style="text-align:center;padding:28px 16px;">
+            <div style="font-size:16px;font-weight:700;">You caught up with the local collective!</div>
+            <div style="font-size:13px;color:var(--muted);">Reset the deck or switch to the Solidarity tab to chat with your matches.</div>
+            <button type="button" class="ds-btn primary" id="btnResetDeck">Reset Deck</button>
+          </div>
+        `
+        }
+      `;
+
+      $$('[data-deck-filter]').forEach((b) => {
+        b.addEventListener('click', () => {
+          activeCauseFilter = b.getAttribute('data-deck-filter');
+          composingTarget = null;
+          renderPhoneScreen();
+        });
+      });
+
+      if (cand) {
+        const openComposer = (hookLabel) => {
+          composingTarget = {
+            candidate: cand,
+            hookLabel,
+            note: `Solidarity on ${hookLabel}! Would love to connect.`
+          };
+          renderPhoneScreen();
+        };
+        const btnPraxis = $('#btnHookPraxis');
+        if (btnPraxis) btnPraxis.addEventListener('click', () => openComposer('Praxis Prompt'));
+        $$('#candCauses [data-hook-cause]').forEach((b) => {
+          b.addEventListener('click', () => openComposer(b.getAttribute('data-hook-cause')));
+        });
+        const btnOpen = $('#btnOpenSolidarity');
+        if (btnOpen) btnOpen.addEventListener('click', () => openComposer('#' + cand.causes[0]));
+        const btnPass = $('#btnPass');
+        if (btnPass) {
+          btnPass.addEventListener('click', () => {
+            deckCandidates = deckCandidates.filter((x) => x.id !== cand.id);
+            composingTarget = null;
+            renderPhoneScreen();
+          });
+        }
+        const btnCancel = $('#btnCancelNote');
+        if (btnCancel) {
+          btnCancel.addEventListener('click', () => {
+            composingTarget = null;
+            renderPhoneScreen();
+          });
+        }
+        const btnConfirm = $('#btnConfirmSolidarity');
+        if (btnConfirm) {
+          btnConfirm.addEventListener('click', () => {
+            const noteVal = $('#inpSolidarityNote')
+              ? $('#inpSolidarityNote').value.trim()
+              : composingTarget.note;
+            deckCandidates = deckCandidates.filter((x) => x.id !== cand.id);
+            matches.unshift({
+              candidate: cand,
+              hookLabel: composingTarget.hookLabel,
+              note: noteVal,
+              messages: [
+                { sender: 'me', text: noteVal },
+                {
+                  sender: 'them',
+                  text: `Solidarity, ${myProfile.displayName}! So glad you reached out about ${composingTarget.hookLabel}.`
+                }
+              ]
+            });
+            activeMatchIdx = 0;
+            composingTarget = null;
+            activeScreen = 'matches';
+            renderPhoneScreen();
+          });
+        }
+      } else {
+        const btnReset = $('#btnResetDeck');
+        if (btnReset) {
+          btnReset.addEventListener('click', () => {
+            deckCandidates = DATA.candidates.map((c) => ({ ...c }));
+            activeCauseFilter = 'All';
+            renderPhoneScreen();
+          });
+        }
+      }
+      return;
+    }
+
+    if (activeScreen === 'matches') {
+      const currentMatch = matches[activeMatchIdx] || matches[0];
+      body.innerHTML = `
+        <div class="ds-pill-row">
+          ${matches
+            .map(
+              (m, idx) =>
+                `<button type="button" class="ds-cause-btn ${
+                  idx === activeMatchIdx ? 'selected' : ''
+                }" data-match-idx="${idx}">${m.candidate.displayName} · ${m.hookLabel}</button>`
+            )
+            .join('')}
+        </div>
+        ${
+          currentMatch
+            ? `
+          <div class="ds-card">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <div>
+                <div style="font-size:15px;font-weight:700;">${currentMatch.candidate.displayName} (${currentMatch.candidate.tendency})</div>
+                <div style="font-size:11px;color:var(--accent);font-weight:600;">Matched via ${currentMatch.hookLabel}</div>
+              </div>
+              <span class="ds-badge">${currentMatch.candidate.city}</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;max-height:190px;overflow-y:auto;padding:6px;background:var(--sunken);border-radius:10px;">
+              ${currentMatch.messages
+                .map(
+                  (msg) => `
+                <div style="align-self:${
+                  msg.sender === 'me' ? 'flex-end' : 'flex-start'
+                };background:${
+                    msg.sender === 'me' ? 'var(--accent)' : 'var(--surface)'
+                  };color:${
+                    msg.sender === 'me' ? '#fff' : 'var(--ink)'
+                  };padding:7px 11px;border-radius:12px;font-size:12.5px;max-width:85%;">
+                  ${msg.text}
+                </div>
+              `
+                )
+                .join('')}
+            </div>
+            <div style="display:flex;gap:6px;">
+              <input id="inpChatMsg" class="ds-input" placeholder="Reply to ${currentMatch.candidate.displayName}..." />
+              <button type="button" class="ds-btn primary" id="btnSendChat">Send</button>
+            </div>
+          </div>
+        `
+            : `<div class="ds-card">No matches yet.</div>`
+        }
+      `;
+      $$('[data-match-idx]').forEach((b) => {
+        b.addEventListener('click', () => {
+          activeMatchIdx = Number(b.getAttribute('data-match-idx'));
+          renderPhoneScreen();
+        });
+      });
+      const btnSend = $('#btnSendChat');
+      if (btnSend && currentMatch) {
+        btnSend.addEventListener('click', () => {
+          const inp = $('#inpChatMsg');
+          const txt = inp ? inp.value.trim() : '';
+          if (!txt) return;
+          currentMatch.messages.push({ sender: 'me', text: txt });
+          renderPhoneScreen();
+        });
+      }
+      return;
+    }
+
+    if (activeScreen === 'profile') {
+      body.innerHTML = `
+        <div class="ds-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <div style="font-size:18px;font-weight:700;">${myProfile.displayName}, ${myProfile.age}</div>
+              <div style="font-size:12px;color:var(--muted);">${myProfile.pronouns} · ${myProfile.city}</div>
+            </div>
+            <button type="button" class="ds-btn secondary" id="btnEditIdentity" style="padding:5px 10px;font-size:11px;">Edit Card</button>
+          </div>
+          <div class="ds-pill-row">
+            <span class="ds-badge">${myProfile.tendency}</span>
+            ${myProfile.unionMember ? `<span class="ds-badge neutral">Union Member</span>` : ''}
+          </div>
+          <div class="ds-praxis-box">
+            <div class="ds-praxis-label">YOUR PRAXIS PROMPT</div>
+            <div style="font-size:12.5px;">${myProfile.praxisPrompt}</div>
+          </div>
+          <div class="ds-pill-row">
+            ${myProfile.causes.map((c) => `<span class="ds-cause-btn selected">#${c}</span>`).join('')}
+          </div>
+          <div class="tech-line" style="margin-top:4px;">
+            Drizzle row: ${JSON.stringify({
+              displayName: myProfile.displayName,
+              tendency: myProfile.tendency,
+              unionMember: myProfile.unionMember,
+              causesCount: myProfile.causes.length
+            })}
+          </div>
+        </div>
+      `;
+      $('#btnEditIdentity').addEventListener('click', () => {
+        activeScreen = 'onboarding-identity';
+        renderPhoneScreen();
+      });
+    }
+  }
+
+  function renderAll() {
+    renderProblems();
+    renderFilters();
+    renderScenarioGrid();
+    renderStage();
+    renderPhoneScreen();
+  }
+
+  // Wire top controls
+  $$('#langSeg [data-lang]').forEach((b) => {
+    b.addEventListener('click', () => {
+      lang = b.getAttribute('data-lang');
+      $$('#langSeg [data-lang]').forEach((x) =>
+        x.setAttribute('aria-pressed', String(x.getAttribute('data-lang') === lang))
+      );
+      renderAll();
+    });
+  });
+
+  $$('#levelSeg [data-level]').forEach((b) => {
+    b.addEventListener('click', () => {
+      level = b.getAttribute('data-level');
+      $$('#levelSeg [data-level]').forEach((x) =>
+        x.setAttribute('aria-pressed', String(x.getAttribute('data-level') === level))
+      );
+      renderStage();
+    });
+  });
+
+  $$('#themeSeg [data-theme-val]').forEach((b) => {
+    b.addEventListener('click', () => {
+      const t = b.getAttribute('data-theme-val');
+      document.documentElement.setAttribute('data-theme', t);
+      $$('#themeSeg [data-theme-val]').forEach((x) =>
+        x.setAttribute('aria-pressed', String(x.getAttribute('data-theme-val') === t))
+      );
+    });
+  });
+
+  $$('#modeSeg [data-mode]').forEach((b) => {
+    b.addEventListener('click', () => {
+      activeMode = b.getAttribute('data-mode');
+      $$('#modeSeg [data-mode]').forEach((x) =>
+        x.setAttribute('aria-pressed', String(x.getAttribute('data-mode') === activeMode))
+      );
+      renderStage();
+    });
+  });
+
+  $$('#screenSwitcher [data-screen]').forEach((b) => {
+    b.addEventListener('click', () => {
+      activeScreen = b.getAttribute('data-screen');
+      renderPhoneScreen();
+    });
+  });
+
+  $('#scenarioSearch').addEventListener('input', (e) => {
+    searchQuery = e.target.value;
+    renderScenarioGrid();
+  });
+
+  $('#btnNextStep').addEventListener('click', () => {
+    const scen = DATA.scenarios.find((s) => s.id === activeScenarioId) || DATA.scenarios[0];
+    activeStepIdx = (activeStepIdx + 1) % scen.steps.length;
+    renderStage();
+  });
+
+  buildArrowheads();
+  renderAll();
+})();
+</script>
+
+</body>
+</html>
