@@ -35,21 +35,27 @@ export default function TabLayout() {
         name="index"
         options={{
           title: t('tabs.discover'),
-          tabBarIcon: ({ color }) => <MaterialIcons color={color} name="favorite" size={24} />,
+          tabBarIcon: ({ color }) => (
+            <MaterialIcons aria-hidden color={color} name="favorite" size={24} />
+          ),
         }}
       />
       <Tabs.Screen
         name="matches"
         options={{
           title: t('tabs.matches'),
-          tabBarIcon: ({ color }) => <MaterialIcons color={color} name="forum" size={24} />,
+          tabBarIcon: ({ color }) => (
+            <MaterialIcons aria-hidden color={color} name="forum" size={24} />
+          ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: t('tabs.profile'),
-          tabBarIcon: ({ color }) => <MaterialIcons color={color} name="person" size={24} />,
+          tabBarIcon: ({ color }) => (
+            <MaterialIcons aria-hidden color={color} name="person" size={24} />
+          ),
         }}
       />
     </Tabs>

@@ -17,7 +17,7 @@ export function resolveLocale(rawLocale?: string | null): SupportedLocale {
   if (!DICTIONARIES) {
     return 'en-US';
   }
-  if (normalized in DICTIONARIES) {
+  if (Object.prototype.hasOwnProperty.call(DICTIONARIES, normalized)) {
     return normalized as SupportedLocale;
   }
   const lower = normalized.toLowerCase();

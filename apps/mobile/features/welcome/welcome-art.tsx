@@ -70,6 +70,7 @@ export function SunBurst({ size = 280 }: { size?: number }) {
   return (
     <View
       accessible={false}
+      aria-hidden
       importantForAccessibility="no-hide-descendants"
       pointerEvents="none"
       style={[styles.sunRoot, { height: size, width: size }]}
@@ -110,6 +111,7 @@ export function TopoRings({ scheme, size = 330 }: { scheme: DsColorScheme; size?
   return (
     <View
       accessible={false}
+      aria-hidden
       importantForAccessibility="no-hide-descendants"
       pointerEvents="none"
       style={[styles.topoRoot, { height: size, width: size }]}
@@ -145,6 +147,7 @@ export function DateMapCard({
     <View style={[styles.card, { backgroundColor: color.surface, shadowColor: color.textPrimary }]}>
       <View
         accessible={false}
+        aria-hidden
         importantForAccessibility="no-hide-descendants"
         style={styles.mapFrame}
       >
@@ -188,6 +191,7 @@ export function FaceStack({ scheme }: { scheme: DsColorScheme }) {
   return (
     <View
       accessible={false}
+      aria-hidden
       importantForAccessibility="no-hide-descendants"
       pointerEvents="none"
       style={styles.faces}
