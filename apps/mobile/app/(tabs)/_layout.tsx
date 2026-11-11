@@ -1,9 +1,8 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { Redirect, Tabs } from 'expo-router';
+import { Tabs } from 'expo-router';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { getDsTheme } from '@/constants/design-system';
-import { useSessionStore } from '@/features/auth/session-store';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTranslation } from '@/localization';
 
@@ -12,12 +11,6 @@ export default function TabLayout() {
   const scheme = colorScheme === 'dark' ? 'dark' : 'light';
   const ds = getDsTheme(scheme);
   const { t } = useTranslation();
-  const signedIn = useSessionStore((s) => s.signedIn);
-
-  if (!signedIn) {
-    return <Redirect href="/welcome" />;
-  }
-
   return (
     <Tabs
       screenOptions={{
@@ -32,7 +25,7 @@ export default function TabLayout() {
       }}
     >
       <Tabs.Screen
-        name="index"
+        name="discover"
         options={{
           title: t('tabs.discover'),
           tabBarIcon: ({ color }) => (

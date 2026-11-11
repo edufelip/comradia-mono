@@ -3,7 +3,9 @@
  * native modules; only the gaps that component tests actually hit are patched
  * here).
  */
-import { useSessionStore } from '@/features/auth/session-store';
+import { INITIAL_SESSION, useSessionStore } from '@/features/auth/session-store';
+
+import { fakeBackend } from './mocks/backend';
 import { INITIAL_COMRADES, useDiscoveryStore } from '@/features/discovery/discovery-store';
 
 jest.mock(
@@ -18,6 +20,11 @@ jest.mock(
 jest.mock('react-native-reanimated', () => require('./mocks/reanimated'));
 jest.mock('react-native-reanimated/mock', () => require('./mocks/reanimated'));
 
+// Firebase never loads in this layer; every screen talks to the in-memory fake.
+jest.mock('@/services/backend', () => ({
+  backend: require('./mocks/backend').fakeBackend.backend,
+}));
+
 jest.mock('expo-haptics', () => ({
   impactAsync: jest.fn(() => Promise.resolve()),
   notificationAsync: jest.fn(() => Promise.resolve()),
@@ -31,6 +38,7 @@ jest.mock('expo-haptics', () => ({
 // between suites.
 beforeEach(() => {
   jest.useRealTimers();
-  useSessionStore.setState({ signedIn: false });
+  fakeBackend.reset();
+  useSessionStore.setState(INITIAL_SESSION);
   useDiscoveryStore.setState({ candidates: INITIAL_COMRADES, matches: [] });
 });

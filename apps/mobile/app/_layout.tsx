@@ -8,12 +8,11 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 
 import { getDsTheme } from '@/constants/design-system';
+import { SessionErrorView } from '@/features/auth/session-error-view';
+import { useSessionStore } from '@/features/auth/session-store';
+import { useSessionSync } from '@/features/auth/use-session-sync';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { LocaleProvider } from '@/localization/locale-context';
-
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
 
 export default function RootLayout() {
   return (
@@ -34,6 +33,8 @@ function RootLayoutContent() {
     GeistMono_500Medium,
   });
   const [fontLoadTimedOut, setFontLoadTimedOut] = useState(false);
+  useSessionSync();
+  const status = useSessionStore((s) => s.status);
 
   useEffect(() => {
     if (fontsLoaded || fontError) return;
@@ -41,7 +42,7 @@ function RootLayoutContent() {
     return () => clearTimeout(timer);
   }, [fontsLoaded, fontError]);
 
-  if (!fontsLoaded && !fontError && !fontLoadTimedOut) {
+  if ((!fontsLoaded && !fontError && !fontLoadTimedOut) || status === 'loading') {
     return (
       <View
         style={{
@@ -51,7 +52,7 @@ function RootLayoutContent() {
           backgroundColor: ds.color.canvas,
         }}
       >
-        <ActivityIndicator color={ds.color.accentPrimary} />
+        <ActivityIndicator color={ds.color.accentPrimary} testID="session-loading" />
       </View>
     );
   }
@@ -71,9 +72,24 @@ function RootLayoutContent() {
 
   return (
     <ThemeProvider value={navTheme}>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      </Stack>
+      {status === 'error' ? (
+        <SessionErrorView />
+      ) : (
+        // Exactly one group is reachable per session state; flipping the state moves the
+        // user to that group's first screen (docs/architecture.md, "Routing").
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" />
+          <Stack.Protected guard={status === 'signedOut'}>
+            <Stack.Screen name="(auth)" />
+          </Stack.Protected>
+          <Stack.Protected guard={status === 'needsOnboarding'}>
+            <Stack.Screen name="(onboarding)" />
+          </Stack.Protected>
+          <Stack.Protected guard={status === 'ready'}>
+            <Stack.Screen name="(tabs)" />
+          </Stack.Protected>
+        </Stack>
+      )}
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
     </ThemeProvider>
   );

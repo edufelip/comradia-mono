@@ -4,7 +4,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DsPillButton } from '@/components/ds/primitives/DsPillButton';
 import { DsFontFamily, DsTypography, getDsTheme } from '@/constants/design-system';
-import { useSessionStore } from '@/features/auth/session-store';
 import { DateMapCard, FaceStack, SunBurst, TopoRings } from '@/features/welcome/welcome-art';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTranslation } from '@/localization';
@@ -16,13 +15,8 @@ export default function WelcomeScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const signIn = useSessionStore((s) => s.signIn);
-
-  // shortcut: skips straight to Discover until S1B (Google / phone sign-up) exists.
-  const handleStart = () => {
-    signIn();
-    router.replace('/');
-  };
+  const handleStart = () => router.push('/register');
+  const handleLogin = () => router.push({ pathname: '/register', params: { mode: 'login' } });
 
   return (
     <View style={[styles.screen, { backgroundColor: ds.color.canvas }]}>
@@ -95,7 +89,7 @@ export default function WelcomeScreen() {
           <DsPillButton
             contentColor={ds.color.textSecondary}
             label={t('welcome.cta_login')}
-            onPress={handleStart}
+            onPress={handleLogin}
             scheme={scheme}
             testID="welcome-cta-login"
             variant="ghost"
