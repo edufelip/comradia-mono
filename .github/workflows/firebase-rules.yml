@@ -1,11 +1,8 @@
 name: Firestore rules
 
 on:
+  # Every PR runs this, so branch protection can require it.
   pull_request:
-    paths:
-      - 'apps/firebase/**'
-      - 'apps/mobile/features/profile/profile-schema.ts'
-      - '.github/workflows/firebase-rules.yml'
   push:
     branches: [develop, main]
     paths:

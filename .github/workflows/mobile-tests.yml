@@ -1,8 +1,8 @@
 name: Mobile tests
 
 on:
+  # Every PR runs this, so branch protection can require it.
   pull_request:
-    paths: ['apps/mobile/**', 'apps/firebase/**', '.github/workflows/mobile-tests.yml']
   push:
     branches: [develop, main]
     paths: ['apps/mobile/**', 'apps/firebase/**', '.github/workflows/mobile-tests.yml']
