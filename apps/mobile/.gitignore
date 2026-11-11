@@ -64,3 +64,5 @@ app-example
 coverage/
 playwright-report/
 test-results/
+
+!.env.example
