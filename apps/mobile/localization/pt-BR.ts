@@ -13,7 +13,6 @@ export const ptBR: Record<TranslationKey, string> = {
   'discover.action.solidarity': 'Curtir',
   'discover.empty.title': 'Você já viu todo mundo por perto',
   'discover.empty.body': 'Volte mais tarde ou reinicie a fila para ver perfis novamente.',
-  'discover.empty.reset': 'Reiniciar Fila',
   'matches.title': 'Seus Matches',
   'matches.subtitle': 'Pessoas que combinam com o que importa para você',
   'matches.empty': 'Nenhum match ainda — curta perfis na aba Descobrir para começar uma conversa.',
@@ -145,4 +144,7 @@ export const ptBR: Record<TranslationKey, string> = {
   'discover.error': 'Não foi possível carregar perfis. Verifique sua conexão.',
   'discover.retry': 'Tentar de novo',
   'discover.empty.refresh': 'Atualizar',
+  'onboarding.basics.section': 'Sobre você',
+  'onboarding.values.weight_decrease': 'Diminuir o peso das paixões em comum',
+  'onboarding.values.weight_increase': 'Aumentar o peso das paixões em comum',
 };

@@ -46,7 +46,29 @@ test.describe('welcome', () => {
     await expect(welcomeCta(page, 'login')).toBeInViewport({ ratio: 0.9 });
 
     await welcomeCta(page, 'login').click();
-    await expectPathname(page, '/');
+    await expectPathname(page, '/register');
+  });
+
+  test('the start CTA opens registration in sign-up mode', async ({ page }) => {
+    await gotoApp(page);
+    await expectWelcomeScreen(page);
+
+    await welcomeCta(page, 'start').click();
+
+    await expectPathname(page, '/register');
+    await expect(page.getByRole('heading', { name: 'Create your account.' })).toBeVisible();
+    await expect(page.getByTestId('register-phone-input')).toBeVisible();
+  });
+
+  test('the login CTA opens registration in log-in mode', async ({ page }) => {
+    await gotoApp(page);
+    await expectWelcomeScreen(page);
+
+    await welcomeCta(page, 'login').click();
+
+    await expectPathname(page, '/register');
+    await expect(page.getByRole('heading', { name: 'Welcome back.' })).toBeVisible();
+    await expect(page.getByText('LOG IN')).toBeVisible();
   });
 
   test('dark color scheme repaints the primary CTA', async ({ page }) => {

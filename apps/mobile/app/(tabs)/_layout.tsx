@@ -29,7 +29,13 @@ export default function TabLayout() {
         options={{
           title: t('tabs.discover'),
           tabBarIcon: ({ color }) => (
-            <MaterialIcons aria-hidden color={color} name="favorite" size={24} />
+            <MaterialIcons
+              aria-hidden
+              color={color}
+              name="favorite"
+              size={24}
+              testID="tab-icon-discover"
+            />
           ),
         }}
       />
@@ -38,7 +44,13 @@ export default function TabLayout() {
         options={{
           title: t('tabs.matches'),
           tabBarIcon: ({ color }) => (
-            <MaterialIcons aria-hidden color={color} name="forum" size={24} />
+            <MaterialIcons
+              aria-hidden
+              color={color}
+              name="forum"
+              size={24}
+              testID="tab-icon-matches"
+            />
           ),
         }}
       />
@@ -47,7 +59,13 @@ export default function TabLayout() {
         options={{
           title: t('tabs.profile'),
           tabBarIcon: ({ color }) => (
-            <MaterialIcons aria-hidden color={color} name="person" size={24} />
+            <MaterialIcons
+              aria-hidden
+              color={color}
+              name="person"
+              size={24}
+              testID="tab-icon-profile"
+            />
           ),
         }}
       />

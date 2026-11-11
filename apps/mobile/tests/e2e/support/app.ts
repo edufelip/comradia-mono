@@ -37,10 +37,3 @@ export async function expectWelcomeScreen(page: Page): Promise<void> {
   await expectPathname(page, '/welcome');
   await expect(page.getByRole('heading', { name: 'Meet someone who gives a damn.' })).toBeVisible();
 }
-
-/** Signs in through the welcome screen shortcut and waits for the Discover deck. */
-export async function enterApp(page: Page, via: 'start' | 'login' = 'start'): Promise<void> {
-  await welcomeCta(page, via).click();
-  await expectPathname(page, '/');
-  await expect(page.getByText('Maya, 28', { exact: true })).toBeVisible();
-}

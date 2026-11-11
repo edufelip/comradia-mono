@@ -21,6 +21,16 @@ const IDENTICAL_BY_DESIGN = new Set<TranslationKey>([
   'welcome.location_city',
   'welcome.location_coords',
   'welcome.map_places',
+  // Brazilian phone format and union names (proper nouns).
+  'auth.phone_placeholder',
+  'onboarding.union.bancarios_sp',
+  'onboarding.union.metalurgicos_abc',
+  'onboarding.union.sintrajud',
+  // Pure number templates.
+  'onboarding.values.count',
+  'onboarding.values.weight_value',
+  'onboarding.starter.answer_count',
+  'profile.age',
 ]);
 
 const LOCALES: { locale: SupportedLocale; dictionary: Record<TranslationKey, string> }[] = [

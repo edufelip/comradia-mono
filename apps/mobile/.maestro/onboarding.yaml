@@ -1,0 +1,85 @@
+appId: com.edufelip.comradia.dev
+name: Onboarding S2–S4
+tags:
+  - smoke
+---
+# Journey 2 — a new account fills S2, S3 and S4 and lands on the deck.
+#
+# Sign-in uses a Firebase test phone number: the dev project only accepts those, and
+# 123456 is the code they always get. Replace the number in `register-phone-input` if
+# the test number configured for the project changes.
+- launchApp:
+    clearState: true
+- tapOn:
+    id: welcome-cta-start
+- tapOn:
+    id: register-phone-input
+- inputText: '11987654321'
+- tapOn:
+    id: register-send-code
+- tapOn:
+    id: verify-code-input
+- inputText: '123456' # the sixth digit submits the code
+
+# S2 — step 1 of 3, no back button on the first signed-in screen.
+- assertVisible:
+    id: onboarding-progress
+- assertVisible: 'Step 1 of 3'
+- tapOn:
+    id: onboarding-name
+- inputText: Rosa
+- tapOn:
+    id: onboarding-birthday
+- inputText: '14/03/1994'
+- hideKeyboard
+- tapOn:
+    id: vibe-bookworm
+- tapOn:
+    id: looking-for-everyone
+- tapOn:
+    id: union-toggle
+- assertVisible:
+    id: union-apeoesp
+- tapOn:
+    id: union-apeoesp
+- tapOn:
+    id: onboarding-continue
+
+# S3 — step 2 of 3. Back keeps the S2 answers.
+- assertVisible: 'Step 2 of 3'
+- tapOn:
+    id: onboarding-back
+- assertVisible:
+    id: vibe-bookworm
+- tapOn:
+    id: onboarding-continue
+- tapOn:
+    id: value-bookshops_coffee
+- tapOn:
+    id: value-tenant_rights
+- tapOn:
+    id: value-cycling
+- assertVisible: '3/5'
+- tapOn:
+    id: weight-increase
+- assertVisible: '70%'
+- tapOn:
+    id: weight-decrease
+- assertVisible: '60%'
+- tapOn:
+    id: onboarding-continue
+
+# S4 — step 3 of 3. Finishing writes both documents and routing opens Discover.
+- assertVisible: 'Step 3 of 3'
+- tapOn:
+    id: prompt-green_flag
+- tapOn:
+    id: starter-answer
+- inputText: You know your neighbours by name.
+- hideKeyboard
+- assertVisible:
+    id: starter-finish
+- tapOn:
+    id: starter-finish
+- assertVisible:
+    id: discover-like

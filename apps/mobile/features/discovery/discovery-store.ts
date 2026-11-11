@@ -1,84 +1,92 @@
 import { create } from 'zustand';
+import type { DiscoveryProfile } from '@/features/profile/profile-schema';
+import type { Backend } from '@/services/backend/types';
 
-export type ComradeProfile = {
-  id: string;
-  displayName: string;
-  age: number;
-  pronouns: string;
-  city: string;
-  tendency: string;
-  causes: string[];
-  bio: string;
-  praxisPrompt: string;
-  unionMember: boolean;
-};
+/**
+ * The two backend calls Discover needs. Screens pass the real backend in, which keeps this
+ * module free of Firebase at runtime (the `tsx` unit runner cannot load React Native code
+ * and the backend module pulls in `react-native`).
+ */
+export type DiscoveryBackend = Pick<Backend, 'listDiscovery' | 'recordSwipe'>;
 
-export const INITIAL_COMRADES: ComradeProfile[] = [
-  {
-    id: 'comrade-maya',
-    displayName: 'Maya',
-    age: 28,
-    pronouns: 'she/her',
-    city: 'São Paulo',
-    tendency: 'Eco-Socialist',
-    causes: ['Climate Justice', 'Transit For All', 'Tenant Union'],
-    bio: 'Urban planner by day, community garden organizer by weekend. Looking for someone to bike with and debate degrowth over espresso.',
-    praxisPrompt: 'Ideal first date: solidarity kitchen prep then live samba at a cooperative bar.',
-    unionMember: true,
-  },
-  {
-    id: 'comrade-lucas',
-    displayName: 'Lucas',
-    age: 31,
-    pronouns: 'he/him',
-    city: 'Florianópolis',
-    tendency: 'Democratic Socialist',
-    causes: ['Labor Rights', 'Public Education', 'Free Software'],
-    bio: 'Public school history teacher & teachers union steward. Big fan of sci-fi, Ursula K. Le Guin, and beach hikes.',
-    praxisPrompt: 'Ask me about my homemade sourdough starter named Rosa Luxemburg.',
-    unionMember: true,
-  },
-  {
-    id: 'comrade-val',
-    displayName: 'Val',
-    age: 26,
-    pronouns: 'they/them',
-    city: 'Rio de Janeiro',
-    tendency: 'Anarcho-Syndicalist',
-    causes: ['Mutual Aid', 'Queer Liberation', 'Zine Libraries'],
-    bio: 'Riso printer, dog fosterer, and neighborhood mutual-aid coordinator. Swipe left (in a good way) if you love punk shows and feijoada.',
-    praxisPrompt: 'Together we could seize the means of weekend brunch.',
-    unionMember: false,
-  },
-];
+export type DiscoveryStatus = 'idle' | 'loading' | 'ready' | 'error';
 
 type DiscoveryState = {
-  candidates: ComradeProfile[];
-  matches: ComradeProfile[];
-  sendSolidarity: (id: string) => void;
-  passCandidate: (id: string) => void;
-  resetDeck: () => void;
+  status: DiscoveryStatus;
+  /** The deck, top card first. */
+  candidates: DiscoveryProfile[];
+  /** People liked in this session. Matches are not computed server-side (decision #8). */
+  liked: DiscoveryProfile[];
+  /** Replaces the deck with the people the backend says are still available. */
+  load: (backend: DiscoveryBackend, uid: string) => Promise<void>;
+  like: (backend: DiscoveryBackend, uid: string, id: string) => Promise<void>;
+  pass: (backend: DiscoveryBackend, uid: string, id: string) => Promise<void>;
 };
 
-export const useDiscoveryStore = create<DiscoveryState>((set) => ({
-  candidates: INITIAL_COMRADES,
-  matches: [],
-  sendSolidarity: (id) =>
-    set((state) => {
-      const target = state.candidates.find((c) => c.id === id);
-      if (!target) return state;
-      const alreadyMatched = state.matches.some((m) => m.id === id);
-      return {
-        candidates: state.candidates.filter((c) => c.id !== id),
-        matches: alreadyMatched ? state.matches : [target, ...state.matches],
-      };
-    }),
-  passCandidate: (id) =>
-    set((state) => ({
-      candidates: state.candidates.filter((c) => c.id !== id),
-    })),
-  resetDeck: () =>
+export const INITIAL_DISCOVERY: Pick<DiscoveryState, 'status' | 'candidates' | 'liked'> = {
+  status: 'idle',
+  candidates: [],
+  liked: [],
+};
+
+/** Only the newest load may write; a slower, older one must not resurrect stale cards. */
+let latestLoad = 0;
+
+export const useDiscoveryStore = create<DiscoveryState>((set, get) => ({
+  ...INITIAL_DISCOVERY,
+
+  load: async (backend, uid) => {
+    const ticket = ++latestLoad;
+    set({ status: 'loading' });
+    try {
+      const candidates = await backend.listDiscovery(uid);
+      if (ticket !== latestLoad) return;
+      set({ status: 'ready', candidates });
+    } catch {
+      if (ticket !== latestLoad) return;
+      set({ status: 'error' });
+    }
+  },
+
+  like: async (backend, uid, id) => {
+    const { candidates, liked } = get();
+    const target = candidates.find((candidate) => candidate.id === id);
+    if (!target) return;
+
+    // Optimistic: the card leaves the deck at once and shows up on Matches.
     set({
-      candidates: INITIAL_COMRADES,
-    }),
+      candidates: candidates.filter((candidate) => candidate.id !== id),
+      liked: liked.some((person) => person.id === id) ? liked : [target, ...liked],
+    });
+
+    try {
+      await backend.recordSwipe(uid, id, 'like');
+    } catch {
+      // Put the card back on top, and take it off Matches again.
+      set((state) => ({
+        candidates: state.candidates.some((candidate) => candidate.id === id)
+          ? state.candidates
+          : [target, ...state.candidates],
+        liked: state.liked.filter((person) => person.id !== id),
+      }));
+    }
+  },
+
+  pass: async (backend, uid, id) => {
+    const { candidates } = get();
+    const target = candidates.find((candidate) => candidate.id === id);
+    if (!target) return;
+
+    set({ candidates: candidates.filter((candidate) => candidate.id !== id) });
+
+    try {
+      await backend.recordSwipe(uid, id, 'pass');
+    } catch {
+      set((state) => ({
+        candidates: state.candidates.some((candidate) => candidate.id === id)
+          ? state.candidates
+          : [target, ...state.candidates],
+      }));
+    }
+  },
 }));

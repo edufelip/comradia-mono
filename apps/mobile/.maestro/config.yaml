@@ -7,5 +7,6 @@
 # To run the suite against the prod build, override the flows' appId header.
 flows:
   - welcome.yaml
-  - onboarding-to-discover.yaml
+  - sign-in.yaml
+  - onboarding.yaml
   - discover.yaml

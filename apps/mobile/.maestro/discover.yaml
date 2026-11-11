@@ -3,26 +3,92 @@ name: Discover deck
 tags:
   - smoke
 ---
+# Full journey: sign up (needs a Firebase test phone number, see docs/architecture.md),
+# finish onboarding, then swipe through the seeded deck. The dev project talks to the
+# emulators, where `apps/firebase/scripts/seed.mjs` provides Maya, Lucas and Val.
 - launchApp:
     clearState: true
 - tapOn:
     id: welcome-cta-start
-- assertVisible: '.*Maya, 28.*'
+- tapOn:
+    id: register-phone-input
+- inputText: '11912345678'
+- tapOn:
+    id: register-send-code
+- tapOn:
+    id: verify-code-input
+- inputText: '123456' # the sixth digit submits the code
 
-# Like advances the deck and records a match.
-- tapOn: '^Like$'
+# S2-S4: a complete profile.
+- assertVisible:
+    id: onboarding-name
+- tapOn:
+    id: onboarding-name
+- inputText: 'Rosa'
+- tapOn:
+    id: onboarding-birthday
+- inputText: '14/03/1994'
+- tapOn:
+    id: vibe-bookworm
+- tapOn:
+    id: looking-for-everyone
+- tapOn:
+    id: onboarding-continue
+- tapOn:
+    id: value-bookshops_coffee
+- tapOn:
+    id: value-tenant_rights
+- tapOn:
+    id: value-cycling
+- tapOn:
+    id: onboarding-continue
+- tapOn:
+    id: prompt-green_flag
+- tapOn:
+    id: starter-answer
+- inputText: 'You know your neighbours by name.'
+- tapOn:
+    id: starter-finish
+
+# The deck comes from Firestore.
+- assertVisible: '.*Maya, 28.*'
+- assertVisible: '.*Outdoorsy.*'
+- assertVisible:
+    id: discover-pass
+- assertVisible:
+    id: discover-like
+
+# Like advances the deck and lists the person on Matches (this session only, decision #8).
+- tapOn:
+    id: discover-like
 - assertVisible: '.*Lucas, 31.*'
 - assertNotVisible: '.*Maya, 28.*'
 - tapOn: '.*Matches.*'
 - assertVisible: '.*Maya, 28.*'
 - assertVisible: '.*Mutual Matches.*'
 
-# Back on Discover, pass through the rest of the deck to reach the empty state.
+# Back on Discover, pass the rest of the deck to reach the empty state.
 - tapOn: '.*Discover.*'
 - assertVisible: '.*Lucas, 31.*'
-- tapOn: '^Pass$'
+- tapOn:
+    id: discover-pass
 - assertVisible: '.*Val, 26.*'
-- tapOn: '^Pass$'
+- tapOn:
+    id: discover-pass
 - assertVisible: '.*You are all caught up.*'
-- tapOn: '.*Reset Deck.*'
-- assertVisible: '.*Maya, 28.*'
+- assertVisible:
+    id: discover-refresh
+
+# Refresh re-reads Firestore; the swipes are persisted, so the deck stays empty.
+- tapOn:
+    id: discover-refresh
+- assertVisible: '.*You are all caught up.*'
+
+# Sign out returns to Welcome.
+- tapOn: '.*Profile.*'
+- assertVisible:
+    id: profile-sign-out
+- tapOn:
+    id: profile-sign-out
+- assertVisible:
+    id: welcome-cta-start

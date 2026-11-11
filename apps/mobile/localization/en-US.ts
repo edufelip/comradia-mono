@@ -11,7 +11,6 @@ export const enUS = {
   'discover.action.solidarity': 'Like',
   'discover.empty.title': 'You are all caught up',
   'discover.empty.body': 'Check back later or reset the deck to review people nearby again.',
-  'discover.empty.reset': 'Reset Deck',
   'matches.title': 'Mutual Matches',
   'matches.subtitle': 'People who share what matters to you',
   'matches.empty': 'No matches yet — tap Like on Discover to start a conversation.',
@@ -142,6 +141,9 @@ export const enUS = {
   'discover.error': "Couldn't load people. Check your connection.",
   'discover.retry': 'Try again',
   'discover.empty.refresh': 'Refresh',
+  'onboarding.basics.section': 'About you',
+  'onboarding.values.weight_decrease': 'Lower shared-passion weight',
+  'onboarding.values.weight_increase': 'Raise shared-passion weight',
 } as const;
 
 export type TranslationKey = keyof typeof enUS;

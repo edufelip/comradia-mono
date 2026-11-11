@@ -17,7 +17,7 @@ export async function seedProfiles(): Promise<void> {
   await seed();
 }
 
-/** Seeded Discover cards (apps/firebase/scripts/seed.mjs), in seed order. */
+/** Seeded Discover cards (apps/firebase/scripts/seed.mjs). Order is not guaranteed; match by id. */
 export const SEEDED = [
   { id: 'seed-maya', name: 'Maya', age: 28 },
   { id: 'seed-lucas', name: 'Lucas', age: 31 },
@@ -55,8 +55,8 @@ export async function latestSmsCode(e164: string): Promise<string> {
 }
 
 /**
- * Signs up through the real UI: Welcome → S1B phone → S1C code. Leaves the page on the
- * first onboarding step (new account). Depends on the S1B / S1C testIDs in
+ * Signs up through the real UI: Welcome → S1B phone → S1C code. Returns once the app has
+ * left S1C (a new account lands on /vibe). Depends on the S1B / S1C testIDs in
  * docs/architecture.md ("Test ids").
  */
 export async function signUpWithPhone(page: Page, nationalDigits = uniquePhone()): Promise<string> {
@@ -65,7 +65,10 @@ export async function signUpWithPhone(page: Page, nationalDigits = uniquePhone()
   await page.getByTestId('register-phone-input').fill(nationalDigits);
   await page.getByTestId('register-send-code').click();
   const e164 = `+55${nationalDigits}`;
+  // S1C submits by itself on the sixth digit; wait for routing to leave it.
   await page.getByTestId('verify-code-input').fill(await latestSmsCode(e164));
-  await page.getByTestId('verify-submit').click();
+  await expect
+    .poll(() => new URL(page.url()).pathname, { message: 'leave /verify-phone' })
+    .not.toBe('/verify-phone');
   return e164;
 }

@@ -1,29 +1,50 @@
+import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { DsCard } from '@/components/ds/primitives/DsCard';
 import { DsPillButton } from '@/components/ds/primitives/DsPillButton';
 import { DsScreen } from '@/components/ds/primitives/DsScreen';
 import { DsRadius, DsSpace, DsTypography, getDsTheme } from '@/constants/design-system';
+import { useSessionStore } from '@/features/auth/session-store';
 import { useDiscoveryStore } from '@/features/discovery/discovery-store';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTranslation } from '@/localization';
+import { backend } from '@/services/backend';
 
+/**
+ * S5. The deck comes from Firestore; Like / Pass are written as swipes and the card leaves
+ * the deck at once. The Matches tab shows the likes of this session (decision #8).
+ */
 export default function DiscoverScreen() {
   const colorScheme = useColorScheme();
   const scheme = colorScheme === 'dark' ? 'dark' : 'light';
   const ds = getDsTheme(scheme);
   const { t } = useTranslation();
-  const candidates = useDiscoveryStore((s) => s.candidates);
-  const sendSolidarity = useDiscoveryStore((s) => s.sendSolidarity);
-  const passCandidate = useDiscoveryStore((s) => s.passCandidate);
-  const resetDeck = useDiscoveryStore((s) => s.resetDeck);
+  const uid = useSessionStore((state) => state.user?.uid);
+  const status = useDiscoveryStore((state) => state.status);
+  const candidates = useDiscoveryStore((state) => state.candidates);
+  const load = useDiscoveryStore((state) => state.load);
+  const like = useDiscoveryStore((state) => state.like);
+  const pass = useDiscoveryStore((state) => state.pass);
 
-  const activeCandidate = candidates[0];
+  useEffect(() => {
+    if (uid) void load(backend, uid);
+  }, [uid, load]);
+
+  const reload = () => {
+    if (uid) void load(backend, uid);
+  };
+
+  const activeCandidate = status === 'ready' ? candidates[0] : undefined;
+  const isLoading = status === 'idle' || status === 'loading';
 
   return (
-    <DsScreen contentContainerStyle={styles.container} scheme={scheme}>
+    <DsScreen contentContainerStyle={styles.container} scheme={scheme} testID="discover-screen">
       <View style={styles.header}>
-        <Text style={[DsTypography.title, { color: ds.color.accentPrimary }]}>
+        <Text
+          accessibilityRole="header"
+          style={[DsTypography.title, { color: ds.color.accentPrimary }]}
+        >
           {t('discover.title')}
         </Text>
         <Text style={[DsTypography.body, { color: ds.color.textSecondary }]}>
@@ -31,31 +52,44 @@ export default function DiscoverScreen() {
         </Text>
       </View>
 
-      {activeCandidate ? (
+      {isLoading ? (
         <DsCard scheme={scheme} style={styles.card}>
+          <Text style={[DsTypography.body, { color: ds.color.textSecondary }]}>
+            {t('discover.loading')}
+          </Text>
+        </DsCard>
+      ) : status === 'error' ? (
+        <DsCard scheme={scheme} style={styles.card}>
+          <Text style={[DsTypography.body, { color: ds.color.textPrimary }]}>
+            {t('discover.error')}
+          </Text>
+          <DsPillButton
+            label={t('discover.retry')}
+            onPress={reload}
+            scheme={scheme}
+            testID="discover-retry"
+            variant="primary"
+          />
+        </DsCard>
+      ) : activeCandidate ? (
+        <DsCard
+          scheme={scheme}
+          style={styles.card}
+          testID={`discover-person-${activeCandidate.id}`}
+        >
           <View style={styles.titleRow}>
-            <Text style={[DsTypography.title, { color: ds.color.textPrimary }]}>
+            <Text
+              style={[DsTypography.title, { color: ds.color.textPrimary }]}
+              testID="discover-card-name"
+            >
               {activeCandidate.displayName}, {activeCandidate.age}
             </Text>
             <Text style={[DsTypography.caption, { color: ds.color.textSecondary }]}>
-              {activeCandidate.pronouns} · {activeCandidate.city}
+              {t(`onboarding.vibe.${activeCandidate.vibe}`)}
             </Text>
           </View>
 
           <View style={styles.badgesRow}>
-            <View
-              style={[
-                styles.badge,
-                {
-                  backgroundColor: ds.color.accentPrimarySoft,
-                  borderColor: ds.color.accentPrimary,
-                },
-              ]}
-            >
-              <Text style={[DsTypography.micro, { color: ds.color.accentPrimary }]}>
-                {activeCandidate.tendency}
-              </Text>
-            </View>
             {activeCandidate.unionMember ? (
               <View
                 style={[
@@ -64,52 +98,61 @@ export default function DiscoverScreen() {
                 ]}
               >
                 <Text style={[DsTypography.micro, { color: ds.color.textPrimary }]}>
-                  {t('discover.union_badge')}
+                  {activeCandidate.union
+                    ? `${t('discover.union_badge')} · ${t(`onboarding.union.${activeCandidate.union}`)}`
+                    : t('discover.union_badge')}
                 </Text>
               </View>
             ) : null}
           </View>
 
-          <Text style={[DsTypography.body, { color: ds.color.textPrimary }]}>
-            {activeCandidate.bio}
-          </Text>
-
-          <View style={[styles.praxisBox, { backgroundColor: ds.color.surfaceMuted }]}>
+          <View style={styles.valuesBlock}>
             <Text style={[DsTypography.micro, { color: ds.color.accentPrimary }]}>
-              {t('discover.praxis_label')}
+              {t('discover.values_label')}
             </Text>
-            <Text style={[DsTypography.body, { color: ds.color.textPrimary }]}>
-              {activeCandidate.praxisPrompt}
-            </Text>
+            <View style={styles.valuesRow}>
+              {activeCandidate.values.map((value) => (
+                <View
+                  key={value}
+                  style={[styles.valueChip, { backgroundColor: ds.color.surfaceMuted }]}
+                >
+                  <Text style={[DsTypography.caption, { color: ds.color.textSecondary }]}>
+                    {t(`onboarding.values.${value}`)}
+                  </Text>
+                </View>
+              ))}
+            </View>
           </View>
 
-          <View style={styles.causesRow}>
-            {activeCandidate.causes.map((cause) => (
-              <View
-                key={cause}
-                style={[styles.causeChip, { backgroundColor: ds.color.surfaceMuted }]}
-              >
-                <Text style={[DsTypography.caption, { color: ds.color.textSecondary }]}>
-                  #{cause}
-                </Text>
-              </View>
-            ))}
+          <View style={[styles.promptBox, { backgroundColor: ds.color.surfaceMuted }]}>
+            <Text style={[DsTypography.micro, { color: ds.color.accentPrimary }]}>
+              {t(`onboarding.prompt.${activeCandidate.promptId}`)}
+            </Text>
+            <Text style={[DsTypography.body, { color: ds.color.textPrimary }]}>
+              {activeCandidate.promptAnswer}
+            </Text>
           </View>
 
           <View style={styles.actionsRow}>
             <View style={styles.actionItem}>
               <DsPillButton
                 label={t('discover.action.pass')}
-                onPress={() => passCandidate(activeCandidate.id)}
+                onPress={() => {
+                  if (uid) void pass(backend, uid, activeCandidate.id);
+                }}
                 scheme={scheme}
+                testID="discover-pass"
                 variant="secondary"
               />
             </View>
             <View style={styles.actionItem}>
               <DsPillButton
                 label={t('discover.action.solidarity')}
-                onPress={() => sendSolidarity(activeCandidate.id)}
+                onPress={() => {
+                  if (uid) void like(backend, uid, activeCandidate.id);
+                }}
                 scheme={scheme}
+                testID="discover-like"
                 variant="primary"
               />
             </View>
@@ -124,9 +167,10 @@ export default function DiscoverScreen() {
             {t('discover.empty.body')}
           </Text>
           <DsPillButton
-            label={t('discover.empty.reset')}
-            onPress={resetDeck}
+            label={t('discover.empty.refresh')}
+            onPress={reload}
             scheme={scheme}
+            testID="discover-refresh"
             variant="primary"
           />
         </DsCard>
@@ -160,20 +204,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: DsSpace.sm,
     paddingVertical: DsSpace.xxs,
   },
-  praxisBox: {
-    borderRadius: DsRadius.md,
+  valuesBlock: {
     gap: DsSpace.xxs,
-    padding: DsSpace.md,
   },
-  causesRow: {
+  valuesRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: DsSpace.xs,
   },
-  causeChip: {
+  valueChip: {
     borderRadius: DsRadius.sm,
     paddingHorizontal: DsSpace.sm,
     paddingVertical: DsSpace.xxs,
+  },
+  promptBox: {
+    borderRadius: DsRadius.md,
+    gap: DsSpace.xxs,
+    padding: DsSpace.md,
   },
   actionsRow: {
     flexDirection: 'row',

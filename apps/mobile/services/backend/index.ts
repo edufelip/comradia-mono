@@ -20,6 +20,7 @@ import {
   getDocs,
   getFirestore,
   limit,
+  orderBy,
   query,
   serverTimestamp,
   setDoc,
@@ -27,7 +28,12 @@ import {
 } from '@react-native-firebase/firestore';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
-import { AUTH_EMULATOR_PORT, DISCOVERY_PAGE_SIZE, emulatorHost, FIRESTORE_EMULATOR_PORT } from './config';
+import {
+  AUTH_EMULATOR_PORT,
+  DISCOVERY_PAGE_SIZE,
+  emulatorHost,
+  FIRESTORE_EMULATOR_PORT,
+} from './config';
 import { BackendError, toBackendError } from './errors';
 import { filterDiscovery, toPublicProfile } from './shared';
 import type { AuthUser, Backend } from './types';
@@ -153,7 +159,9 @@ export const backend: Backend = {
       // shortcut: newest-unfiltered page of 50, filtered on the device; move ranking and
       // distance to a Cloud Function once the Blaze plan is on (docs/architecture.md).
       const [profiles, swipes] = await Promise.all([
-        getDocs(query(collection(db, 'profiles'), limit(DISCOVERY_PAGE_SIZE))),
+        getDocs(
+          query(collection(db, 'profiles'), orderBy('createdAt'), limit(DISCOVERY_PAGE_SIZE)),
+        ),
         getDocs(collection(db, 'users', uid, 'swipes')),
       ]);
       return filterDiscovery(

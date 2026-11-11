@@ -7,17 +7,24 @@ import { useDiscoveryStore } from '@/features/discovery/discovery-store';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTranslation } from '@/localization';
 
+/**
+ * S9. Matches are not computed server-side yet (decision #8), so this is the list of people
+ * liked in this session. It empties on reload, when swipe data is still in Firestore.
+ */
 export default function MatchesScreen() {
   const colorScheme = useColorScheme();
   const scheme = colorScheme === 'dark' ? 'dark' : 'light';
   const ds = getDsTheme(scheme);
   const { t } = useTranslation();
-  const matches = useDiscoveryStore((s) => s.matches);
+  const liked = useDiscoveryStore((state) => state.liked);
 
   return (
-    <DsScreen contentContainerStyle={styles.container} scheme={scheme}>
+    <DsScreen contentContainerStyle={styles.container} scheme={scheme} testID="matches-screen">
       <View style={styles.header}>
-        <Text style={[DsTypography.title, { color: ds.color.textPrimary }]}>
+        <Text
+          accessibilityRole="header"
+          style={[DsTypography.title, { color: ds.color.textPrimary }]}
+        >
           {t('matches.title')}
         </Text>
         <Text style={[DsTypography.body, { color: ds.color.textSecondary }]}>
@@ -25,23 +32,23 @@ export default function MatchesScreen() {
         </Text>
       </View>
 
-      {matches.length === 0 ? (
+      {liked.length === 0 ? (
         <DsCard scheme={scheme}>
           <Text style={[DsTypography.body, { color: ds.color.textSecondary }]}>
             {t('matches.empty')}
           </Text>
         </DsCard>
       ) : (
-        matches.map((comrade) => (
-          <DsCard key={comrade.id} scheme={scheme} style={styles.card}>
+        liked.map((person) => (
+          <DsCard key={person.id} scheme={scheme} style={styles.card}>
             <Text style={[DsTypography.cardTitle, { color: ds.color.textPrimary }]}>
-              {comrade.displayName}, {comrade.age} · {comrade.city}
+              {person.displayName}, {person.age}
             </Text>
             <Text style={[DsTypography.caption, { color: ds.color.accentPrimary }]}>
-              {comrade.tendency}
+              {t(`onboarding.vibe.${person.vibe}`)}
             </Text>
             <Text style={[DsTypography.body, { color: ds.color.textSecondary }]}>
-              {comrade.praxisPrompt}
+              {person.promptAnswer}
             </Text>
           </DsCard>
         ))

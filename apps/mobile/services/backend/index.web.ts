@@ -17,8 +17,9 @@ import {
   doc,
   getDoc,
   getDocs,
-  getFirestore,
+  initializeFirestore,
   limit,
+  orderBy,
   query,
   serverTimestamp,
   setDoc,
@@ -38,19 +39,29 @@ import type { AuthUser, Backend } from './types';
 
 const host = emulatorHost();
 
-// Web config is public by design (security comes from Auth + Firestore rules). Without it,
-// the app talks to the emulators under the demo project.
+// Web config is public by design (security comes from Auth + Firestore rules). With the
+// emulators, always use the demo project so tests never reach a real one.
 const app = getApps().length
   ? getApp()
-  : initializeApp({
-      apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || 'demo-api-key',
-      authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || `${DEMO_PROJECT_ID}.firebaseapp.com`,
-      projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || DEMO_PROJECT_ID,
-      appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID || undefined,
-    });
+  : initializeApp(
+      host
+        ? {
+            apiKey: 'demo-api-key',
+            authDomain: `${DEMO_PROJECT_ID}.firebaseapp.com`,
+            projectId: DEMO_PROJECT_ID,
+          }
+        : {
+            apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+            authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+            projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+            appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
+          },
+    );
 
 const auth = getAuth(app);
-const db = getFirestore(app);
+// WebKit buffers Firestore's streaming channel: after a reload, query results arrived
+// ~30 s late. Plain long-polling requests avoid that on every browser.
+const db = initializeFirestore(app, { experimentalForceLongPolling: true });
 
 if (host) {
   connectAuthEmulator(auth, `http://${host}:${AUTH_EMULATOR_PORT}`, { disableWarnings: true });
@@ -62,8 +73,9 @@ if (host) {
 let pendingConfirmation: ConfirmationResult | null = null;
 let recaptcha: RecaptchaVerifier | null = null;
 
+/** A fresh verifier per attempt: a used one never fires again, which broke "resend". */
 function invisibleRecaptcha(): RecaptchaVerifier {
-  if (recaptcha) return recaptcha;
+  recaptcha?.clear();
   let container = document.getElementById('recaptcha-container');
   if (!container) {
     container = document.createElement('div');
@@ -154,7 +166,9 @@ export const backend: Backend = {
       // shortcut: one unranked page of 50, filtered on the device; move ranking and distance
       // to a Cloud Function once the Blaze plan is on (docs/architecture.md).
       const [profiles, swipes] = await Promise.all([
-        getDocs(query(collection(db, 'profiles'), limit(DISCOVERY_PAGE_SIZE))),
+        getDocs(
+          query(collection(db, 'profiles'), orderBy('createdAt'), limit(DISCOVERY_PAGE_SIZE)),
+        ),
         getDocs(collection(db, 'users', uid, 'swipes')),
       ]);
       return filterDiscovery(

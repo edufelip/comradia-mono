@@ -76,8 +76,9 @@ Everything else is denied. Option ids are listed once in `features/profile/profi
 | S2 | `/vibe` | First name, birthday (18+), vibe (5 cards), looking for (3), optional union badge | `onboarding-name`, `onboarding-birthday`, `vibe-<id>`, `looking-for-<id>`, `union-toggle`, `union-<id>`, `onboarding-continue` |
 | S3 | `/values` | 3–5 values, shared-passion weight (0–100, step 10) | `value-<id>`, `weight-decrease`, `weight-increase`, `onboarding-continue` |
 | S4 | `/starter` | Prompt picker + text answer (voice: "coming soon"); "Start swiping" writes the profile | `prompt-<id>`, `starter-answer`, `starter-finish`, `onboarding-error` |
-| S5 | `/discover` | Deck from Firestore; Like / Pass are saved as swipes | `discover-like`, `discover-pass`, `discover-refresh` |
-| S11 | `/profile` | Own card from the session; sign out | `profile-sign-out` |
+| S5 | `/discover` | Deck from Firestore (oldest profiles first, 50 per load); Like / Pass are saved as swipes | `discover-screen`, `discover-person-<id>`, `discover-card-name`, `discover-like`, `discover-pass`, `discover-retry`, `discover-refresh` |
+| S9 | `/matches` | People liked in this session (no mutual matching yet, see Deferred) | `matches-screen` |
+| S11 | `/profile` | Own card from the session; sign out | `profile-screen`, `profile-card-name`, `profile-sign-out` |
 
 ## Environments
 

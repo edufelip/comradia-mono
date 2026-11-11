@@ -13,7 +13,6 @@ export const esES: Record<TranslationKey, string> = {
   'discover.action.solidarity': 'Me gusta',
   'discover.empty.title': 'Ya viste a todas las personas cerca',
   'discover.empty.body': 'Vuelve más tarde o reinicia la lista para ver perfiles nuevamente.',
-  'discover.empty.reset': 'Reiniciar Lista',
   'matches.title': 'Tus Matches',
   'matches.subtitle': 'Personas que comparten lo que te importa',
   'matches.empty': 'Aún no hay matches — da Me gusta en Descubrir para comenzar una conversación.',
@@ -144,4 +143,7 @@ export const esES: Record<TranslationKey, string> = {
   'discover.error': 'No se pudieron cargar perfiles. Revisa tu conexión.',
   'discover.retry': 'Reintentar',
   'discover.empty.refresh': 'Actualizar',
+  'onboarding.basics.section': 'Sobre ti',
+  'onboarding.values.weight_decrease': 'Bajar el peso de las pasiones en común',
+  'onboarding.values.weight_increase': 'Subir el peso de las pasiones en común',
 };

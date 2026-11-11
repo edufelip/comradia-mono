@@ -6,7 +6,7 @@
 import { INITIAL_SESSION, useSessionStore } from '@/features/auth/session-store';
 
 import { fakeBackend } from './mocks/backend';
-import { INITIAL_COMRADES, useDiscoveryStore } from '@/features/discovery/discovery-store';
+import { INITIAL_DISCOVERY, useDiscoveryStore } from '@/features/discovery/discovery-store';
 
 jest.mock(
   'react-native-safe-area-context',
@@ -40,5 +40,5 @@ beforeEach(() => {
   jest.useRealTimers();
   fakeBackend.reset();
   useSessionStore.setState(INITIAL_SESSION);
-  useDiscoveryStore.setState({ candidates: INITIAL_COMRADES, matches: [] });
+  useDiscoveryStore.setState(INITIAL_DISCOVERY);
 });

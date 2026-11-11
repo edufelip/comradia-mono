@@ -1,89 +1,205 @@
-import { render, screen, fireEvent } from '@testing-library/react-native';
-import DiscoverScreen from '@/app/(tabs)/index';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+
+import DiscoverScreen from '@/app/(tabs)/discover';
 import MatchesScreen from '@/app/(tabs)/matches';
+import { useSessionStore } from '@/features/auth/session-store';
 import { useDiscoveryStore } from '@/features/discovery/discovery-store';
+import type { DiscoveryProfile } from '@/features/profile/profile-schema';
+import { enUS } from '@/localization/en-US';
+
+import { TEST_PROFILE, TEST_USER, fakeBackend } from './mocks/backend';
 
 jest.mock('@/localization/get-device-locale', () => ({ getDeviceLocale: () => 'en-US' }));
 
+const MAYA: DiscoveryProfile = {
+  id: 'p-maya',
+  displayName: 'Maya',
+  age: 28,
+  vibe: 'outdoorsy',
+  lookingFor: 'everyone',
+  unionMember: true,
+  union: 'apeoesp',
+  values: ['climate_outdoors', 'public_transit', 'tenant_rights'],
+  promptId: 'perfect_sunday',
+  promptAnswer: 'Community garden at sunrise, then a long lunch.',
+};
+
+const LUCAS: DiscoveryProfile = {
+  id: 'p-lucas',
+  displayName: 'Lucas',
+  age: 31,
+  vibe: 'bookworm',
+  lookingFor: 'women',
+  unionMember: true,
+  union: 'seesp',
+  values: ['bookshops_coffee', 'indie_film_music', 'cycling'],
+  promptId: 'hill_to_die_on',
+  promptAnswer: 'Public libraries are the best thing a city does.',
+};
+
+const VAL: DiscoveryProfile = {
+  id: 'p-val',
+  displayName: 'Val',
+  age: 26,
+  vibe: 'creative',
+  lookingFor: 'everyone',
+  unionMember: false,
+  union: null,
+  values: ['volunteering', 'community_gardens', 'pets_parks', 'food_markets'],
+  promptId: 'together_we_could',
+  promptAnswer: 'Run a bike-to-work convoy.',
+};
+
+function signIn() {
+  useSessionStore.setState({ status: 'ready', user: TEST_USER, profile: TEST_PROFILE });
+}
+
+function seedDeck(...people: DiscoveryProfile[]) {
+  for (const person of people) fakeBackend.state.profiles.set(person.id, person);
+}
+
 describe('DiscoverScreen', () => {
-  it('shows the first comrade in the deck', async () => {
+  it('shows a loading line while the deck is on its way', async () => {
+    signIn();
+    jest.spyOn(fakeBackend.backend, 'listDiscovery').mockReturnValue(new Promise(() => undefined));
+
     await render(<DiscoverScreen />);
 
-    expect(screen.getByText('Comradia')).toBeOnTheScreen();
-    expect(screen.getByText('Meet someone who gives a damn.')).toBeOnTheScreen();
-    expect(screen.getByText('Maya, 28')).toBeOnTheScreen();
-    expect(screen.getByText('she/her · São Paulo')).toBeOnTheScreen();
-    expect(screen.getByText('Eco-Socialist')).toBeOnTheScreen();
-    expect(screen.getByText('Union Member')).toBeOnTheScreen();
-    expect(screen.getByText('SHARED VALUES & FIRST DATE')).toBeOnTheScreen();
-    expect(screen.getByText('#Climate Justice')).toBeOnTheScreen();
-    expect(screen.getByRole('button', { name: 'Pass' })).toBeOnTheScreen();
-    expect(screen.getByRole('button', { name: 'Like' })).toBeOnTheScreen();
+    expect(screen.getByText(enUS['discover.loading'])).toBeOnTheScreen();
+    expect(screen.queryByTestId('discover-like')).not.toBeOnTheScreen();
   });
 
-  it('moves to the next comrade when the current one is passed', async () => {
+  it('reports a failed load and recovers through Retry', async () => {
+    signIn();
+    seedDeck(MAYA);
+    fakeBackend.state.failNext.set('listDiscovery', 'network');
+
     await render(<DiscoverScreen />);
 
-    await fireEvent.press(screen.getByRole('button', { name: 'Pass' }));
+    expect(await screen.findByText(enUS['discover.error'])).toBeOnTheScreen();
 
-    expect(screen.queryByText('Maya, 28')).not.toBeOnTheScreen();
-    expect(screen.getByText('Lucas, 31')).toBeOnTheScreen();
-    expect(useDiscoveryStore.getState().candidates).toHaveLength(2);
+    await fireEvent.press(screen.getByTestId('discover-retry'));
+
+    expect(await screen.findByText('Maya, 28')).toBeOnTheScreen();
+    expect(fakeBackend.callsTo('listDiscovery')).toHaveLength(2);
+    expect(fakeBackend.callsTo('listDiscovery')[1].args).toEqual([TEST_USER.uid]);
   });
 
-  it('hides the union badge for comrades who are not union members', async () => {
+  it('explains an empty deck and reloads it with Refresh', async () => {
+    signIn();
+
     await render(<DiscoverScreen />);
 
-    await fireEvent.press(screen.getByRole('button', { name: 'Pass' }));
-    await fireEvent.press(screen.getByRole('button', { name: 'Pass' }));
+    expect(await screen.findByText(enUS['discover.empty.title'])).toBeOnTheScreen();
+    expect(screen.getByText(enUS['discover.empty.body'])).toBeOnTheScreen();
 
-    expect(screen.getByText('Val, 26')).toBeOnTheScreen();
-    expect(screen.queryByText('Union Member')).not.toBeOnTheScreen();
+    await fireEvent.press(screen.getByTestId('discover-refresh'));
+
+    await waitFor(() => expect(fakeBackend.callsTo('listDiscovery')).toHaveLength(2));
+    expect(screen.getByText(enUS['discover.empty.title'])).toBeOnTheScreen();
+    expect(screen.queryByTestId('discover-like')).not.toBeOnTheScreen();
   });
 
-  it('shows the empty state and can reset the deck', async () => {
+  it('draws the top card with name, age, vibe, union, values and prompt', async () => {
+    signIn();
+    seedDeck(MAYA, LUCAS);
+
     await render(<DiscoverScreen />);
 
-    await fireEvent.press(screen.getByRole('button', { name: 'Pass' }));
-    await fireEvent.press(screen.getByRole('button', { name: 'Pass' }));
-    await fireEvent.press(screen.getByRole('button', { name: 'Pass' }));
-
-    expect(screen.getByText('You are all caught up')).toBeOnTheScreen();
-    expect(screen.queryByRole('button', { name: 'Pass' })).not.toBeOnTheScreen();
-
-    await fireEvent.press(screen.getByRole('button', { name: 'Reset Deck' }));
-
-    expect(screen.getByText('Maya, 28')).toBeOnTheScreen();
-    expect(useDiscoveryStore.getState().candidates).toHaveLength(3);
+    expect(await screen.findByText('Maya, 28')).toBeOnTheScreen();
+    expect(screen.getByText('Outdoorsy')).toBeOnTheScreen();
+    expect(screen.getByText('Union Member · APEOESP · Teachers')).toBeOnTheScreen();
+    expect(screen.getByText(enUS['discover.values_label'])).toBeOnTheScreen();
+    expect(screen.getByText('Climate & outdoors')).toBeOnTheScreen();
+    expect(screen.getByText('Public transit')).toBeOnTheScreen();
+    expect(screen.getByText('Tenant rights')).toBeOnTheScreen();
+    expect(screen.getByText('My perfect Sunday is…')).toBeOnTheScreen();
+    expect(screen.getByText('Community garden at sunrise, then a long lunch.')).toBeOnTheScreen();
+    expect(screen.getByTestId('discover-pass')).toHaveAccessibleName('Pass');
+    expect(screen.getByTestId('discover-like')).toHaveAccessibleName('Like');
   });
 
-  it('adds a liked person to Matches', async () => {
+  it('hides the union badge for someone who is not a union member', async () => {
+    signIn();
+    seedDeck(VAL);
+
+    await render(<DiscoverScreen />);
+
+    expect(await screen.findByText('Val, 26')).toBeOnTheScreen();
+    expect(screen.queryByText(enUS['discover.union_badge'])).not.toBeOnTheScreen();
+  });
+
+  it('records a like, advances the deck and lists the person on Matches', async () => {
+    signIn();
+    seedDeck(MAYA, LUCAS);
+
     const discover = await render(<DiscoverScreen />);
+    await fireEvent.press(await screen.findByTestId('discover-like'));
 
-    await fireEvent.press(screen.getByRole('button', { name: 'Like' }));
-
-    expect(screen.getByText('Lucas, 31')).toBeOnTheScreen();
-    expect(useDiscoveryStore.getState().matches.map((comrade) => comrade.id)).toEqual([
-      'comrade-maya',
+    expect(await screen.findByText('Lucas, 31')).toBeOnTheScreen();
+    expect(screen.queryByText('Maya, 28')).not.toBeOnTheScreen();
+    expect(useDiscoveryStore.getState().liked.map((person) => person.id)).toEqual(['p-maya']);
+    expect(fakeBackend.callsTo('recordSwipe')).toEqual([
+      { method: 'recordSwipe', args: [TEST_USER.uid, 'p-maya', 'like'] },
     ]);
 
     await discover.unmount();
     await render(<MatchesScreen />);
 
-    expect(screen.getByText('Maya, 28 · São Paulo')).toBeOnTheScreen();
-    expect(
-      screen.getByText(
-        'Ideal first date: solidarity kitchen prep then live samba at a cooperative bar.',
-      ),
-    ).toBeOnTheScreen();
+    expect(screen.getByText('Maya, 28')).toBeOnTheScreen();
+    expect(screen.getByText('Community garden at sunrise, then a long lunch.')).toBeOnTheScreen();
   });
 
-  it('does not duplicate a match when the same person is liked twice', async () => {
+  it('records a pass without creating a match', async () => {
+    signIn();
+    seedDeck(MAYA, LUCAS);
+
+    await render(<DiscoverScreen />);
+    await fireEvent.press(await screen.findByTestId('discover-pass'));
+
+    expect(await screen.findByText('Lucas, 31')).toBeOnTheScreen();
+    expect(useDiscoveryStore.getState().liked).toEqual([]);
+    expect(fakeBackend.callsTo('recordSwipe')).toEqual([
+      { method: 'recordSwipe', args: [TEST_USER.uid, 'p-maya', 'pass'] },
+    ]);
+  });
+
+  it('puts the card back on top when the like cannot be saved', async () => {
+    signIn();
+    seedDeck(MAYA, LUCAS);
+    fakeBackend.state.failNext.set('recordSwipe', 'network');
+
+    await render(<DiscoverScreen />);
+    await fireEvent.press(await screen.findByTestId('discover-like'));
+
+    await waitFor(() => expect(screen.getByText('Maya, 28')).toBeOnTheScreen());
+    expect(screen.getByText('Maya, 28')).toBeOnTheScreen();
+    expect(useDiscoveryStore.getState().candidates[0].id).toBe('p-maya');
+    expect(useDiscoveryStore.getState().liked).toEqual([]);
+    expect(fakeBackend.callsTo('recordSwipe')).toHaveLength(1);
+  });
+
+  it('puts the card back on top when the pass cannot be saved', async () => {
+    signIn();
+    seedDeck(MAYA, LUCAS);
+    fakeBackend.state.failNext.set('recordSwipe', 'network');
+
+    await render(<DiscoverScreen />);
+    await fireEvent.press(await screen.findByTestId('discover-pass'));
+
+    await waitFor(() => expect(screen.getByText('Maya, 28')).toBeOnTheScreen());
+    expect(screen.getByText('Maya, 28')).toBeOnTheScreen();
+    expect(fakeBackend.callsTo('recordSwipe')).toHaveLength(1);
+  });
+
+  it('never shows the signed-in user in their own deck', async () => {
+    signIn();
+    seedDeck(MAYA);
+    fakeBackend.state.profiles.set(TEST_USER.uid, TEST_PROFILE);
+
     await render(<DiscoverScreen />);
 
-    await fireEvent.press(screen.getByRole('button', { name: 'Like' }));
-    useDiscoveryStore.getState().sendSolidarity('comrade-maya');
-
-    expect(useDiscoveryStore.getState().matches).toHaveLength(1);
+    expect(await screen.findByText('Maya, 28')).toBeOnTheScreen();
+    expect(screen.queryByText('Ana, 29')).not.toBeOnTheScreen();
   });
 });

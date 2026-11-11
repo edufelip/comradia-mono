@@ -1,8 +1,8 @@
 import { fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 import { View } from 'react-native';
+import RegisterScreen from '@/app/(auth)/register';
 import WelcomeScreen from '@/app/(auth)/welcome';
 import TabLayout from '@/app/(tabs)/_layout';
-import { useSessionStore } from '@/features/auth/session-store';
 import { enUS } from '@/localization/en-US';
 import { LocaleProvider } from '@/localization/locale-context';
 import { ptBR } from '@/localization/pt-BR';
@@ -14,6 +14,11 @@ jest.mock('@/hooks/use-color-scheme', () => ({ useColorScheme: () => mockColorSc
 jest.mock('@/localization/get-device-locale', () => ({
   getDeviceLocale: () => mockDeviceLocale,
 }));
+jest.mock('expo-apple-authentication', () => ({
+  AppleAuthenticationButton: () => null,
+  AppleAuthenticationButtonStyle: { BLACK: 2, WHITE: 0, WHITE_OUTLINE: 1 },
+  AppleAuthenticationButtonType: { CONTINUE: 1, SIGN_IN: 0, SIGN_UP: 2 },
+}));
 
 /**
  * `renderRouter` is built for RNTL 13's synchronous render: it returns the render
@@ -24,6 +29,7 @@ async function renderWelcome(options: Parameters<typeof renderRouter>[1] = {}) {
   const result = renderRouter(
     {
       '(auth)/welcome': WelcomeScreen,
+      '(auth)/register': RegisterScreen,
       '(tabs)/_layout': TabLayout,
       '(tabs)/index': () => <View testID="discover-route" />,
       '(tabs)/matches': () => <View testID="matches-route" />,
@@ -32,7 +38,10 @@ async function renderWelcome(options: Parameters<typeof renderRouter>[1] = {}) {
     { initialUrl: '/welcome', ...options },
   );
   await result;
-  return { getPathname: () => result.getPathname() };
+  return {
+    getPathname: () => result.getPathname(),
+    getSearchParams: () => result.getSearchParams(),
+  };
 }
 
 afterEach(() => {
@@ -64,22 +73,24 @@ describe('WelcomeScreen', () => {
     expect(screen.getAllByRole('button')).toHaveLength(2);
   });
 
-  it('signs in and goes to Discover when the start CTA is tapped', async () => {
+  it('opens registration in sign-up mode from the start CTA', async () => {
     const router = await renderWelcome();
 
     await fireEvent.press(screen.getByTestId('welcome-cta-start'));
 
-    expect(useSessionStore.getState().signedIn).toBe(true);
-    expect(router.getPathname()).toBe('/');
+    expect(router.getPathname()).toBe('/register');
+    expect(router.getSearchParams()).not.toMatchObject({ mode: 'login' });
+    expect(screen.getByRole('header')).toHaveTextContent(enUS['auth.title']);
   });
 
-  it('signs in and goes to Discover when the login CTA is tapped', async () => {
+  it('opens registration in log-in mode from the login CTA', async () => {
     const router = await renderWelcome();
 
     await fireEvent.press(screen.getByTestId('welcome-cta-login'));
 
-    expect(useSessionStore.getState().signedIn).toBe(true);
-    expect(router.getPathname()).toBe('/');
+    expect(router.getPathname()).toBe('/register');
+    expect(router.getSearchParams()).toMatchObject({ mode: 'login' });
+    expect(screen.getByRole('header')).toHaveTextContent(enUS['auth.title_login']);
   });
 
   it('renders in dark scheme without crashing', async () => {
