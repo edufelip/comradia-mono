@@ -29,3 +29,16 @@ export function filterDiscovery(
     .filter((d) => d.id !== uid && !swipedIds.has(d.id))
     .map((d) => ({ id: d.id, ...toPublicProfile(d.data) }));
 }
+
+export const MESSAGE_MAX = 1000;
+
+/** One id per pair, whoever liked first: the two uids sorted and joined by `_`. */
+export function matchIdFor(a: string, b: string): string {
+  return a < b ? `${a}_${b}` : `${b}_${a}`;
+}
+
+/** The uid in a match id that is not `uid`. */
+export function otherUid(matchId: string, uid: string): string {
+  const [a, b] = matchId.split('_');
+  return a === uid ? b : a;
+}
