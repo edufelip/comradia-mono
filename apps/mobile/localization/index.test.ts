@@ -9,6 +9,6 @@ describe('Comradia localization', () => {
     assert.equal(resolveLocale('es-AR'), 'es-ES');
     assert.equal(resolveLocale('en-GB'), 'en-US');
     assert.equal(t('en-US', 'discover.title'), 'Comradia');
-    assert.equal(t('pt-BR', 'tabs.discover'), 'Camaradas');
+    assert.equal(t('pt-BR', 'tabs.discover'), 'Descobrir');
   });
 });

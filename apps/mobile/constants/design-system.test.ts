@@ -8,8 +8,8 @@ describe('Comradia design-system tokens', () => {
     const light = getDsTheme('light');
     const dark = getDsTheme('dark');
 
-    assert.equal(light.color.accentPrimary, '#c83232');
-    assert.equal(dark.color.accentPrimary, '#f87171');
+    assert.equal(light.color.accentPrimary, '#D92D3A');
+    assert.equal(dark.color.accentPrimary, '#E05A47');
     assert.equal(DsTypography.title.fontFamily, 'Geist_700Bold');
   });
 });
