@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { filterDiscovery, toPublicProfile } from './shared';
+import { filterDiscovery, matchIdFor, otherUid, toPublicProfile } from './shared';
 
 const CARD = {
   displayName: 'Ana',
@@ -68,5 +68,24 @@ describe('filterDiscovery', () => {
   it('returns an empty deck when everything was swiped', () => {
     assert.deepEqual(filterDiscovery('me', docs, new Set(['maya', 'lucas'])), []);
     assert.deepEqual(filterDiscovery('me', [], new Set()), []);
+  });
+});
+
+describe('matchIdFor', () => {
+  it('sorts the two uids and joins them with _', () => {
+    assert.equal(matchIdFor('alice', 'bob'), 'alice_bob');
+    assert.equal(matchIdFor('bob', 'alice'), 'alice_bob');
+  });
+
+  it('does not depend on the like order or on prefix length', () => {
+    assert.equal(matchIdFor('ana', 'anabel'), 'ana_anabel');
+    assert.equal(matchIdFor('anabel', 'ana'), 'ana_anabel');
+  });
+});
+
+describe('otherUid', () => {
+  it('returns the uid in the match id that is not mine', () => {
+    assert.equal(otherUid('alice_bob', 'alice'), 'bob');
+    assert.equal(otherUid('alice_bob', 'bob'), 'alice');
   });
 });
