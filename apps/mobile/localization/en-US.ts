@@ -19,6 +19,19 @@ export const enUS = {
   'profile.subtitle': 'Real chemistry. Shared values.',
   'profile.tendency': 'Core Values',
   'profile.causes': 'Passions & Causes',
+  'welcome.location_city': 'SÃO PAULO',
+  'welcome.location_coords': '23.55°S 46.63°W',
+  'welcome.conditions': 'TONIGHT · 24°C · CLEAR SKIES',
+  'welcome.title_lead': 'Meet someone who ',
+  'welcome.title_accent': 'gives a damn.',
+  'welcome.lede':
+    'Thoughtful dating for people who care about the world, their neighbourhood, and a great first date.',
+  'welcome.map_caption': '214 first dates this week',
+  'welcome.map_places': 'PINHEIROS · VILA MADÁ · BIXIGA',
+  'welcome.social_proof_count': '12.4k people',
+  'welcome.social_proof_rest': 'nearby are already here',
+  'welcome.cta_start': 'Find your person',
+  'welcome.cta_login': 'I already have an account',
 } as const;
 
 export type TranslationKey = keyof typeof enUS;

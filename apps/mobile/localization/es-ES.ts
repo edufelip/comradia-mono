@@ -21,4 +21,17 @@ export const esES: Record<TranslationKey, string> = {
   'profile.subtitle': 'Química real. Valores compartidos.',
   'profile.tendency': 'Valores Clave',
   'profile.causes': 'Causas y Pasiones',
+  'welcome.location_city': 'SÃO PAULO',
+  'welcome.location_coords': '23.55°S 46.63°W',
+  'welcome.conditions': 'ESTA NOCHE · 24°C · CIELO DESPEJADO',
+  'welcome.title_lead': 'Conoce a alguien que ',
+  'welcome.title_accent': 'de verdad se preocupa.',
+  'welcome.lede':
+    'Citas con intención para quienes se preocupan por el mundo, por su barrio y por una gran primera cita.',
+  'welcome.map_caption': '214 primeras citas esta semana',
+  'welcome.map_places': 'PINHEIROS · VILA MADÁ · BIXIGA',
+  'welcome.social_proof_count': '12,4 mil personas',
+  'welcome.social_proof_rest': 'cerca de ti ya están aquí',
+  'welcome.cta_start': 'Encuentra a tu persona',
+  'welcome.cta_login': 'Ya tengo una cuenta',
 };
