@@ -1,11 +1,15 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import { expectPathname } from './support/app';
-import { SEEDED, signUpWithPhone } from './support/firebase';
+import { SEEDED, signUpWithPhone, uidForPhone } from './support/firebase';
 import { completeOnboarding } from './support/onboarding';
 
 const EMPTY_TITLE = 'You are all caught up';
 const SEEDED_IDS: string[] = SEEDED.map((profile) => profile.id);
+
+// Must match apps/firebase/firebase.json and services/backend/config.ts.
+const PROJECT = 'demo-comradia';
+const FIRESTORE = 'http://127.0.0.1:8089';
 
 const deck = (page: Page) => page.getByTestId('discover-screen');
 const matches = (page: Page) => page.getByTestId('matches-screen');
@@ -79,6 +83,25 @@ async function swipe(page: Page, direction: 'like' | 'pass'): Promise<void> {
   await expect.poll(() => currentPerson(page)).not.toBe(before);
 }
 
+/**
+ * Waits until the emulator stores the swipe. The card leaves the deck before the write
+ * lands, so a reload straight after the tap can beat it (WebKit is the slow one).
+ */
+async function waitForSwipe(uid: string, targetId: string): Promise<void> {
+  await expect
+    .poll(
+      async () => {
+        const res = await fetch(
+          `${FIRESTORE}/v1/projects/${PROJECT}/databases/(default)/documents/users/${uid}/swipes/${targetId}`,
+          { headers: { Authorization: 'Bearer owner' } },
+        );
+        return res.ok;
+      },
+      { message: `swipe on ${targetId} stored` },
+    )
+    .toBe(true);
+}
+
 /** Passes every remaining card and asserts the empty state. */
 async function emptyDeck(page: Page): Promise<void> {
   await passUntil(page, () => false);
@@ -119,16 +142,15 @@ test.describe('discover deck', () => {
     expect([...seen].sort()).toEqual([...SEEDED_IDS].sort());
   });
 
-  test('Like advances the deck and puts the person on Matches', async ({ page }) => {
+  test('Like advances the deck and creates no match without a like back', async ({ page }) => {
     await readyUser(page);
 
-    const liked = await cardTitle(page).innerText();
     await swipe(page, 'like');
 
     await page.getByRole('tab', { name: /Matches/ }).click();
 
     await expectPathname(page, '/matches');
-    await expect(matches(page).getByText(liked).first()).toBeVisible();
+    await expect(matches(page).getByTestId('matches-empty')).toBeVisible();
   });
 
   test('Pass removes the card and creates no match', async ({ page }) => {
@@ -139,13 +161,12 @@ test.describe('discover deck', () => {
     await page.getByRole('tab', { name: /Matches/ }).click();
 
     await expectPathname(page, '/matches');
-    await expect(
-      matches(page).getByText("Nobody yet. Tap Like on Discover and they'll show up here."),
-    ).toBeVisible();
+    await expect(matches(page).getByTestId('matches-empty')).toBeVisible();
   });
 
   test('swipes are persisted: a reload does not bring them back', async ({ page }) => {
     const { digits } = await readyUser(page);
+    const uid = await uidForPhone(`+55${digits}`);
 
     const passed: string[] = [];
     const liked = await passUntil(page, (id) => {
@@ -156,6 +177,7 @@ test.describe('discover deck', () => {
     expect(liked).not.toBeNull();
 
     await swipe(page, 'like');
+    await waitForSwipe(uid, liked as string);
 
     await page.reload();
     if ((await sessionLanding(page)) === 'welcome') await signUpWithPhone(page, digits);

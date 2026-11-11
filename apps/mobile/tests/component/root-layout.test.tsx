@@ -3,6 +3,7 @@ import { act, fireEvent, renderRouter, screen, waitFor } from 'expo-router/testi
 import { useSessionStore } from '@/features/auth/session-store';
 import type { PublicProfile } from '@/features/profile/profile-schema';
 import { enUS } from '@/localization/en-US';
+import { matchIdFor } from '@/services/backend/shared';
 
 import { TEST_PROFILE, TEST_USER, fakeBackend } from './mocks/backend';
 
@@ -16,6 +17,26 @@ jest.mock('@/localization/get-device-locale', () => ({ getDeviceLocale: () => 'e
 function restoreUser(profile: PublicProfile | null = null) {
   if (profile) fakeBackend.state.profiles.set(TEST_USER.uid, profile);
   fakeBackend.emit(TEST_USER);
+}
+
+const MAYA: PublicProfile = {
+  displayName: 'Maya',
+  age: 28,
+  vibe: 'outdoorsy',
+  lookingFor: 'everyone',
+  unionMember: false,
+  union: null,
+  values: ['bookshops_coffee', 'tenant_rights', 'cycling'],
+  promptId: 'perfect_sunday',
+  promptAnswer: 'Community garden at sunrise.',
+};
+
+/** A ready user with a real match against Maya; returns its id. */
+async function seedMatch() {
+  fakeBackend.state.profiles.set('p-maya', MAYA);
+  fakeBackend.likeFrom('p-maya', TEST_USER.uid);
+  const result = await fakeBackend.backend.like(TEST_USER.uid, 'p-maya');
+  return result.matched ? result.matchId : matchIdFor(TEST_USER.uid, 'p-maya');
 }
 
 function renderRoot(initialUrl = '/') {
@@ -141,5 +162,47 @@ describe('RootLayout session routing', () => {
     await router;
 
     await expectPathname(router, '/discover');
+  });
+
+  it('opens the match modal for a ready user', async () => {
+    const matchId = await seedMatch();
+    restoreUser(TEST_PROFILE);
+
+    const router = renderRoot(`/match/${matchId}`);
+    await router;
+
+    await expectPathname(router, `/match/${matchId}`);
+    expect(await screen.findByTestId('match-screen')).toBeOnTheScreen();
+    expect(screen.getByText(enUS['match.title'])).toBeOnTheScreen();
+  });
+
+  it('opens the chat for a ready user', async () => {
+    const matchId = await seedMatch();
+    restoreUser(TEST_PROFILE);
+
+    const router = renderRoot(`/chat/${matchId}`);
+    await router;
+
+    await expectPathname(router, `/chat/${matchId}`);
+    expect(await screen.findByTestId('chat-screen')).toBeOnTheScreen();
+    expect(await screen.findByText('Maya')).toBeOnTheScreen();
+  });
+
+  it('sends a signed-out visitor deep-linking to a match back to /welcome', async () => {
+    useSessionStore.setState({ status: 'signedOut', user: null, profile: null });
+
+    const router = renderRoot('/match/any');
+    await router;
+
+    await expectPathname(router, '/welcome');
+  });
+
+  it('sends a signed-out visitor deep-linking to a chat back to /welcome', async () => {
+    useSessionStore.setState({ status: 'signedOut', user: null, profile: null });
+
+    const router = renderRoot('/chat/any');
+    await router;
+
+    await expectPathname(router, '/welcome');
   });
 });

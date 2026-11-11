@@ -5,14 +5,19 @@
  */
 import type { DiscoveryProfile, PublicProfile } from '@/features/profile/profile-schema';
 import { BackendError, type BackendErrorCode } from '@/services/backend/errors';
+import { matchIdFor, otherUid } from '@/services/backend/shared';
 import type {
   AuthUser,
   Backend,
+  ChatMessage,
+  Match,
   OnboardingDocuments,
   SwipeDirection,
 } from '@/services/backend/types';
 
 type Listener = (user: AuthUser | null) => void;
+type MatchesListener = { uid: string; listener: (matches: Match[]) => void };
+type MessagesListener = { matchId: string; listener: (messages: ChatMessage[]) => void };
 
 export const TEST_USER: AuthUser = {
   uid: 'test-user',
@@ -41,6 +46,11 @@ function createFakeBackend() {
     profiles: new Map<string, PublicProfile>(),
     accounts: new Map<string, OnboardingDocuments['account']>(),
     swipes: [] as { uid: string; targetId: string; direction: SwipeDirection }[],
+    /** `${from}->${to}` for every like. Seed one with `likeFrom(from, to)`. */
+    likes: new Set<string>(),
+    /** matchId -> createdAt (epoch ms). */
+    matches: new Map<string, number>(),
+    messages: new Map<string, ChatMessage[]>(),
     pendingPhone: null as string | null,
     /** Accepted by confirmPhoneCode. */
     validCode: '123456',
@@ -56,6 +66,36 @@ function createFakeBackend() {
       state.failNext.delete(method);
       throw new BackendError(code);
     }
+  };
+
+  const matchesListeners = new Set<MatchesListener>();
+  const messagesListeners = new Set<MessagesListener>();
+  let clock = 1_700_000_000_000;
+  let messageSeq = 0;
+
+  const matchesOf = (uid: string): Match[] => {
+    const out: Match[] = [];
+    state.matches.forEach((createdAt, id) => {
+      if (!id.split('_').includes(uid)) return;
+      const otherId = otherUid(id, uid);
+      const profile = state.profiles.get(otherId);
+      if (profile) out.push({ id, other: { id: otherId, ...profile }, createdAt });
+    });
+    return out.sort((a, b) => b.createdAt - a.createdAt);
+  };
+  const notifyMatches = () =>
+    matchesListeners.forEach(({ uid, listener }) => listener(matchesOf(uid)));
+  const notifyMessages = (matchId: string) =>
+    messagesListeners.forEach((l) => {
+      if (l.matchId === matchId) l.listener([...(state.messages.get(matchId) ?? [])]);
+    });
+  const createMatch = (a: string, b: string) => {
+    const id = matchIdFor(a, b);
+    if (!state.matches.has(id)) {
+      state.matches.set(id, (clock += 1000));
+      notifyMatches();
+    }
+    return id;
   };
 
   const emit = (user: AuthUser | null) => {
@@ -120,6 +160,59 @@ function createFakeBackend() {
       record('recordSwipe', [uid, targetId, direction]);
       state.swipes.push({ uid, targetId, direction });
     },
+    async like(uid, targetId) {
+      record('like', [uid, targetId]);
+      state.swipes.push({ uid, targetId, direction: 'like' });
+      state.likes.add(`${uid}->${targetId}`);
+      if (!state.likes.has(`${targetId}->${uid}`)) return { matched: false };
+      return { matched: true, matchId: createMatch(uid, targetId) };
+    },
+    async reconcileMatches(uid) {
+      record('reconcileMatches', [uid]);
+      state.likes.forEach((key) => {
+        const [from, to] = key.split('->');
+        if (to === uid && state.likes.has(`${uid}->${from}`)) createMatch(uid, from);
+      });
+    },
+    onMatches(uid, listener, onError) {
+      const code = state.failNext.get('onMatches');
+      if (code) {
+        state.failNext.delete('onMatches');
+        onError();
+        return () => {};
+      }
+      const entry = { uid, listener };
+      matchesListeners.add(entry);
+      listener(matchesOf(uid));
+      return () => {
+        matchesListeners.delete(entry);
+      };
+    },
+    async getMatch(uid, matchId) {
+      record('getMatch', [uid, matchId]);
+      return matchesOf(uid).find((m) => m.id === matchId) ?? null;
+    },
+    onMessages(matchId, listener, onError) {
+      const code = state.failNext.get('onMessages');
+      if (code) {
+        state.failNext.delete('onMessages');
+        onError();
+        return () => {};
+      }
+      const entry = { matchId, listener };
+      messagesListeners.add(entry);
+      listener([...(state.messages.get(matchId) ?? [])]);
+      return () => {
+        messagesListeners.delete(entry);
+      };
+    },
+    async sendMessage(uid, matchId, text) {
+      record('sendMessage', [uid, matchId, text]);
+      const list = state.messages.get(matchId) ?? [];
+      list.push({ id: `m${(messageSeq += 1)}`, from: uid, text, createdAt: (clock += 1000) });
+      state.messages.set(matchId, list);
+      notifyMessages(matchId);
+    },
   };
 
   return {
@@ -128,8 +221,24 @@ function createFakeBackend() {
     /** Simulates Firebase restoring or ending a session. */
     emit,
     callsTo: (method: keyof Backend) => state.calls.filter((c) => c.method === method),
+    /** Records that `from` already liked `to` (the next like back makes a match). */
+    likeFrom(from: string, to: string) {
+      state.likes.add(`${from}->${to}`);
+    },
+    /** Delivers a message as if the other person sent it. */
+    receiveMessage(matchId: string, from: string, text: string) {
+      const list = state.messages.get(matchId) ?? [];
+      list.push({ id: `m${(messageSeq += 1)}`, from, text, createdAt: (clock += 1000) });
+      state.messages.set(matchId, list);
+      notifyMessages(matchId);
+    },
     reset() {
       listeners.clear();
+      matchesListeners.clear();
+      messagesListeners.clear();
+      state.likes.clear();
+      state.matches.clear();
+      state.messages.clear();
       state.user = null;
       state.appleAvailable = false;
       state.profiles.clear();

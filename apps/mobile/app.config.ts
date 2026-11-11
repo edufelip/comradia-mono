@@ -42,8 +42,18 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       '@react-native-firebase/auth',
       // Reads the iOS URL scheme from GoogleService-Info.plist.
       '@react-native-google-signin/google-signin',
-      // @react-native-firebase needs static frameworks on iOS.
-      ['expo-build-properties', { ios: { useFrameworks: 'static' } }],
+      // @react-native-firebase needs static frameworks on iOS. Its pods import React-Core
+      // headers non-modularly, which Xcode 16+ rejects when they are built as frameworks
+      // (expo/expo#39607), so they stay plain static libraries.
+      [
+        'expo-build-properties',
+        {
+          ios: {
+            useFrameworks: 'static',
+            forceStaticLinking: ['RNFBApp', 'RNFBAuth', 'RNFBCrashlytics', 'RNFBFirestore'],
+          },
+        },
+      ],
     ],
     extra: {
       ...config.extra,

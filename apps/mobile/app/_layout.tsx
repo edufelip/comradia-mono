@@ -87,6 +87,8 @@ function RootLayoutContent() {
           </Stack.Protected>
           <Stack.Protected guard={status === 'ready'}>
             <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="match/[id]" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="chat/[id]" />
           </Stack.Protected>
         </Stack>
       )}

@@ -90,6 +90,34 @@ export function swipe(overrides: Record<string, unknown> = {}): Record<string, u
   return { direction: 'like', createdAt: serverTimestamp(), ...overrides };
 }
 
+/** A like written by `likerUid` on `targetUid`: `likes/{targetUid}/from/{likerUid}`. */
+export function like(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return { createdAt: serverTimestamp(), ...overrides };
+}
+
+/** A match document: `users` is the two uids sorted, and the id is both joined by `_`. */
+export function match(
+  a: string,
+  b: string,
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return {
+    users: a < b ? [a, b] : [b, a],
+    createdAt: serverTimestamp(),
+    ...overrides,
+  };
+}
+
+/** A chat message sent by Alice. */
+export function message(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    from: 'alice',
+    text: 'Oi! Want to get a coffee?',
+    createdAt: serverTimestamp(),
+    ...overrides,
+  };
+}
+
 /** Returns a copy of `data` without `keys` (a missing key must be denied). */
 export function without(data: Record<string, unknown>, ...keys: string[]): Record<string, unknown> {
   const copy = { ...data };

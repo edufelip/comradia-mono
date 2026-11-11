@@ -21,7 +21,8 @@ beforeEach(async () => {
   await env.clearFirestore();
 });
 
-// Everything that is not profiles, users or users/*/swipes is denied by default.
+// Everything the rules do not model (profiles, users, users/*/swipes, likes, matches,
+// matches/*/messages) is denied by default.
 describe('default deny', () => {
   it('denies read and write on an unknown collection', async () => {
     await assertFails(setDoc(doc(db(alice), 'messages/m1'), { body: 'hi' }));

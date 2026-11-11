@@ -54,6 +54,56 @@ export async function latestSmsCode(e164: string): Promise<string> {
   return code as string;
 }
 
+/** The uid the Auth emulator gave this phone number (E.164); throws if nobody signed up with it. */
+export async function uidForPhone(e164: string): Promise<string> {
+  const res = await fetch(
+    `${AUTH}/identitytoolkit.googleapis.com/v1/projects/${PROJECT}/accounts:lookup`,
+    {
+      method: 'POST',
+      headers: { Authorization: 'Bearer owner', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phoneNumber: [e164] }),
+    },
+  );
+  if (!res.ok) throw new Error(`accounts:lookup → ${res.status} ${await res.text()}`);
+  const body = (await res.json()) as { users?: { localId: string; phoneNumber?: string }[] };
+  const user = body.users?.find((account) => account.phoneNumber === e164);
+  if (!user) throw new Error(`no auth user for ${e164}`);
+  return user.localId;
+}
+
+/** Firestore emulator REST write as `owner` (bypasses rules), the same way scripts/seed.mjs does. */
+async function writeDoc(path: string, fields: Record<string, unknown>): Promise<void> {
+  const res = await fetch(
+    `${FIRESTORE}/v1/projects/${PROJECT}/databases/(default)/documents/${path}`,
+    {
+      method: 'PATCH',
+      headers: { Authorization: 'Bearer owner', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields }),
+    },
+  );
+  if (!res.ok) throw new Error(`PATCH ${path} → ${res.status} ${await res.text()}`);
+}
+
+/** Seeds `fromUid`'s like on `toUid` plus the swipe, as if they liked them in Discover. */
+export async function seedLike(fromUid: string, toUid: string): Promise<void> {
+  const createdAt = { timestampValue: new Date().toISOString() };
+  await writeDoc(`likes/${toUid}/from/${fromUid}`, { createdAt });
+  await writeDoc(`users/${fromUid}/swipes/${toUid}`, {
+    direction: { stringValue: 'like' },
+    createdAt,
+  });
+}
+
+/** Seeds one chat message in `matchId`, sent by `fromUid`, with a fresh id. */
+export async function seedMessage(matchId: string, fromUid: string, text: string): Promise<void> {
+  const id = `seed-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  await writeDoc(`matches/${matchId}/messages/${id}`, {
+    from: { stringValue: fromUid },
+    text: { stringValue: text },
+    createdAt: { timestampValue: new Date().toISOString() },
+  });
+}
+
 /**
  * Signs up through the real UI: Welcome → S1B phone → S1C code. Returns once the app has
  * left S1C (a new account lands on /vibe). Depends on the S1B / S1C testIDs in

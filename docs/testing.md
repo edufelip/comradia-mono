@@ -53,9 +53,13 @@ The workflow files stay in the repo so CI can come back with `gh workflow enable
 From `docs/architecture.md` "Deferred", all of these wait on the Blaze plan or a later task:
 
 - **Real SMS** to any number: Spark only allows Firebase test numbers, so phone sign-in is emulator- or test-number-only.
-- **Mutual matches and match notifications.** Likes are stored, matching is not computed; that needs a Cloud Function.
+- **Match and message notifications.** Matches and chat work without a server, but push notifications need Cloud Functions.
 - **Voice intros and photos:** Cloud Storage on new projects needs Blaze.
 - **Age recompute, ranking by shared passions and distance:** a Cloud Function.
 - **App Check, account deletion, report / block.**
+
+Known flaky test:
+
+- `sign-in.spec.ts` › Google popup (Chromium projects). After "Sign in" in the auth emulator popup, the result sometimes never reaches the app and the popup stays open, more often when many workers run at once. The test retries twice. Cause not found yet (2026-11-11).
 - **Native E2E** flows are written and their syntax is checked, but they have not run on a device.
 - **Placeholder stats** on the welcome screen (weather, "214 first dates", "12.4k people") are fixed strings until there is a data source.

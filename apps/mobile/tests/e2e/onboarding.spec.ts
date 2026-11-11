@@ -158,10 +158,16 @@ test.describe('onboarding S2–S4', () => {
     await signUp(page, nationalDigits);
     await completeOnboarding(page, { name: displayName });
 
-    const profile = (await listProfiles()).find(
-      (candidate) => candidate.data.displayName === displayName,
-    );
-    expect(profile).toBeDefined();
+    // The app may leave S4 before the REST listing sees the write (seen on WebKit).
+    let profile: Awaited<ReturnType<typeof listProfiles>>[number] | undefined;
+    await expect
+      .poll(async () => {
+        profile = (await listProfiles()).find(
+          (candidate) => candidate.data.displayName === displayName,
+        );
+        return profile;
+      })
+      .toBeDefined();
     const uid = profile?.id as string;
 
     // Everything the public card may hold and nothing else: the birth date and the
