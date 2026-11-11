@@ -103,5 +103,8 @@
     "typescript": "~5.9.2",
     "yaml": "2.9.0"
   },
-  "private": true
+  "private": true,
+  "resolutions": {
+    "@react-navigation/core": "7.16.2"
+  }
 }

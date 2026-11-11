@@ -121,6 +121,19 @@ test.describe('sign in', () => {
     await expect(page.getByTestId('register-phone-input')).toHaveValue('(11) 98765-4321');
   });
 
+  // Regression: browser Back crashed react-navigation core < 7.16 ("reading 'stale'"),
+  // fixed by the `resolutions` pin in package.json.
+  test('browser back from registration returns to welcome', async ({ page }) => {
+    await gotoApp(page);
+    await page.getByTestId('welcome-cta-start').click();
+    await expectPathname(page, '/register');
+
+    await page.goBack();
+
+    await expectPathname(page, '/welcome');
+    await expect(page.getByTestId('welcome-cta-start')).toBeVisible();
+  });
+
   test('goes back from registration to welcome', async ({ page }) => {
     await gotoApp(page);
     await page.getByTestId('welcome-cta-start').click();

@@ -3517,10 +3517,10 @@
     color "^4.2.3"
     sf-symbols-typescript "^2.1.0"
 
-"@react-navigation/core@^7.15.0":
-  version "7.15.0"
-  resolved "https://registry.npmjs.org/@react-navigation/core/-/core-7.15.0.tgz"
-  integrity sha512-vK8OQItB7G7SzUcnQAJmPZK4+ET8xm+N0hcLaCpSxDs36M2gQ544jBpc6WPY22/yabzFRGjP4EP9sEzABezPWQ==
+"@react-navigation/core@7.16.2", "@react-navigation/core@^7.15.0":
+  version "7.16.2"
+  resolved "https://registry.yarnpkg.com/@react-navigation/core/-/core-7.16.2.tgz#d35c0fd6ffe18f62294908122b44cdd49fc6ba2e"
+  integrity sha512-0dbCC2aTjNW7MvG1fY7zeq6eYvmmaFCEnBDXPuMPJ8uKgfs9lFGXIQFIfBdmcBVX6vHhS+K213VCsuHSIv5jYw==
   dependencies:
     "@react-navigation/routers" "^7.5.3"
     escape-string-regexp "^4.0.0"
