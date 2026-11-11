@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { beforeEach, describe, it } from 'node:test';
 
 import type { DiscoveryProfile } from '@/features/profile/profile-schema';
+import type { LikeResult } from '@/services/backend/types';
 
 import { INITIAL_DISCOVERY, useDiscoveryStore, type DiscoveryBackend } from './discovery-store';
 
@@ -25,9 +26,14 @@ const LUCAS = profile('p-lucas', 'Lucas');
 const VAL = profile('p-val', 'Val');
 
 const UID = 'me';
+const MATCH_ID = 'me_p-maya';
 
-function fakeBackend(deck: DiscoveryProfile[] = [MAYA, LUCAS, VAL]) {
+function fakeBackend(
+  deck: DiscoveryProfile[] = [MAYA, LUCAS, VAL],
+  likeResult: LikeResult = { matched: false },
+) {
   const swipes: { uid: string; id: string; direction: 'like' | 'pass' }[] = [];
+  const likes: { uid: string; id: string }[] = [];
   const calls = { list: 0 };
 
   const backend: DiscoveryBackend = {
@@ -39,9 +45,13 @@ function fakeBackend(deck: DiscoveryProfile[] = [MAYA, LUCAS, VAL]) {
     async recordSwipe(uid, id, direction) {
       swipes.push({ uid, id, direction });
     },
+    async like(uid, id) {
+      likes.push({ uid, id });
+      return likeResult;
+    },
   };
 
-  return { backend, swipes, calls };
+  return { backend, swipes, likes, calls };
 }
 
 function deferred<T>() {
@@ -58,14 +68,13 @@ const state = () => useDiscoveryStore.getState();
 const ids = (people: { id: string }[]) => people.map((person) => person.id);
 
 beforeEach(() => {
-  useDiscoveryStore.setState({ ...INITIAL_DISCOVERY, candidates: [], liked: [] });
+  useDiscoveryStore.setState({ ...INITIAL_DISCOVERY, candidates: [] });
 });
 
 describe('discovery store', () => {
-  it('starts idle with an empty deck and no likes', () => {
+  it('starts idle with an empty deck', () => {
     assert.deepEqual(state().status, 'idle');
     assert.deepEqual(state().candidates, []);
-    assert.deepEqual(state().liked, []);
   });
 
   it('loads the deck from the backend for the signed-in uid', async () => {
@@ -86,16 +95,6 @@ describe('discovery store', () => {
     await state().load(backend, UID);
 
     assert.deepEqual(ids(state().candidates), ['p-maya', 'p-lucas', 'p-val']);
-  });
-
-  it('keeps the session likes when the deck is reloaded', async () => {
-    const { backend } = fakeBackend();
-    await state().load(backend, UID);
-    await state().like(backend, UID, MAYA.id);
-
-    await state().load(backend, UID);
-
-    assert.deepEqual(ids(state().liked), ['p-maya']);
   });
 
   it('reports an error and leaves the old deck alone when loading fails', async () => {
@@ -128,92 +127,77 @@ describe('discovery store', () => {
     assert.deepEqual(ids(state().candidates), ['p-maya', 'p-lucas', 'p-val']);
   });
 
-  it('likes the top card: removes it, records the swipe and adds it to the likes', async () => {
-    const { backend, swipes } = fakeBackend();
+  it('likes the top card: removes it and resolves with the backend answer', async () => {
+    const { backend, likes } = fakeBackend();
     await state().load(backend, UID);
 
-    await state().like(backend, UID, MAYA.id);
+    const result = await state().like(backend, UID, MAYA.id);
 
+    assert.deepEqual(result, { matched: false });
     assert.deepEqual(ids(state().candidates), ['p-lucas', 'p-val']);
-    assert.deepEqual(ids(state().liked), ['p-maya']);
-    assert.deepEqual(swipes, [{ uid: UID, id: MAYA.id, direction: 'like' }]);
+    assert.deepEqual(likes, [{ uid: UID, id: MAYA.id }]);
   });
 
-  it('keeps the newest like first', async () => {
-    const { backend } = fakeBackend();
+  it('resolves with the new match id when the like is mutual', async () => {
+    const { backend } = fakeBackend([MAYA, LUCAS, VAL], { matched: true, matchId: MATCH_ID });
     await state().load(backend, UID);
 
-    await state().like(backend, UID, MAYA.id);
-    await state().like(backend, UID, LUCAS.id);
+    const result = await state().like(backend, UID, MAYA.id);
 
-    assert.deepEqual(ids(state().liked), ['p-lucas', 'p-maya']);
-    assert.deepEqual(ids(state().candidates), ['p-val']);
-  });
-
-  it('does not list the same person twice when they come back around', async () => {
-    const { backend } = fakeBackend();
-    await state().load(backend, UID);
-    // A refresh can bring back someone already liked in this session (e.g. a failed write
-    // elsewhere), so liking them again must not duplicate the match list.
-    useDiscoveryStore.setState({ liked: [MAYA] });
-
-    await state().like(backend, UID, MAYA.id);
-
-    assert.deepEqual(ids(state().liked), ['p-maya']);
+    assert.deepEqual(result, { matched: true, matchId: MATCH_ID });
     assert.deepEqual(ids(state().candidates), ['p-lucas', 'p-val']);
   });
 
   it('ignores likes for a card that is no longer in the deck', async () => {
-    const { backend, swipes } = fakeBackend();
+    const { backend, likes } = fakeBackend();
     await state().load(backend, UID);
     await state().like(backend, UID, MAYA.id);
 
-    await state().like(backend, UID, MAYA.id);
-    await state().like(backend, UID, 'p-nobody');
+    const again = await state().like(backend, UID, MAYA.id);
+    const nobody = await state().like(backend, UID, 'p-nobody');
 
-    assert.deepEqual(ids(state().liked), ['p-maya']);
-    assert.equal(swipes.length, 1);
+    assert.equal(again, null);
+    assert.equal(nobody, null);
+    assert.deepEqual(ids(state().candidates), ['p-lucas', 'p-val']);
+    assert.equal(likes.length, 1);
   });
 
-  it('likes optimistically and puts the card back first when the swipe fails', async () => {
-    const failure = deferred<void>();
+  it('likes optimistically and puts the card back first when the like fails', async () => {
+    const failure = deferred<LikeResult>();
     const { backend } = fakeBackend();
     await state().load(backend, UID);
-    const slowSwipe: DiscoveryBackend = { ...backend, recordSwipe: () => failure.promise };
+    const slowLike: DiscoveryBackend = { ...backend, like: () => failure.promise };
 
-    const pending = state().like(slowSwipe, UID, MAYA.id);
+    const pending = state().like(slowLike, UID, MAYA.id);
     assert.deepEqual(ids(state().candidates), ['p-lucas', 'p-val']);
-    assert.deepEqual(ids(state().liked), ['p-maya']);
 
     failure.reject(new Error('offline'));
-    await pending;
+    const result = await pending;
 
+    assert.equal(result, null);
     assert.deepEqual(ids(state().candidates), ['p-maya', 'p-lucas', 'p-val']);
-    assert.deepEqual(state().liked, []);
   });
 
   it('puts a failed like back on top of cards swiped afterwards', async () => {
-    const first = deferred<void>();
+    const first = deferred<LikeResult>();
     const { backend } = fakeBackend();
     await state().load(backend, UID);
 
-    const pending = state().like({ ...backend, recordSwipe: () => first.promise }, UID, MAYA.id);
+    const pending = state().like({ ...backend, like: () => first.promise }, UID, MAYA.id);
     await state().like(backend, UID, LUCAS.id);
     first.reject(new Error('offline'));
     await pending;
 
     assert.deepEqual(ids(state().candidates), ['p-maya', 'p-val']);
-    assert.deepEqual(ids(state().liked), ['p-lucas']);
   });
 
-  it('passes the card: removes it, records the swipe and creates no like', async () => {
+  it('passes the card: removes it and records the pass', async () => {
     const { backend, swipes } = fakeBackend();
     await state().load(backend, UID);
 
     await state().pass(backend, UID, LUCAS.id);
 
     assert.deepEqual(ids(state().candidates), ['p-maya', 'p-val']);
-    assert.deepEqual(state().liked, []);
     assert.deepEqual(swipes, [{ uid: UID, id: LUCAS.id, direction: 'pass' }]);
   });
 
@@ -230,17 +214,16 @@ describe('discovery store', () => {
     await pending;
 
     assert.deepEqual(ids(state().candidates), ['p-val', 'p-maya', 'p-lucas']);
-    assert.deepEqual(state().liked, []);
   });
 
   it('ignores actions on an empty deck', async () => {
-    const { backend, swipes } = fakeBackend();
+    const { backend, swipes, likes } = fakeBackend();
 
     await state().like(backend, UID, MAYA.id);
     await state().pass(backend, UID, MAYA.id);
 
     assert.deepEqual(state().candidates, []);
-    assert.deepEqual(state().liked, []);
     assert.deepEqual(swipes, []);
+    assert.deepEqual(likes, []);
   });
 });

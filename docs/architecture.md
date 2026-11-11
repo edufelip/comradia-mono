@@ -25,6 +25,8 @@ apps/mobile
     (auth)/                  welcome (S1), register (S1B), verify-phone (S1C)
     (onboarding)/            vibe (S2), values (S3), starter (S4)
     (tabs)/                  discover (S5), matches (S9), profile (S11)
+    match/[id].tsx           "It's a match!" modal (S8)
+    chat/[id].tsx            chat with one match (S10)
   features/
     auth/                    session store, Firebase → store sync, phone number helpers
     profile/profile-schema.ts  option ids, validation, Firestore document builder (pure TS)
@@ -51,7 +53,7 @@ apps/firebase
 | `loading` | Firebase is restoring the session | spinner only |
 | `signedOut` | no user | `(auth)`: `/welcome`, `/register`, `/verify-phone` |
 | `needsOnboarding` | signed in, no `profiles/{uid}` | `(onboarding)`: `/vibe`, `/values`, `/starter` |
-| `ready` | signed in with a profile | `(tabs)`: `/discover`, `/matches`, `/profile` |
+| `ready` | signed in with a profile | `(tabs)`: `/discover`, `/matches`, `/profile`; `/match/[id]`, `/chat/[id]` |
 | `error` | signed in, profile read failed | retry / sign-out view |
 
 When the status changes, the user lands on `app/index.tsx`, which redirects to the right first screen. Screens never navigate across groups themselves: signing in, finishing onboarding or signing out changes the status, and routing follows.

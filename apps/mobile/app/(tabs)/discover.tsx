@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -13,13 +14,14 @@ import { backend } from '@/services/backend';
 
 /**
  * S5. The deck comes from Firestore; Like / Pass are written as swipes and the card leaves
- * the deck at once. The Matches tab shows the likes of this session (decision #8).
+ * the deck at once. A like the backend reports as mutual opens S8 (decision #8).
  */
 export default function DiscoverScreen() {
   const colorScheme = useColorScheme();
   const scheme = colorScheme === 'dark' ? 'dark' : 'light';
   const ds = getDsTheme(scheme);
   const { t } = useTranslation();
+  const router = useRouter();
   const uid = useSessionStore((state) => state.user?.uid);
   const status = useDiscoveryStore((state) => state.status);
   const candidates = useDiscoveryStore((state) => state.candidates);
@@ -33,6 +35,12 @@ export default function DiscoverScreen() {
 
   const reload = () => {
     if (uid) void load(backend, uid);
+  };
+
+  const likeAndMaybeMatch = async (id: string) => {
+    if (!uid) return;
+    const result = await like(backend, uid, id);
+    if (result?.matched) router.push(`/match/${result.matchId}`);
   };
 
   const activeCandidate = status === 'ready' ? candidates[0] : undefined;
@@ -149,7 +157,7 @@ export default function DiscoverScreen() {
               <DsPillButton
                 label={t('discover.action.solidarity')}
                 onPress={() => {
-                  if (uid) void like(backend, uid, activeCandidate.id);
+                  void likeAndMaybeMatch(activeCandidate.id);
                 }}
                 scheme={scheme}
                 testID="discover-like"

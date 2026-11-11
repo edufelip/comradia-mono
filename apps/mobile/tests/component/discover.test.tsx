@@ -1,14 +1,18 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 import DiscoverScreen from '@/app/(tabs)/discover';
-import MatchesScreen from '@/app/(tabs)/matches';
 import { useSessionStore } from '@/features/auth/session-store';
 import { useDiscoveryStore } from '@/features/discovery/discovery-store';
 import type { DiscoveryProfile } from '@/features/profile/profile-schema';
 import { enUS } from '@/localization/en-US';
+import { matchIdFor } from '@/services/backend/shared';
 
 import { TEST_PROFILE, TEST_USER, fakeBackend } from './mocks/backend';
 
+const mockPush = jest.fn();
+jest.mock('expo-router', () => ({
+  useRouter: () => ({ back: jest.fn(), navigate: jest.fn(), push: mockPush, replace: jest.fn() }),
+}));
 jest.mock('@/localization/get-device-locale', () => ({ getDeviceLocale: () => 'en-US' }));
 
 const MAYA: DiscoveryProfile = {
@@ -129,25 +133,35 @@ describe('DiscoverScreen', () => {
     expect(screen.queryByText(enUS['discover.union_badge'])).not.toBeOnTheScreen();
   });
 
-  it('records a like, advances the deck and lists the person on Matches', async () => {
+  it('records a like, advances the deck and opens no modal without a like back', async () => {
     signIn();
     seedDeck(MAYA, LUCAS);
 
-    const discover = await render(<DiscoverScreen />);
+    await render(<DiscoverScreen />);
     await fireEvent.press(await screen.findByTestId('discover-like'));
 
     expect(await screen.findByText('Lucas, 31')).toBeOnTheScreen();
     expect(screen.queryByText('Maya, 28')).not.toBeOnTheScreen();
-    expect(useDiscoveryStore.getState().liked.map((person) => person.id)).toEqual(['p-maya']);
-    expect(fakeBackend.callsTo('recordSwipe')).toEqual([
-      { method: 'recordSwipe', args: [TEST_USER.uid, 'p-maya', 'like'] },
+    expect(mockPush).not.toHaveBeenCalled();
+    expect(fakeBackend.callsTo('recordSwipe')).toEqual([]);
+    expect(fakeBackend.callsTo('like')).toEqual([
+      { method: 'like', args: [TEST_USER.uid, 'p-maya'] },
     ]);
+  });
 
-    await discover.unmount();
-    await render(<MatchesScreen />);
+  it('opens the match modal when the like is mutual', async () => {
+    signIn();
+    seedDeck(MAYA, LUCAS);
+    // The other person liked first, so this like is the second half of a match.
+    fakeBackend.likeFrom(MAYA.id, TEST_USER.uid);
 
-    expect(screen.getByText('Maya, 28')).toBeOnTheScreen();
-    expect(screen.getByText('Community garden at sunrise, then a long lunch.')).toBeOnTheScreen();
+    await render(<DiscoverScreen />);
+    await fireEvent.press(await screen.findByTestId('discover-like'));
+
+    await waitFor(() =>
+      expect(mockPush).toHaveBeenCalledWith(`/match/${matchIdFor(TEST_USER.uid, MAYA.id)}`),
+    );
+    expect(await screen.findByText('Lucas, 31')).toBeOnTheScreen();
   });
 
   it('records a pass without creating a match', async () => {
@@ -158,16 +172,17 @@ describe('DiscoverScreen', () => {
     await fireEvent.press(await screen.findByTestId('discover-pass'));
 
     expect(await screen.findByText('Lucas, 31')).toBeOnTheScreen();
-    expect(useDiscoveryStore.getState().liked).toEqual([]);
+    expect(mockPush).not.toHaveBeenCalled();
     expect(fakeBackend.callsTo('recordSwipe')).toEqual([
       { method: 'recordSwipe', args: [TEST_USER.uid, 'p-maya', 'pass'] },
     ]);
+    expect(fakeBackend.callsTo('like')).toEqual([]);
   });
 
   it('puts the card back on top when the like cannot be saved', async () => {
     signIn();
     seedDeck(MAYA, LUCAS);
-    fakeBackend.state.failNext.set('recordSwipe', 'network');
+    fakeBackend.state.failNext.set('like', 'network');
 
     await render(<DiscoverScreen />);
     await fireEvent.press(await screen.findByTestId('discover-like'));
@@ -175,8 +190,8 @@ describe('DiscoverScreen', () => {
     await waitFor(() => expect(screen.getByText('Maya, 28')).toBeOnTheScreen());
     expect(screen.getByText('Maya, 28')).toBeOnTheScreen();
     expect(useDiscoveryStore.getState().candidates[0].id).toBe('p-maya');
-    expect(useDiscoveryStore.getState().liked).toEqual([]);
-    expect(fakeBackend.callsTo('recordSwipe')).toHaveLength(1);
+    expect(mockPush).not.toHaveBeenCalled();
+    expect(fakeBackend.callsTo('like')).toHaveLength(1);
   });
 
   it('puts the card back on top when the pass cannot be saved', async () => {
