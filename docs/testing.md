@@ -129,13 +129,15 @@ Gotchas:
 
 ## CI
 
-**Off for now (since 2026-11-11): tests run locally only.** Both workflows below are disabled on GitHub, so run the layers above before you push: `cd apps/mobile && yarn test:all && yarn format:check`, plus `cd apps/firebase && yarn test` when the rules or the profile schema change.
+Every job runs on our own self-hosted runner, `comradia-ci-ubuntu-1` on the home PC (`ssh pc`, labels `self-hosted, Linux, X64, comradia-ci`). The repo has no GitHub-hosted minutes, so `ubuntu-latest` jobs would sit in the queue forever. There is one runner on purpose: the emulators and the web server use fixed ports (9099, 8089, 8199), so Comradia jobs must run one at a time.
 
-The workflow files stay in the repo so CI can come back with `gh workflow enable "Mobile tests"` and `gh workflow enable "Firestore rules"`:
+- Service: `systemctl --user status actions.runner.edufelip-comradia-mono.comradia-ci-ubuntu-1` on the PC; files in `~/actions-runners/comradia-ci-ubuntu-1`. Its `.env` sets `PLAYWRIGHT_BROWSERS_PATH=~/.cache/ms-playwright-comradia` and `TMPDIR=~/ci-tmp/comradia`.
+- The runner has no sudo, so never use `playwright install --with-deps` or `apt-get` in a job.
+- **iOS jobs are the exception.** They need a Mac, so they run on GitHub-hosted `macos-15`, and every one is gated by the repo variable `IOS_CI_ENABLED` (starts `false`): add `if: vars.IOS_CI_ENABLED == 'true'` to each iOS job. Turn them on with `gh variable set IOS_CI_ENABLED --body true -R edufelip/comradia-mono`. Hosted macOS minutes cost money on a private repo. No iOS job exists yet.
 
 | Workflow | Runs when | Jobs |
 | --- | --- | --- |
-| `.github/workflows/mobile-tests.yml` | every PR; pushes to `develop` / `main` touching `apps/mobile/**` or `apps/firebase/**` | `checks` (typecheck, lint, format, unit, component + coverage) and `e2e-web` (Playwright, in parallel; report uploaded on failure) |
+| `.github/workflows/mobile-tests.yml` | every PR; pushes to `develop` / `main` touching `apps/mobile/**` or `apps/firebase/**` | `checks` (typecheck, lint, format, unit, component + coverage) and `e2e-web` (Playwright; report uploaded on failure) |
 | `.github/workflows/firebase-rules.yml` | every PR; pushes to `develop` / `main` touching `apps/firebase/**` or `apps/mobile/features/profile/profile-schema.ts` | `yarn test` in `apps/firebase`: rules tests under a Firestore emulator |
 
 ## Rules

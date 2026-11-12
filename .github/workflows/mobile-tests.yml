@@ -18,7 +18,8 @@ defaults:
 jobs:
   checks:
     name: Types, lint, unit, component
-    runs-on: ubuntu-latest
+    # Self-hosted runner on the home PC (one runner, so jobs never share emulator ports).
+    runs-on: [self-hosted, Linux, X64, comradia-ci]
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -36,7 +37,8 @@ jobs:
 
   e2e-web:
     name: E2E (Playwright web)
-    runs-on: ubuntu-latest
+    # Self-hosted runner on the home PC (one runner, so jobs never share emulator ports).
+    runs-on: [self-hosted, Linux, X64, comradia-ci]
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
@@ -54,13 +56,8 @@ jobs:
       - run: yarn install --frozen-lockfile
       - run: yarn install --frozen-lockfile
         working-directory: apps/firebase
-      - id: pw
-        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
-      - run: npx playwright install --with-deps chromium webkit
+      # Browsers persist on the runner (PLAYWRIGHT_BROWSERS_PATH in its .env); no --with-deps, it needs sudo.
+      - run: npx playwright install chromium webkit
       - run: yarn test:e2e
         env:
           CI: '1'

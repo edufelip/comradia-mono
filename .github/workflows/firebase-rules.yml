@@ -21,7 +21,8 @@ defaults:
 jobs:
   rules:
     name: Rules and schema parity
-    runs-on: ubuntu-latest
+    # Self-hosted runner on the home PC (one runner, so jobs never share emulator ports).
+    runs-on: [self-hosted, Linux, X64, comradia-ci]
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
