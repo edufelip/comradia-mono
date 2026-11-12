@@ -1,4 +1,18 @@
 {
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "notifications",
+      "runtime": "nodejs22",
+      "predeploy": ["yarn --cwd \"$RESOURCE_DIR\" build"],
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log"
+      ]
+    }
+  ],
   "firestore": {
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"

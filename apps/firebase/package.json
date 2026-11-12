@@ -6,7 +6,7 @@
   "scripts": {
     "emulators": "firebase emulators:start --project demo-comradia --only auth,firestore,storage",
     "seed": "node scripts/seed.mjs --clear",
-    "test": "firebase emulators:exec --project demo-comradia --only firestore,storage \"node --import tsx --test tests/*.test.ts\"",
+    "test": "firebase emulators:exec --project demo-comradia --only firestore,storage \"node --import tsx --test tests/*.test.ts && yarn --cwd functions test\"",
     "deploy:rules": "firebase deploy --project dev --only firestore:rules,firestore:indexes",
     "deploy:storage": "firebase deploy --project dev --only storage"
   },

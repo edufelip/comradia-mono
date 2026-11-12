@@ -35,6 +35,10 @@ jobs:
         with:
           node-version: 22
       - run: yarn install --frozen-lockfile
+      - run: yarn install --frozen-lockfile
+        working-directory: apps/firebase/functions
+      - run: yarn build
+        working-directory: apps/firebase/functions
       # `yarn test` starts its own Firestore emulator via `firebase emulators:exec`
-      # and runs every file in tests/ against it.
+      # and runs the rules plus emulator-backed Functions tests against it.
       - run: yarn test
