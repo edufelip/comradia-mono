@@ -126,3 +126,24 @@ describe('users/{uid}/pushTokens', () => {
     );
   });
 });
+
+describe('notificationDispatches server-only ledger', () => {
+  it('denies client reads, queries, creates, updates and deletes', async () => {
+    const markerId = 'a'.repeat(64);
+    await env.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(db(context), 'notificationDispatches', markerId), {
+        createdAt: serverTimestamp(),
+      });
+    });
+    for (const context of [alice, bob, signedOut]) {
+      const marker = doc(db(context), 'notificationDispatches', markerId);
+      await assertFails(getDoc(marker));
+      await assertFails(getDocs(collection(db(context), 'notificationDispatches')));
+      await assertFails(setDoc(doc(db(context), 'notificationDispatches', 'b'.repeat(64)), {
+        createdAt: serverTimestamp(),
+      }));
+      await assertFails(setDoc(marker, { createdAt: serverTimestamp() }));
+      await assertFails(deleteDoc(marker));
+    }
+  });
+});
