@@ -12,6 +12,7 @@ import { DsRadius, DsSpace, DsTypography, getDsTheme } from '@/constants/design-
 import { useSessionStore } from '@/features/auth/session-store';
 import { useChat } from '@/features/chat/use-chat';
 import { sharedValues } from '@/features/matches/shared-values';
+import { useBlockedUids } from '@/features/safety/use-blocked-uids';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTranslation } from '@/localization';
 import { backend } from '@/services/backend';
@@ -31,6 +32,7 @@ export default function ChatScreen() {
   const uid = useSessionStore((state) => state.user?.uid);
   const myProfile = useSessionStore((state) => state.profile);
   const { status, match, messages, retry } = useChat(backend, uid, id);
+  const { blockedUids } = useBlockedUids(backend, uid);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const [sendFailed, setSendFailed] = useState(false);
@@ -43,6 +45,9 @@ export default function ChatScreen() {
 
   const shared = sharedValues(myProfile?.values, match?.other.values ?? []);
   const canSend = draft.trim().length > 0 && !sending;
+  // A block on either side closes the conversation: the messages stay readable, the
+  // composer goes away.
+  const closed = match ? blockedUids.includes(match.other.id) : false;
 
   const send = async () => {
     if (!uid || !canSend) return;
@@ -89,6 +94,20 @@ export default function ChatScreen() {
               </Text>
             ) : null}
           </View>
+          {match ? (
+            <DsPillButton
+              fullWidth={false}
+              label={t('chat.safety')}
+              onPress={() =>
+                router.push(`/safety/${match.other.id}?context=chat&match=${match.id}`)
+              }
+              scheme={scheme}
+              size="xs"
+              style={styles.headerAction}
+              testID="chat-safety"
+              variant="ghost"
+            />
+          ) : null}
         </View>
 
         {shared.length > 0 ? (
@@ -185,47 +204,58 @@ export default function ChatScreen() {
               },
             ]}
           >
-            {sendFailed ? (
+            {closed ? (
               <Text
-                accessibilityRole="alert"
-                style={[DsTypography.caption, { color: ds.color.danger }]}
-                testID="chat-error"
+                style={[DsTypography.body, { color: ds.color.textSecondary }]}
+                testID="chat-closed"
               >
-                {t('chat.error')}
+                {t('chat.closed')}
               </Text>
-            ) : null}
+            ) : (
+              <>
+                {sendFailed ? (
+                  <Text
+                    accessibilityRole="alert"
+                    style={[DsTypography.caption, { color: ds.color.danger }]}
+                    testID="chat-error"
+                  >
+                    {t('chat.error')}
+                  </Text>
+                ) : null}
 
-            <View style={styles.composer}>
-              <TextInput
-                accessibilityLabel={t('chat.input_label')}
-                maxLength={MESSAGE_MAX}
-                onChangeText={setDraft}
-                placeholder={t('chat.placeholder')}
-                placeholderTextColor={ds.color.textTertiary}
-                style={[
-                  styles.input,
-                  {
-                    backgroundColor: ds.color.surface,
-                    borderColor: ds.color.border,
-                    color: ds.color.textPrimary,
-                  },
-                ]}
-                testID="chat-input"
-                value={draft}
-              />
-              <DsPillButton
-                disabled={!canSend}
-                fullWidth={false}
-                label={t('chat.send')}
-                loading={sending}
-                onPress={() => {
-                  void send();
-                }}
-                scheme={scheme}
-                testID="chat-send"
-                variant="primary"
-              />
-            </View>
+                <View style={styles.composer}>
+                  <TextInput
+                    accessibilityLabel={t('chat.input_label')}
+                    maxLength={MESSAGE_MAX}
+                    onChangeText={setDraft}
+                    placeholder={t('chat.placeholder')}
+                    placeholderTextColor={ds.color.textTertiary}
+                    style={[
+                      styles.input,
+                      {
+                        backgroundColor: ds.color.surface,
+                        borderColor: ds.color.border,
+                        color: ds.color.textPrimary,
+                      },
+                    ]}
+                    testID="chat-input"
+                    value={draft}
+                  />
+                  <DsPillButton
+                    disabled={!canSend}
+                    fullWidth={false}
+                    label={t('chat.send')}
+                    loading={sending}
+                    onPress={() => {
+                      void send();
+                    }}
+                    scheme={scheme}
+                    testID="chat-send"
+                    variant="primary"
+                  />
+                </View>
+              </>
+            )}
           </View>
         ) : null}
       </View>
@@ -258,6 +288,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     gap: DsSpace.sm,
+  },
+  headerAction: {
+    marginLeft: 'auto',
   },
   headerText: {
     gap: DsSpace.xxs,

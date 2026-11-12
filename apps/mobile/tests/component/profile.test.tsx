@@ -71,4 +71,97 @@ describe('ProfileScreen', () => {
     expect(screen.getByText('Ana, 29')).toBeOnTheScreen();
     expect(screen.queryByText(enUS['discover.union_badge'])).not.toBeOnTheScreen();
   });
+
+  describe('deleting the account', () => {
+    async function openPanel() {
+      await render(<ProfileScreen />);
+      await fireEvent.press(screen.getByTestId('profile-delete-account'));
+    }
+
+    async function confirmDelete() {
+      await fireEvent.press(await screen.findByTestId('profile-delete-confirm'));
+    }
+
+    it('asks first, with the consequences spelled out, and deletes nothing on cancel', async () => {
+      signIn();
+      await openPanel();
+
+      expect(screen.getByTestId('profile-delete-panel')).toBeOnTheScreen();
+      expect(screen.getByText(enUS['profile.delete.title'])).toBeOnTheScreen();
+      expect(screen.getByText(enUS['profile.delete.body'])).toBeOnTheScreen();
+
+      await fireEvent.press(screen.getByTestId('profile-delete-cancel'));
+
+      expect(screen.queryByTestId('profile-delete-panel')).not.toBeOnTheScreen();
+      expect(screen.getByTestId('profile-delete-account')).toBeOnTheScreen();
+      expect(fakeBackend.callsTo('deleteAccount')).toEqual([]);
+      expect(fakeBackend.callsTo('lastSignInAt')).toEqual([]);
+    });
+
+    it('deletes everything on a fresh sign-in and lets the session end', async () => {
+      signIn();
+      await openPanel();
+
+      await confirmDelete();
+
+      await waitFor(() =>
+        expect(fakeBackend.callsTo('deleteAccount')).toEqual([
+          { method: 'deleteAccount', args: [TEST_USER.uid] },
+        ]),
+      );
+      expect(screen.queryByTestId('profile-delete-error')).not.toBeOnTheScreen();
+      expect(screen.queryByTestId('profile-delete-reauth')).not.toBeOnTheScreen();
+    });
+
+    it('asks for a fresh sign-in instead of deleting with an old one', async () => {
+      signIn();
+      // Firebase refuses a deletion after five minutes without a sign-in.
+      jest.spyOn(fakeBackend.backend, 'lastSignInAt').mockReturnValue(Date.now() - 6 * 60 * 1000);
+      await openPanel();
+
+      await confirmDelete();
+
+      expect(await screen.findByTestId('profile-delete-reauth')).toBeOnTheScreen();
+      expect(screen.getByText(enUS['profile.delete.reauth'])).toBeOnTheScreen();
+      expect(fakeBackend.callsTo('deleteAccount')).toEqual([]);
+      // Sign out stays available, which is exactly what the copy asks for.
+      expect(screen.getByTestId('profile-sign-out')).toBeEnabled();
+    });
+
+    it('asks for a fresh sign-in when the sign-in time is unknown', async () => {
+      signIn();
+      jest.spyOn(fakeBackend.backend, 'lastSignInAt').mockReturnValue(null);
+      await openPanel();
+
+      await confirmDelete();
+
+      expect(await screen.findByTestId('profile-delete-reauth')).toBeOnTheScreen();
+      expect(fakeBackend.callsTo('deleteAccount')).toEqual([]);
+    });
+
+    it('reports a deletion that did not go through', async () => {
+      signIn();
+      fakeBackend.state.failNext.set('deleteAccount', 'network');
+      await openPanel();
+
+      await confirmDelete();
+
+      expect(await screen.findByTestId('profile-delete-error')).toBeOnTheScreen();
+      expect(screen.getByText(enUS['profile.delete.error'])).toBeOnTheScreen();
+      expect(fakeBackend.callsTo('deleteAccount')).toHaveLength(1);
+      expect(screen.queryByTestId('profile-delete-reauth')).not.toBeOnTheScreen();
+    });
+
+    it('turns a stale session into the re-auth message', async () => {
+      signIn();
+      fakeBackend.state.failNext.set('deleteAccount', 'requires_recent_login');
+      await openPanel();
+
+      await confirmDelete();
+
+      expect(await screen.findByTestId('profile-delete-error')).toBeOnTheScreen();
+      expect(screen.getByTestId('profile-delete-reauth')).toBeOnTheScreen();
+      expect(fakeBackend.callsTo('deleteAccount')).toHaveLength(1);
+    });
+  });
 });

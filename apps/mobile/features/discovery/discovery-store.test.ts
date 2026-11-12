@@ -31,6 +31,7 @@ const MATCH_ID = 'me_p-maya';
 function fakeBackend(
   deck: DiscoveryProfile[] = [MAYA, LUCAS, VAL],
   likeResult: LikeResult = { matched: false },
+  blocked: string[] = [],
 ) {
   const swipes: { uid: string; id: string; direction: 'like' | 'pass' }[] = [];
   const likes: { uid: string; id: string }[] = [];
@@ -41,6 +42,10 @@ function fakeBackend(
       calls.list += 1;
       assert.equal(uid, UID);
       return deck;
+    },
+    async listBlockedUids(uid) {
+      assert.equal(uid, UID);
+      return blocked;
     },
     async recordSwipe(uid, id, direction) {
       swipes.push({ uid, id, direction });
@@ -95,6 +100,40 @@ describe('discovery store', () => {
     await state().load(backend, UID);
 
     assert.deepEqual(ids(state().candidates), ['p-maya', 'p-lucas', 'p-val']);
+  });
+
+  it('hides everyone I blocked and everyone who blocked me', async () => {
+    const { backend } = fakeBackend([MAYA, LUCAS, VAL], { matched: false }, [MAYA.id, VAL.id]);
+
+    await state().load(backend, UID);
+
+    assert.equal(state().status, 'ready');
+    assert.deepEqual(ids(state().candidates), ['p-lucas']);
+  });
+
+  it('fails closed when the blocked list cannot be read', async () => {
+    const { backend } = fakeBackend();
+    const failing: DiscoveryBackend = {
+      ...backend,
+      listBlockedUids: async () => {
+        throw new Error('offline');
+      },
+    };
+
+    await state().load(failing, UID);
+
+    assert.equal(state().status, 'error');
+    assert.deepEqual(state().candidates, []);
+  });
+
+  it('drops one person from the deck on request', async () => {
+    const { backend } = fakeBackend();
+    await state().load(backend, UID);
+
+    state().removeCandidate(MAYA.id);
+
+    assert.deepEqual(ids(state().candidates), ['p-lucas', 'p-val']);
+    assert.equal(state().status, 'ready');
   });
 
   it('reports an error and leaves the old deck alone when loading fails', async () => {

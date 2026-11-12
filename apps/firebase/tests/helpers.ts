@@ -118,6 +118,27 @@ export function message(overrides: Record<string, unknown> = {}): Record<string,
   };
 }
 
+/**
+ * A block document: both `users/{uid}/blocks/{blockedUid}` and the reverse index
+ * `blocks/{blockedUid}/by/{uid}` hold the same one-field document.
+ */
+export function block(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return { createdAt: serverTimestamp(), ...overrides };
+}
+
+/** A report written by Alice about Bob. Override one field to test that field's rule. */
+export function report(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    reporter: 'alice',
+    target: 'bob',
+    reason: 'harassment',
+    details: 'Kept messaging after I said no.',
+    context: 'chat',
+    createdAt: serverTimestamp(),
+    ...overrides,
+  };
+}
+
 /** Returns a copy of `data` without `keys` (a missing key must be denied). */
 export function without(data: Record<string, unknown>, ...keys: string[]): Record<string, unknown> {
   const copy = { ...data };

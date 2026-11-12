@@ -19,7 +19,7 @@ import {
   where,
   writeBatch,
 } from 'firebase/firestore';
-import { db, like, match, testEnvironment, without } from './helpers';
+import { block, db, like, match, testEnvironment, without } from './helpers';
 
 let env: RulesTestEnvironment;
 let alice: ReturnType<RulesTestEnvironment['authenticatedContext']>;
@@ -138,12 +138,35 @@ describe('matches create', () => {
     );
   });
 
-  it('denies update and delete', async () => {
+  it('denies a match when one of them blocked the other', async () => {
+    await seedBothLikes();
+    await seed('blocks/bob/by/alice', block());
+    await assertFails(setDoc(matchRef(alice, 'alice_bob'), match('alice', 'bob')));
+  });
+
+  it('denies a match when the other person blocked me', async () => {
+    await seedBothLikes();
+    await seed('blocks/alice/by/bob', block());
+    await assertFails(setDoc(matchRef(alice, 'alice_bob'), match('alice', 'bob')));
+  });
+
+  it('allows the match again once the block is gone', async () => {
+    await seedBothLikes();
+    await seed('blocks/bob/by/alice', block());
+    await assertFails(setDoc(matchRef(alice, 'alice_bob'), match('alice', 'bob')));
+    await assertSucceeds(deleteDoc(doc(db(alice), 'blocks/bob/by/alice')));
+    await assertSucceeds(setDoc(matchRef(alice, 'alice_bob'), match('alice', 'bob')));
+  });
+
+  it('denies update and allows either member to delete', async () => {
     await seedBothLikes();
     await seed('matches/alice_bob', match('alice', 'bob'));
     await assertFails(updateDoc(matchRef(alice, 'alice_bob'), { createdAt: serverTimestamp() }));
-    await assertFails(deleteDoc(matchRef(alice, 'alice_bob')));
     await assertFails(deleteDoc(matchRef(carol, 'alice_bob')));
+    await assertFails(deleteDoc(matchRef(signedOut, 'alice_bob')));
+    await assertSucceeds(deleteDoc(matchRef(alice, 'alice_bob')));
+    await seed('matches/alice_bob', match('alice', 'bob'));
+    await assertSucceeds(deleteDoc(matchRef(bob, 'alice_bob')));
   });
 });
 

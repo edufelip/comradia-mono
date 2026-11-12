@@ -9,6 +9,28 @@ export type AuthUser = {
 
 export type SwipeDirection = 'like' | 'pass';
 
+/** Why someone reports a card or a chat. Mirrored in `firestore.rules`. */
+export type ReportReason = 'harassment' | 'hate' | 'fake' | 'spam' | 'underage' | 'other';
+
+/** The picker order in the report sheet. */
+export const REPORT_REASONS: readonly ReportReason[] = [
+  'harassment',
+  'hate',
+  'fake',
+  'spam',
+  'underage',
+  'other',
+];
+
+export type ReportContext = 'profile' | 'chat';
+
+export type ReportInput = {
+  targetId: string;
+  reason: ReportReason;
+  details: string;
+  context: ReportContext;
+};
+
 /** A mutual like. `id` is the two uids sorted and joined by `_` (see `matchIdFor`). */
 export type Match = {
   id: string;
@@ -74,4 +96,20 @@ export type Backend = {
     onError: () => void,
   ): Unsubscribe;
   sendMessage(uid: string, matchId: string, text: string): Promise<void>;
+  /** Blocks `targetId`: writes users/{uid}/blocks/{targetId} and blocks/{targetId}/by/{uid} in one batch. */
+  blockUser(uid: string, targetId: string): Promise<void>;
+  /** Writes reports/{auto} and blocks the target, in one batch. */
+  reportUser(uid: string, input: ReportInput): Promise<void>;
+  /** Uids to hide from me: people I blocked plus people who blocked me (no duplicates). */
+  listBlockedUids(uid: string): Promise<string[]>;
+  /** Epoch ms of the signed-in user's last sign-in (Auth metadata), or null when signed out. */
+  lastSignInAt(): number | null;
+  /**
+   * Deletes everything I own, then my sign-in. Order: my swipes (and for each 'like' swipe
+   * the doc likes/{target}/from/{uid}); likes I received (likes/{uid}/from/*); my blocks
+   * (blocks/{t}/by/{uid} and users/{uid}/blocks/{t}); in every match where users
+   * array-contains uid: my messages (from == uid) then the match doc; then profiles/{uid}
+   * and users/{uid}; finally the Firebase Auth user. Batches of at most 450 writes.
+   */
+  deleteAccount(uid: string): Promise<void>;
 };

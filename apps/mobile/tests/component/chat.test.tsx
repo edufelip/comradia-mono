@@ -10,16 +10,22 @@ import type { ChatMessage } from '@/services/backend/types';
 import { TEST_PROFILE, TEST_USER, fakeBackend } from './mocks/backend';
 
 const mockBack = jest.fn();
+const mockPush = jest.fn();
 let mockParams: { id?: string } = {};
-jest.mock('expo-router', () => ({
-  useLocalSearchParams: () => mockParams,
-  useRouter: () => ({
-    back: mockBack,
-    navigate: jest.fn(),
-    push: jest.fn(),
-    replace: jest.fn(),
-  }),
-}));
+jest.mock('expo-router', () => {
+  const { useEffect } = jest.requireActual<typeof import('react')>('react');
+  return {
+    // Stand-in for `useFocusEffect`: runs on mount, like a focused screen.
+    useFocusEffect: (callback: () => void) => useEffect(callback, [callback]),
+    useLocalSearchParams: () => mockParams,
+    useRouter: () => ({
+      back: mockBack,
+      navigate: jest.fn(),
+      push: mockPush,
+      replace: jest.fn(),
+    }),
+  };
+});
 jest.mock('@/localization/get-device-locale', () => ({ getDeviceLocale: () => 'en-US' }));
 
 const MAYA: DiscoveryProfile = {
@@ -226,5 +232,45 @@ describe('ChatScreen', () => {
     await fireEvent.press(await screen.findByTestId('chat-back'));
 
     expect(mockBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens the safety sheet for the other person', async () => {
+    signIn();
+    const matchId = await seedMatch();
+
+    await render(<ChatScreen />);
+
+    const safety = await screen.findByTestId('chat-safety');
+    expect(safety).toHaveAccessibleName('Safety options');
+
+    await fireEvent.press(safety);
+
+    expect(mockPush).toHaveBeenCalledWith(`/safety/${MAYA.id}?context=chat&match=${matchId}`);
+  });
+
+  it('closes the conversation when the other person is blocked', async () => {
+    signIn();
+    const matchId = await seedMatch();
+    fakeBackend.state.blocked.add(MAYA.id);
+    await act(() => fakeBackend.receiveMessage(matchId, MAYA.id, 'Thursday sounds good'));
+
+    await render(<ChatScreen />);
+
+    expect(await screen.findByTestId('chat-closed')).toBeOnTheScreen();
+    expect(screen.getByText(enUS['chat.closed'])).toBeOnTheScreen();
+    // The messages stay readable; only the composer goes away.
+    expect(screen.getByText('Thursday sounds good')).toBeOnTheScreen();
+    expect(screen.queryByTestId('chat-input')).not.toBeOnTheScreen();
+    expect(screen.queryByTestId('chat-send')).not.toBeOnTheScreen();
+  });
+
+  it('keeps the composer when nobody is blocked', async () => {
+    signIn();
+    await seedMatch();
+
+    await render(<ChatScreen />);
+
+    expect(await screen.findByTestId('chat-input')).toBeOnTheScreen();
+    expect(screen.queryByTestId('chat-closed')).not.toBeOnTheScreen();
   });
 });

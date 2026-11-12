@@ -12,6 +12,7 @@ import type {
   ChatMessage,
   Match,
   OnboardingDocuments,
+  ReportInput,
   SwipeDirection,
 } from '@/services/backend/types';
 
@@ -51,6 +52,10 @@ function createFakeBackend() {
     /** matchId -> createdAt (epoch ms). */
     matches: new Map<string, number>(),
     messages: new Map<string, ChatMessage[]>(),
+    /** Uids the signed-in user blocked (or reported, which also blocks). */
+    blocked: new Set<string>(),
+    /** Every report written, in order. */
+    reports: [] as ReportInput[],
     pendingPhone: null as string | null,
     /** Accepted by confirmPhoneCode. */
     validCode: '123456',
@@ -213,6 +218,30 @@ function createFakeBackend() {
       state.messages.set(matchId, list);
       notifyMessages(matchId);
     },
+    async blockUser(uid, targetId) {
+      record('blockUser', [uid, targetId]);
+      state.blocked.add(targetId);
+    },
+    async reportUser(uid, input) {
+      record('reportUser', [uid, input]);
+      state.reports.push(input);
+      state.blocked.add(input.targetId);
+    },
+    async listBlockedUids(uid) {
+      record('listBlockedUids', [uid]);
+      return [...state.blocked];
+    },
+    lastSignInAt() {
+      record('lastSignInAt', []);
+      return Date.now();
+    },
+    async deleteAccount(uid) {
+      record('deleteAccount', [uid]);
+      state.profiles.delete(uid);
+      state.accounts.delete(uid);
+      state.swipes = state.swipes.filter((swipe) => swipe.uid !== uid);
+      emit(null);
+    },
   };
 
   return {
@@ -239,6 +268,8 @@ function createFakeBackend() {
       state.likes.clear();
       state.matches.clear();
       state.messages.clear();
+      state.blocked.clear();
+      state.reports = [];
       state.user = null;
       state.appleAvailable = false;
       state.profiles.clear();

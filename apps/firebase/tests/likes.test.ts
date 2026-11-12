@@ -105,9 +105,16 @@ describe('likes read and delete', () => {
     await assertFails(getDoc(doc(db(signedOut), 'likes/alice/from/bob')));
   });
 
-  it('allows only the liker to delete the like', async () => {
-    await assertFails(deleteDoc(likeRef(alice, 'alice', 'bob')));
-    await assertFails(deleteDoc(likeRef(carol, 'alice', 'bob')));
+  it('allows the liker to delete the like', async () => {
     await assertSucceeds(deleteDoc(likeRef(bob, 'alice', 'bob')));
+  });
+
+  it('allows the liked person to delete a like they received', async () => {
+    await assertSucceeds(deleteDoc(likeRef(alice, 'alice', 'bob')));
+  });
+
+  it('denies a third person and a signed-out delete', async () => {
+    await assertFails(deleteDoc(likeRef(carol, 'alice', 'bob')));
+    await assertFails(deleteDoc(doc(db(signedOut), 'likes/alice/from/bob')));
   });
 });

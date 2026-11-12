@@ -98,6 +98,15 @@ service cloud.firestore {
           && request.resource.data.direction in ['like', 'pass']
           && request.resource.data.createdAt == request.time;
       }
+
+      // The blocker's own list of who they blocked: private, written once, never edited.
+      // Delete is for account deletion (there is no unblock yet).
+      match /blocks/{targetUid} {
+        allow read, delete: if isOwner(uid);
+        allow create: if isOwner(uid) && targetUid != uid
+          && request.resource.data.keys().hasOnly(['createdAt'])
+          && request.resource.data.createdAt == request.time;
+      }
     }
 
     // One like per direction. The liked person reads the likes they received (that is how
@@ -108,7 +117,44 @@ service cloud.firestore {
       allow create: if isOwner(likerUid) && likerUid != targetUid
         && request.resource.data.keys().hasOnly(['createdAt'])
         && request.resource.data.createdAt == request.time;
-      allow delete: if isOwner(likerUid);
+      // Either side may withdraw the like: the liker on their own behalf, or the liked
+      // person when they leave or delete their account.
+      allow delete: if isOwner(likerUid) || isOwner(targetUid);
+    }
+
+    /** Either one blocked the other: the same fact is written from both sides and read here. */
+    function blockedBetween(a, b) {
+      return exists(/databases/$(database)/documents/blocks/$(a)/by/$(b))
+        || exists(/databases/$(database)/documents/blocks/$(b)/by/$(a));
+    }
+
+    // The reverse index of a block, keyed by the blocked person. The target may read that
+    // they were blocked (that is why the profile and chat disappear), the blocker owns the
+    // entry, and the match and message rules check both directions with two exists() calls.
+    match /blocks/{targetUid}/by/{blockerUid} {
+      allow read: if isOwner(targetUid) || isOwner(blockerUid);
+      allow create: if isOwner(blockerUid) && targetUid != blockerUid
+        && request.resource.data.keys().hasOnly(['createdAt'])
+        && request.resource.data.createdAt == request.time;
+      allow delete: if isOwner(blockerUid);
+    }
+
+    // A report is write-only from the client: nobody reads, edits or deletes one, so a
+    // report can never be used to learn who reported whom or to retract a complaint.
+    match /reports/{reportId} {
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['reporter', 'target', 'reason', 'details',
+          'context', 'createdAt'])
+        && request.resource.data.keys().hasAll(['reporter', 'target', 'reason', 'details',
+          'context', 'createdAt'])
+        && request.resource.data.reporter == request.auth.uid
+        && isString(request.resource.data.target, 1, 128)
+        && request.resource.data.target != request.auth.uid
+        && request.resource.data.reason in ['harassment', 'hate', 'fake', 'spam', 'underage',
+          'other']
+        && isString(request.resource.data.details, 0, 500)
+        && request.resource.data.context in ['profile', 'chat']
+        && request.resource.data.createdAt == request.time;
     }
 
     /** The caller is one of the two uids in the match id (a uid never contains `_`). */
@@ -139,8 +185,11 @@ service cloud.firestore {
       allow create: if isInMatch(matchId)
         && request.auth.uid in request.resource.data.users
         && validMatch(matchId, request.resource.data)
+        && !blockedBetween(request.resource.data.users[0], request.resource.data.users[1])
         && existsAfter(/databases/$(database)/documents/likes/$(request.resource.data.users[0])/from/$(request.resource.data.users[1]))
         && existsAfter(/databases/$(database)/documents/likes/$(request.resource.data.users[1])/from/$(request.resource.data.users[0]));
+      // Either member may delete the match: account deletion takes the chat with it.
+      allow delete: if isInMatch(matchId);
 
       // One chat per match, text only. The sender is one of the two; nothing is edited.
       match /messages/{messageId} {
@@ -148,10 +197,13 @@ service cloud.firestore {
           && exists(/databases/$(database)/documents/matches/$(matchId));
         allow create: if isInMatch(matchId)
           && exists(/databases/$(database)/documents/matches/$(matchId))
+          && !blockedBetween(matchId.split('_')[0], matchId.split('_')[1])
           && request.resource.data.keys().hasOnly(['from', 'text', 'createdAt'])
           && request.resource.data.from == request.auth.uid
           && isString(request.resource.data.text, 1, 1000)
           && request.resource.data.createdAt == request.time;
+        // Account deletion removes the messages the person sent, and only those.
+        allow delete: if isInMatch(matchId) && resource.data.from == request.auth.uid;
       }
     }
   }
