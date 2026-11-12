@@ -25,6 +25,12 @@ jest.mock('@/services/backend', () => ({
   backend: require('./mocks/backend').fakeBackend.backend,
 }));
 
+// The bridge is exercised in this component lane, but its native SDK edge is not available
+// in Jest. Keep event delivery controllable so routing and privacy behavior still run live.
+jest.mock('@/features/notifications/notifications', () => {
+  return require('./mocks/notifications').notificationMockApi;
+});
+
 jest.mock('expo-haptics', () => ({
   impactAsync: jest.fn(() => Promise.resolve()),
   notificationAsync: jest.fn(() => Promise.resolve()),
@@ -41,4 +47,5 @@ beforeEach(() => {
   fakeBackend.reset();
   useSessionStore.setState(INITIAL_SESSION);
   useDiscoveryStore.setState(INITIAL_DISCOVERY);
+  require('./mocks/notifications').notificationMockApi.resetPushEvents();
 });

@@ -37,8 +37,10 @@ async function readyUser(page: Page): Promise<{ digits: string; name: string }> 
 
 /** The Firestore id of the top card, or null when the deck shows no card. */
 async function currentPerson(page: Page): Promise<string | null> {
-  if ((await personCard(page).count()) === 0) return null;
-  const testId = await personCard(page).first().getAttribute('data-testid');
+  // The last card can disappear between a count and an auto-waiting attribute read.
+  const testId = await personCard(page).evaluateAll(
+    (cards) => cards[0]?.getAttribute('data-testid') ?? null,
+  );
   return testId?.replace('discover-person-', '') ?? null;
 }
 
@@ -84,8 +86,7 @@ async function swipe(page: Page, direction: 'like' | 'pass'): Promise<void> {
 }
 
 /**
- * Waits until the emulator stores the swipe. The card leaves the deck before the write
- * lands, so a reload straight after the tap can beat it (WebKit is the slow one).
+ * Confirms persistence independently of the visible deck before reloading the page.
  */
 async function waitForSwipe(uid: string, targetId: string): Promise<void> {
   await expect

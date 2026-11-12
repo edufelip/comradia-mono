@@ -1,6 +1,14 @@
 import { Image } from 'expo-image';
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import Animated, {
+  cancelAnimation,
+  Easing,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { DsFontFamily, getDsTheme } from '@/constants/design-system';
 import { useTranslation } from '@/localization';
 import { usePhotoUrl } from './use-photo-url';
@@ -26,15 +34,33 @@ const LOCAL = /^(file|blob|data|content|ph|https?):/;
 export function ProfilePhoto({ path, name, shape, scheme, style, testID }: Props) {
   const ds = getDsTheme(scheme);
   const { t } = useTranslation();
+  const reduceMotion = useReducedMotion();
   const isLocal = path !== null && LOCAL.test(path);
   const remote = usePhotoUrl(isLocal ? null : path);
   const uri = isLocal ? path : remote;
+  const photoIdentity = JSON.stringify([path, uri, name]);
+  const currentIdentity = useRef<string | null>(photoIdentity);
   const [width, setWidth] = useState(0);
-  const [failed, setFailed] = useState<string | null>(null);
+  const [failedIdentity, setFailedIdentity] = useState<string | null>(null);
+  const fallbackProgress = useSharedValue(1);
+  const fallbackStyle = useAnimatedStyle(() => ({
+    opacity: fallbackProgress.value,
+    transform: [{ scale: 0.98 + fallbackProgress.value * 0.02 }],
+  }));
 
   const top = shape === 'circle' ? 9999 : width / 2;
   const bottom = shape === 'circle' ? 9999 : 16;
-  const showImage = uri !== null && failed !== uri;
+  const showImage = uri !== null && failedIdentity !== photoIdentity;
+
+  useLayoutEffect(() => {
+    currentIdentity.current = photoIdentity;
+    cancelAnimation(fallbackProgress);
+    fallbackProgress.value = 1;
+    return () => {
+      cancelAnimation(fallbackProgress);
+      if (currentIdentity.current === photoIdentity) currentIdentity.current = null;
+    };
+  }, [fallbackProgress, photoIdentity]);
 
   return (
     <View
@@ -60,24 +86,43 @@ export function ProfilePhoto({ path, name, shape, scheme, style, testID }: Props
         // The root is the one named image; the inner <img> would be read again, unnamed.
         <View aria-hidden style={StyleSheet.absoluteFill}>
           <Image
+            key={`${photoIdentity}:${uri}`}
             contentFit="cover"
-            onError={() => setFailed(uri)}
+            onError={() => {
+              if (currentIdentity.current !== photoIdentity) return;
+              setFailedIdentity(photoIdentity);
+              if (reduceMotion) {
+                fallbackProgress.value = 1;
+              } else {
+                fallbackProgress.value = 0;
+                fallbackProgress.value = withTiming(1, {
+                  duration: 120,
+                  easing: Easing.out(Easing.cubic),
+                });
+              }
+            }}
             source={{ uri }}
             style={StyleSheet.absoluteFill}
             testID={testID ? `${testID}-image` : undefined}
-            transition={150}
+            transition={reduceMotion ? 0 : 150}
           />
         </View>
       ) : (
-        <Text
+        <Animated.View
+          accessible={false}
           aria-hidden
-          style={[
-            styles.initial,
-            { color: ds.color.accentPrimary, fontSize: Math.max(14, width * 0.36) },
-          ]}
+          style={[styles.initialContainer, fallbackStyle]}
         >
-          {name.trim().charAt(0).toUpperCase()}
-        </Text>
+          <Text
+            aria-hidden
+            style={[
+              styles.initial,
+              { color: ds.color.accentPrimary, fontSize: Math.max(14, width * 0.36) },
+            ]}
+          >
+            {name.trim().charAt(0).toUpperCase()}
+          </Text>
+        </Animated.View>
       )}
     </View>
   );
@@ -88,6 +133,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
+  },
+  initialContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   circle: {
     aspectRatio: 1,

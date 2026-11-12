@@ -1,8 +1,9 @@
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
+import { DsMotionPressable } from '@/components/ds/motion/DsMotionPressable';
+import { DsMotionView } from '@/components/ds/motion/DsMotionView';
 import { DsBackButton } from '@/components/ds/primitives/DsBackButton';
 import { DsPillButton } from '@/components/ds/primitives/DsPillButton';
 import { DsFontFamily, DsTypography, getDsTheme } from '@/constants/design-system';
@@ -124,8 +125,9 @@ export default function VerifyPhoneScreen() {
             <Text style={[DsTypography.body, styles.sentTo, { color: ds.color.textSecondary }]}>
               {t('verify.sent_to', { phone: formatBR(phone) })}
             </Text>
-            <Pressable
+            <DsMotionPressable
               accessibilityRole="link"
+              feedbackScale={0.985}
               onPress={goBackToRegister}
               style={styles.edit}
               testID="verify-edit"
@@ -133,7 +135,7 @@ export default function VerifyPhoneScreen() {
               <Text style={[styles.editText, { color: ds.color.accentPrimary }]}>
                 {t('verify.edit')}
               </Text>
-            </Pressable>
+            </DsMotionPressable>
           </View>
         </View>
 
@@ -146,7 +148,11 @@ export default function VerifyPhoneScreen() {
             value={code}
           />
 
-          <AuthError code={errorCode} scheme={scheme} testID="verify-error" />
+          {errorCode ? (
+            <DsMotionView key={errorCode} testID="verify-error-motion" variant="reveal">
+              <AuthError code={errorCode} scheme={scheme} testID="verify-error" />
+            </DsMotionView>
+          ) : null}
 
           <DsPillButton
             contentColor={ds.color.onAccent}

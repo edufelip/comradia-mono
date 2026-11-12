@@ -1,6 +1,6 @@
 # Architecture
 
-Comradia is one Expo app (`apps/mobile`) on top of Firebase (`apps/firebase`). There is no server of our own: Firebase Auth signs people in, Firestore stores data, and Firestore security rules are the only gate between users. A static landing page lives in `apps/website`.
+Comradia is one Expo app (`apps/mobile`) on top of Firebase (`apps/firebase`). Firebase Functions dispatch match and message notifications; Firebase Auth signs people in, Firestore stores profile data, Cloud Storage stores portraits, and Firestore and Storage security rules control access. A static landing page lives in `apps/website`.
 
 ## Decisions
 
@@ -15,7 +15,7 @@ Comradia is one Expo app (`apps/mobile`) on top of Firebase (`apps/firebase`). T
 | 7 | **Age is stored, birth date stays private.** The client computes age at signup; rules allow 18–99. | Without Cloud Functions there is no trusted place to recompute it. | Blaze: a scheduled Function recomputes ages from the private birth date. |
 | 8 | **Matches without a server.** A like is also written to `likes/{target}/from/{me}`, which the liked person can read. When I like someone who already liked me, the same batch creates `matches/{a_b}`; the rules allow that create only when both likes exist (`existsAfter`). Two likes at the same moment are fixed by `reconcileMatches` when Matches opens. | Works on the free plan. Revised 2026-11-11: the earlier plan said mutual matching needed a Cloud Function. | A person can see who liked them (needed for the check). Hide that if it becomes a paid feature; then move the check to a Cloud Function. |
 | 9 | **Firebase config files are committed** (`apps/mobile/firebase/<variant>/`). | They hold public client ids, not secrets. Abuse is limited by Auth, rules and (later) App Check. | Before launch: turn on App Check. |
-| 10 | **One optional portrait per profile, in Cloud Storage.** `profiles/{uid}.photoPath` points at `photos/{uid}/{id}.jpg`; every upload gets a new file id and the old file is deleted afterwards, best effort. Android crops to 3:4 (iOS's crop is square; the frame covers either). The phone resizes to 1080 px and JPEG 0.8 before upload. | Storage rules can't read Firestore cheaply, so each file is owner-only and immutable, and Firestore only accepts a path inside the owner's folder. No permission prompt: the system photo picker needs none. | Multiple photos, or moderation (needs a Cloud Function). |
+| 10 | **One optional portrait per profile, in Cloud Storage.** `profiles/{uid}.photoPath` points at `photos/{uid}/{id}.jpg`; every upload gets a new file id and the old file is deleted afterwards, best effort. Android crops to 3:4 (iOS's crop is square; the frame covers either). The phone resizes to 1080 px and JPEG 0.8 before upload. | Storage rules allow any signed-in user to read portraits, but only the owner to create or delete them; files cannot be overwritten. Firestore only accepts a path inside the owner's folder. No permission prompt: the system photo picker needs none. | Multiple photos, or moderation (needs a Cloud Function). |
 
 ## Layout
 
@@ -42,6 +42,7 @@ apps/firebase
   firestore.rules            security rules (the trust boundary)
   storage.rules              photo upload rules
   firebase.json              emulator ports: auth 9099, Firestore 8089, Storage 9199
+  functions/                 match/message push triggers and emulator-backed adapter tests
   scripts/seed.mjs           Discover profiles for the emulators
   tests/                     rules tests against the Firestore and Storage emulators
 ```
@@ -111,14 +112,15 @@ Web reads its Firebase config from `EXPO_PUBLIC_FIREBASE_API_KEY`, `_AUTH_DOMAIN
 
 - **Budget alert:** "comradia-dev monthly", R$ 25, emails at 10%, 50%, 90% and 100% of actual spend and at 100% of forecast. An alert only warns; it does not stop charges.
 - **Storage bucket in `us-east1`:** one of the three regions (`us-east1`, `us-west1`, `us-central1`) where Storage has a free allowance (5 GB stored, 100 GB downloaded per month). Firestore stays in `southamerica-east1`.
-- **Photos are small and cached:** resized to 1080 px, JPEG 0.8 (about 100–200 KB), never overwritten, uploaded with `Cache-Control: public, max-age=31536000, immutable`. Old files are deleted on change and on account deletion, so nothing piles up.
-- **Real SMS now bills per message.** Phone sign-in can text any number on Blaze. Keep test numbers for testing. Before any public build, limit SMS to Brazil (SMS region policy) and turn on App Check, so bots can't run up SMS charges.
+- **Photos are small and cached:** resized to 1080 px, JPEG 0.8 (about 100–200 KB), never overwritten, uploaded with `Cache-Control: public, max-age=31536000, immutable`. Old files are deleted after a change on a best-effort basis; account deletion stops if removing a file fails so it can be retried.
+- **Real SMS is disabled on dev.** The SMS region policy is an empty allowlist, so no paid SMS can go out. Phone sign-in uses the two owner-set Firebase test numbers (code `123456`; listed in the Firebase console, not here). Enabling real SMS requires the owner's yes; the policy should not impose a Brazil-only limit. Turn on App Check before a public build.
 - **Billing account limit:** the account allows 5 linked projects. `mapfriends-92e3c` was unlinked on 2026-11-12 to make room.
 
 ## Security
 
 - Firestore rules are the trust boundary: every write is validated (allowed keys, types, sizes, enums, owner, server timestamps). The rules tests in `apps/firebase/tests` cover each allow and deny.
-- Storage rules guard photos: owner-only, JPEG, 5 MB, no overwrite. Account deletion removes every file under `photos/{uid}/` first and stops if one fails, so it can be retried.
+- Storage rules let any signed-in user read photos; only the owner can create or delete them. Uploads must be JPEG, no larger than 5 MB and cannot overwrite an existing file. Account deletion removes files under `photos/{uid}/` first and stops if one fails, so it can be retried.
+- Notification tokens stay in owner-private `users/{uid}/pushTokens`; event dispatch markers are Admin-only. Functions and native client changes require a separate dev rollout before provider delivery can be verified (see [notifications](notifications.md)).
 - No private data in public documents. Phone and email stay in Firebase Auth; birth date stays in `users/{uid}`.
 - Apple sign-in uses a SHA-256 nonce; the raw nonce never leaves the device except to Firebase.
 - Error messages shown to users come from `BackendErrorCode`, never raw Firebase text.
@@ -126,7 +128,7 @@ Web reads its Firebase config from `EXPO_PUBLIC_FIREBASE_API_KEY`, `_AUTH_DOMAIN
 
 ## Deferred (needs a Cloud Function or a later task)
 
-- Match and message notifications (needs Cloud Functions + push). Unmatch; block and report exist without one.
+- Native notification delivery verification and dev rollout (Functions and client implementation: see [notifications](notifications.md)). Unmatch; block and report exist without one.
 - Voice intros, more than one photo, photo moderation.
 - Age recompute, ranking by shared passions and distance (Cloud Function).
 - Unblock (there is no UI yet).

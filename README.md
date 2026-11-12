@@ -2,14 +2,14 @@
 
 **Where solidarity meets romance.**
 
-Comradia is a dating app for people on the left: sign in, build a card from your vibe, values and a prompt answer, and swipe through other members. One Expo app on top of Firebase — no server of our own. Firebase Auth signs people in, Firestore stores the data, and Firestore security rules are the only gate between users.
+Comradia is a dating app for people on the left: sign in, build a card from your vibe, values and a prompt answer, and swipe through other members. One Expo app on top of Firebase — Firebase Functions handle notification dispatch. Firebase Auth signs people in, Firestore stores profile data, Cloud Storage stores portraits, and Firestore and Storage security rules control access.
 
 ## Layout
 
 | Path | What it is | Toolchain |
 | --- | --- | --- |
 | `apps/mobile` | The app (iOS, Android, web) | Expo, yarn 1 |
-| `apps/firebase` | Firestore rules, emulator config, seed script, rules tests | firebase-tools 13, yarn 1 |
+| `apps/firebase` | Firestore and Storage rules, notification Functions, emulator config and tests | firebase-tools 13, yarn 1 |
 | `apps/website` | Public landing page (static HTML, no build) | none |
 | `docs` | Architecture and testing notes | — |
 
@@ -26,7 +26,7 @@ Each app keeps its own `package.json` and lockfile; the root is not a workspace.
 The app talks to the Firebase emulators. Use two terminals:
 
 ```bash
-# terminal 1: auth on :9099 and Firestore on :8089
+# terminal 1: auth on :9099, Firestore on :8089 and Storage on :9199
 cd apps/firebase && yarn install && yarn emulators
 
 # terminal 2: the app on http://localhost:8081
@@ -42,3 +42,5 @@ On an Android emulator the host is `10.0.2.2` instead of `127.0.0.1`. Without `E
 
 - [docs/architecture.md](docs/architecture.md) — decisions, data model, rules, screens, environments.
 - [docs/testing.md](docs/testing.md) — the test layers and how to run them.
+
+For notification backend build and emulator tests, also install the lockfile in `apps/firebase/functions`. See [notification delivery](docs/notifications.md) and [Functions setup](apps/firebase/functions/README.md).

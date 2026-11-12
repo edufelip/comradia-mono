@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { DsMotionView } from '@/components/ds/motion/DsMotionView';
 import { DsCard } from '@/components/ds/primitives/DsCard';
 import { DsPillButton } from '@/components/ds/primitives/DsPillButton';
 import { DsFontFamily, DsRadius, DsSpace, getDsTheme } from '@/constants/design-system';
@@ -34,6 +35,14 @@ export default function StarterScreen() {
   const user = useSessionStore((state) => state.user);
   const [saving, setSaving] = useState(false);
   const [failed, setFailed] = useState(false);
+  const previousPromptId = useRef(draft.promptId);
+  const [promptHasChanged, setPromptHasChanged] = useState(false);
+
+  useLayoutEffect(() => {
+    if (previousPromptId.current === draft.promptId) return;
+    previousPromptId.current = draft.promptId;
+    setPromptHasChanged(true);
+  }, [draft.promptId]);
 
   const handleFinish = async () => {
     if (!user || saving) return;
@@ -56,13 +65,15 @@ export default function StarterScreen() {
       footer={
         <>
           {failed ? (
-            <Text
-              accessibilityRole="alert"
-              style={[styles.error, { color: ds.color.danger }]}
-              testID="onboarding-error"
-            >
-              {t('onboarding.error.save')}
-            </Text>
+            <DsMotionView testID="onboarding-error-motion" variant="reveal">
+              <Text
+                accessibilityRole="alert"
+                style={[styles.error, { color: ds.color.danger }]}
+                testID="onboarding-error"
+              >
+                {t('onboarding.error.save')}
+              </Text>
+            </DsMotionView>
           ) : null}
           <DsPillButton
             contentColor={ds.color.onAccent}
@@ -110,9 +121,17 @@ export default function StarterScreen() {
       </ScrollView>
 
       <DsCard scheme={scheme} style={styles.answerCard} testID="starter-prompt-card">
-        <Text style={[styles.promptLabel, { color: ds.color.accentPrimary }]}>
-          {t(`onboarding.prompt.${draft.promptId}`)}
-        </Text>
+        {promptHasChanged ? (
+          <DsMotionView key={draft.promptId} testID="starter-prompt-motion" variant="reveal">
+            <Text style={[styles.promptLabel, { color: ds.color.accentPrimary }]}>
+              {t(`onboarding.prompt.${draft.promptId}`)}
+            </Text>
+          </DsMotionView>
+        ) : (
+          <Text style={[styles.promptLabel, { color: ds.color.accentPrimary }]}>
+            {t(`onboarding.prompt.${draft.promptId}`)}
+          </Text>
+        )}
         <TextInput
           accessibilityLabel={t('onboarding.starter.answer_label')}
           maxLength={ANSWER_MAX}

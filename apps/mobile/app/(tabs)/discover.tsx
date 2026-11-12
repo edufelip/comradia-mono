@@ -1,6 +1,16 @@
+import { useIsFocused } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import { useEffect } from 'react';
-import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import Animated, {
+  cancelAnimation,
+  Easing,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
+import { DsMotionPressable } from '@/components/ds/motion/DsMotionPressable';
 import { DsCard } from '@/components/ds/primitives/DsCard';
 import { DsPillButton } from '@/components/ds/primitives/DsPillButton';
 import { DsScreen } from '@/components/ds/primitives/DsScreen';
@@ -11,6 +21,7 @@ import { ProfilePhoto } from '@/features/profile/ProfilePhoto';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTranslation } from '@/localization';
 import { backend } from '@/services/backend';
+import type { DiscoveryProfile } from '@/features/profile/profile-schema';
 
 /**
  * S5. The deck comes from Firestore; Like / Pass are written as swipes and the card leaves
@@ -23,12 +34,53 @@ export default function DiscoverScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const { height } = useWindowDimensions();
+  const isFocused = useIsFocused();
+  const reduceMotion = useReducedMotion();
   const uid = useSessionStore((state) => state.user?.uid);
   const status = useDiscoveryStore((state) => state.status);
   const candidates = useDiscoveryStore((state) => state.candidates);
   const load = useDiscoveryStore((state) => state.load);
   const like = useDiscoveryStore((state) => state.like);
   const pass = useDiscoveryStore((state) => state.pass);
+  const [heldCandidate, setHeldCandidate] = useState<DiscoveryProfile | null>(null);
+  const [actionPending, setActionPending] = useState(false);
+  const focusedRef = useRef(isFocused);
+  const actionEpoch = useRef(0);
+  const actionInFlight = useRef(false);
+  const cardProgress = useSharedValue(1);
+  const cardMotionStyle = useAnimatedStyle(() => ({
+    opacity: cardProgress.value,
+    transform: [
+      { translateY: (1 - cardProgress.value) * 8 },
+      { scale: 0.98 + cardProgress.value * 0.02 },
+    ],
+  }));
+
+  useEffect(() => {
+    focusedRef.current = isFocused;
+    if (!isFocused) {
+      actionEpoch.current += 1;
+      actionInFlight.current = false;
+      setHeldCandidate(null);
+      setActionPending(false);
+      cancelAnimation(cardProgress);
+      cardProgress.value = 1;
+    }
+    return () => {
+      actionEpoch.current += 1;
+      actionInFlight.current = false;
+      cancelAnimation(cardProgress);
+    };
+  }, [cardProgress, isFocused]);
+
+  useEffect(() => {
+    actionEpoch.current += 1;
+    actionInFlight.current = false;
+    setHeldCandidate(null);
+    setActionPending(false);
+    cancelAnimation(cardProgress);
+    cardProgress.value = 1;
+  }, [cardProgress, uid]);
 
   useEffect(() => {
     if (uid) void load(backend, uid);
@@ -38,13 +90,72 @@ export default function DiscoverScreen() {
     if (uid) void load(backend, uid);
   };
 
-  const likeAndMaybeMatch = async (id: string) => {
-    if (!uid) return;
-    const result = await like(backend, uid, id);
-    if (result?.matched) router.push(`/match/${result.matchId}`);
+  const finishConfirmedSwipe = () => {
+    actionInFlight.current = false;
+    setHeldCandidate(null);
+    setActionPending(false);
+    if (reduceMotion || !focusedRef.current) {
+      cancelAnimation(cardProgress);
+      cardProgress.value = 1;
+      return;
+    }
+    cardProgress.value = 0;
+    cardProgress.value = withTiming(1, {
+      duration: 220,
+      easing: Easing.out(Easing.cubic),
+    });
+  };
+
+  const restoreUnconfirmedSwipe = () => {
+    actionInFlight.current = false;
+    setHeldCandidate(null);
+    setActionPending(false);
+  };
+
+  const isCurrentAction = (epoch: number, actionUid: string) =>
+    actionEpoch.current === epoch &&
+    focusedRef.current &&
+    useSessionStore.getState().user?.uid === actionUid;
+
+  const likeAndMaybeMatch = async (candidate: DiscoveryProfile) => {
+    if (!uid || actionInFlight.current) return;
+    actionInFlight.current = true;
+    const epoch = ++actionEpoch.current;
+    setActionPending(true);
+    setHeldCandidate(candidate);
+    const result = await like(backend, uid, candidate.id);
+    if (!isCurrentAction(epoch, uid)) return;
+    if (!result) {
+      restoreUnconfirmedSwipe();
+      return;
+    }
+    if (result.matched) {
+      restoreUnconfirmedSwipe();
+      router.push(`/match/${result.matchId}?celebrate=1`);
+      return;
+    }
+    finishConfirmedSwipe();
+  };
+
+  const passCandidate = async (candidate: DiscoveryProfile) => {
+    if (!uid || actionInFlight.current) return;
+    actionInFlight.current = true;
+    const epoch = ++actionEpoch.current;
+    setActionPending(true);
+    setHeldCandidate(candidate);
+    await pass(backend, uid, candidate.id);
+    if (!isCurrentAction(epoch, uid)) return;
+    // The store restores a failed pass before its promise settles. Keep the visible card in
+    // place on failure; only confirm the transition after it is absent from the deck.
+    if (useDiscoveryStore.getState().candidates.some((person) => person.id === candidate.id)) {
+      restoreUnconfirmedSwipe();
+      return;
+    }
+    finishConfirmedSwipe();
   };
 
   const activeCandidate = status === 'ready' ? candidates[0] : undefined;
+  const displayedCandidate = heldCandidate ?? activeCandidate;
   const isLoading = status === 'idle' || status === 'loading';
 
   return (
@@ -80,119 +191,119 @@ export default function DiscoverScreen() {
             variant="primary"
           />
         </DsCard>
-      ) : activeCandidate ? (
-        <DsCard
-          scheme={scheme}
-          style={styles.card}
-          testID={`discover-person-${activeCandidate.id}`}
-        >
-          <ProfilePhoto
-            key={activeCandidate.id}
-            path={activeCandidate.photoPath}
-            name={activeCandidate.displayName}
-            shape="arch"
+      ) : displayedCandidate ? (
+        <Animated.View style={cardMotionStyle} testID="discover-card-motion">
+          <DsCard
             scheme={scheme}
-            style={{
-              width: '100%',
-              aspectRatio: 4 / 5,
-              maxHeight: Math.round(height * 0.42),
-              alignSelf: 'center',
-            }}
-            testID="discover-photo"
-          />
-          <View style={styles.titleRow}>
-            <Text
-              style={[DsTypography.title, { color: ds.color.textPrimary }]}
-              testID="discover-card-name"
-            >
-              {activeCandidate.displayName}, {activeCandidate.age}
-            </Text>
-            <Text style={[DsTypography.caption, { color: ds.color.textSecondary }]}>
-              {t(`onboarding.vibe.${activeCandidate.vibe}`)}
-            </Text>
-          </View>
-
-          <View style={styles.badgesRow}>
-            {activeCandidate.unionMember ? (
-              <View
-                style={[
-                  styles.badge,
-                  { backgroundColor: ds.color.surfaceMuted, borderColor: ds.color.border },
-                ]}
+            style={styles.card}
+            testID={`discover-person-${displayedCandidate.id}`}
+          >
+            <ProfilePhoto
+              key={displayedCandidate.id}
+              path={displayedCandidate.photoPath}
+              name={displayedCandidate.displayName}
+              shape="arch"
+              scheme={scheme}
+              style={{
+                width: '100%',
+                aspectRatio: 4 / 5,
+                maxHeight: Math.round(height * 0.42),
+                alignSelf: 'center',
+              }}
+              testID="discover-photo"
+            />
+            <View style={styles.titleRow}>
+              <Text
+                style={[DsTypography.title, { color: ds.color.textPrimary }]}
+                testID="discover-card-name"
               >
-                <Text style={[DsTypography.micro, { color: ds.color.textPrimary }]}>
-                  {activeCandidate.union
-                    ? `${t('discover.union_badge')} · ${t(`onboarding.union.${activeCandidate.union}`)}`
-                    : t('discover.union_badge')}
-                </Text>
-              </View>
-            ) : null}
-          </View>
+                {displayedCandidate.displayName}, {displayedCandidate.age}
+              </Text>
+              <Text style={[DsTypography.caption, { color: ds.color.textSecondary }]}>
+                {t(`onboarding.vibe.${displayedCandidate.vibe}`)}
+              </Text>
+            </View>
 
-          <View style={styles.valuesBlock}>
-            <Text style={[DsTypography.micro, { color: ds.color.accentPrimary }]}>
-              {t('discover.values_label')}
-            </Text>
-            <View style={styles.valuesRow}>
-              {activeCandidate.values.map((value) => (
+            <View style={styles.badgesRow}>
+              {displayedCandidate.unionMember ? (
                 <View
-                  key={value}
-                  style={[styles.valueChip, { backgroundColor: ds.color.surfaceMuted }]}
+                  style={[
+                    styles.badge,
+                    { backgroundColor: ds.color.surfaceMuted, borderColor: ds.color.border },
+                  ]}
                 >
-                  <Text style={[DsTypography.caption, { color: ds.color.textSecondary }]}>
-                    {t(`onboarding.values.${value}`)}
+                  <Text style={[DsTypography.micro, { color: ds.color.textPrimary }]}>
+                    {displayedCandidate.union
+                      ? `${t('discover.union_badge')} · ${t(`onboarding.union.${displayedCandidate.union}`)}`
+                      : t('discover.union_badge')}
                   </Text>
                 </View>
-              ))}
+              ) : null}
             </View>
-          </View>
 
-          <View style={[styles.promptBox, { backgroundColor: ds.color.surfaceMuted }]}>
-            <Text style={[DsTypography.micro, { color: ds.color.accentPrimary }]}>
-              {t(`onboarding.prompt.${activeCandidate.promptId}`)}
-            </Text>
-            <Text style={[DsTypography.body, { color: ds.color.textPrimary }]}>
-              {activeCandidate.promptAnswer}
-            </Text>
-          </View>
-
-          <View style={styles.actionsRow}>
-            <View style={styles.actionItem}>
-              <DsPillButton
-                label={t('discover.action.pass')}
-                onPress={() => {
-                  if (uid) void pass(backend, uid, activeCandidate.id);
-                }}
-                scheme={scheme}
-                testID="discover-pass"
-                variant="secondary"
-              />
+            <View style={styles.valuesBlock}>
+              <Text style={[DsTypography.micro, { color: ds.color.accentPrimary }]}>
+                {t('discover.values_label')}
+              </Text>
+              <View style={styles.valuesRow}>
+                {displayedCandidate.values.map((value) => (
+                  <View
+                    key={value}
+                    style={[styles.valueChip, { backgroundColor: ds.color.surfaceMuted }]}
+                  >
+                    <Text style={[DsTypography.caption, { color: ds.color.textSecondary }]}>
+                      {t(`onboarding.values.${value}`)}
+                    </Text>
+                  </View>
+                ))}
+              </View>
             </View>
-            <View style={styles.actionItem}>
-              <DsPillButton
-                label={t('discover.action.solidarity')}
-                onPress={() => {
-                  void likeAndMaybeMatch(activeCandidate.id);
-                }}
-                scheme={scheme}
-                testID="discover-like"
-                variant="primary"
-              />
-            </View>
-          </View>
 
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={t('discover.report', { name: activeCandidate.displayName })}
-            onPress={() => router.push(`/safety/${activeCandidate.id}?context=profile`)}
-            style={({ pressed }) => [styles.reportLink, { opacity: pressed ? 0.7 : 1 }]}
-            testID="discover-report"
-          >
-            <Text style={[DsTypography.caption, { color: ds.color.textTertiary }]}>
-              {t('discover.report', { name: activeCandidate.displayName })}
-            </Text>
-          </Pressable>
-        </DsCard>
+            <View style={[styles.promptBox, { backgroundColor: ds.color.surfaceMuted }]}>
+              <Text style={[DsTypography.micro, { color: ds.color.accentPrimary }]}>
+                {t(`onboarding.prompt.${displayedCandidate.promptId}`)}
+              </Text>
+              <Text style={[DsTypography.body, { color: ds.color.textPrimary }]}>
+                {displayedCandidate.promptAnswer}
+              </Text>
+            </View>
+
+            <View style={styles.actionsRow}>
+              <View style={styles.actionItem}>
+                <DsPillButton
+                  disabled={actionPending}
+                  label={t('discover.action.pass')}
+                  onPress={() => void passCandidate(displayedCandidate)}
+                  scheme={scheme}
+                  testID="discover-pass"
+                  variant="secondary"
+                />
+              </View>
+              <View style={styles.actionItem}>
+                <DsPillButton
+                  disabled={actionPending}
+                  label={t('discover.action.solidarity')}
+                  onPress={() => void likeAndMaybeMatch(displayedCandidate)}
+                  scheme={scheme}
+                  testID="discover-like"
+                  variant="primary"
+                />
+              </View>
+            </View>
+
+            <DsMotionPressable
+              accessibilityRole="button"
+              accessibilityLabel={t('discover.report', { name: displayedCandidate.displayName })}
+              onPress={() => router.push(`/safety/${displayedCandidate.id}?context=profile`)}
+              style={styles.reportLink}
+              testID="discover-report"
+            >
+              <Text style={[DsTypography.caption, { color: ds.color.textTertiary }]}>
+                {t('discover.report', { name: displayedCandidate.displayName })}
+              </Text>
+            </DsMotionPressable>
+          </DsCard>
+        </Animated.View>
       ) : (
         <DsCard scheme={scheme} style={styles.card}>
           <Text style={[DsTypography.cardTitle, { color: ds.color.textPrimary }]}>

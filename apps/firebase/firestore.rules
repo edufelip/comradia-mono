@@ -17,6 +17,20 @@ service cloud.firestore {
       return value is string && value.size() >= min && value.size() <= max;
     }
 
+    function validPushTokenId(tokenId) {
+      // Rules cannot verify that this is the SHA-256 of the token value, but they do enforce
+      // the stable, lowercase document-id shape used by the client.
+      return tokenId.matches('^[0-9a-f]{64}$');
+    }
+
+    function validPushToken(data) {
+      return data.keys().hasOnly(['token', 'platform', 'updatedAt'])
+        && data.keys().hasAll(['token', 'platform', 'updatedAt'])
+        && isString(data.token, 1, 4096)
+        && data.platform in ['ios', 'android']
+        && data.updatedAt == request.time;
+    }
+
     function vibes() {
       return ['outdoorsy', 'bookworm', 'creative', 'community', 'foodie'];
     }
@@ -110,6 +124,16 @@ service cloud.firestore {
         allow create: if isOwner(uid) && targetUid != uid
           && request.resource.data.keys().hasOnly(['createdAt'])
           && request.resource.data.createdAt == request.time;
+      }
+
+      // Device registrations are private to the account owner. The client hashes each FCM
+      // token for its document id; rules validate the digest shape and the bounded payload.
+      match /pushTokens/{tokenId} {
+        // Collection queries cannot establish a per-document id predicate in Rules, so list
+        // is scoped to the owner and direct writes validate the hash-shaped id below.
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && validPushTokenId(tokenId)
+          && validPushToken(request.resource.data);
       }
     }
 

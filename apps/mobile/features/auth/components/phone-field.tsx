@@ -1,6 +1,12 @@
 import { useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
-
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import {
   DsFontFamily,
   DsRadius,
@@ -8,6 +14,7 @@ import {
   getDsTheme,
   type DsColorScheme,
 } from '@/constants/design-system';
+import { DS_MOTION } from '@/constants/motion';
 
 type PhoneFieldProps = {
   scheme: DsColorScheme;
@@ -39,41 +46,63 @@ export function PhoneField({
 }: PhoneFieldProps) {
   const ds = getDsTheme(scheme);
   const [focused, setFocused] = useState(false);
+  const reduceMotion = useReducedMotion();
+  const focusProgress = useSharedValue(0);
+  const focusStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: 1 + focusProgress.value * 0.006 }],
+  }));
+  const setFocus = (nextFocused: boolean) => {
+    setFocused(nextFocused);
+    focusProgress.value = reduceMotion
+      ? 0
+      : withTiming(nextFocused ? 1 : 0, {
+          duration: DS_MOTION.duration.fast,
+          easing: Easing.bezier(...DS_MOTION.easing.easeOut),
+        });
+  };
 
   return (
-    <View
-      style={[
-        styles.row,
-        {
-          backgroundColor: ds.color.surface,
-          borderColor: focused ? ds.color.accentPrimary : ds.color.borderStrong,
-        },
-      ]}
-      testID={testID ? `${testID}.row` : undefined}
+    <Animated.View
+      style={[styles.motion, focusStyle]}
+      testID={testID ? `${testID}.motion` : undefined}
     >
-      <View accessible accessibilityLabel={countryLabel} style={styles.prefix}>
-        <Text style={[styles.prefixText, { color: ds.color.textSecondary }]}>🇧🇷 +55</Text>
+      <View
+        style={[
+          styles.row,
+          {
+            backgroundColor: ds.color.surface,
+            borderColor: focused ? ds.color.accentPrimary : ds.color.borderStrong,
+          },
+        ]}
+        testID={testID ? `${testID}.row` : undefined}
+      >
+        <View accessible accessibilityLabel={countryLabel} style={styles.prefix}>
+          <Text style={[styles.prefixText, { color: ds.color.textSecondary }]}>🇧🇷 +55</Text>
+        </View>
+        <View style={[styles.separator, { backgroundColor: ds.color.border }]} />
+        <TextInput
+          accessibilityLabel={phoneLabel}
+          autoComplete="tel"
+          keyboardType="phone-pad"
+          onBlur={() => setFocus(false)}
+          onChangeText={onChangeText}
+          onFocus={() => setFocus(true)}
+          placeholder={placeholder}
+          placeholderTextColor={ds.color.textTertiary}
+          style={[styles.input, { color: ds.color.textPrimary }]}
+          testID={testID}
+          textContentType="telephoneNumber"
+          value={value}
+        />
       </View>
-      <View style={[styles.separator, { backgroundColor: ds.color.border }]} />
-      <TextInput
-        accessibilityLabel={phoneLabel}
-        autoComplete="tel"
-        keyboardType="phone-pad"
-        onBlur={() => setFocused(false)}
-        onChangeText={onChangeText}
-        onFocus={() => setFocused(true)}
-        placeholder={placeholder}
-        placeholderTextColor={ds.color.textTertiary}
-        style={[styles.input, { color: ds.color.textPrimary }]}
-        testID={testID}
-        textContentType="telephoneNumber"
-        value={value}
-      />
-    </View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
+  motion: {
+    width: '100%',
+  },
   row: {
     alignItems: 'center',
     borderRadius: DsRadius.lg,

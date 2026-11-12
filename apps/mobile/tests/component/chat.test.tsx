@@ -13,6 +13,7 @@ const HIDDEN = { includeHiddenElements: true };
 const mockBack = jest.fn();
 const mockPush = jest.fn();
 let mockParams: { id?: string } = {};
+let mockIsFocused = true;
 jest.mock('expo-router', () => {
   const { useEffect } = jest.requireActual<typeof import('react')>('react');
   return {
@@ -27,7 +28,16 @@ jest.mock('expo-router', () => {
     }),
   };
 });
+jest.mock('@react-navigation/native', () => ({
+  ...jest.requireActual('@react-navigation/native'),
+  useIsFocused: () => mockIsFocused,
+}));
 jest.mock('@/localization/get-device-locale', () => ({ getDeviceLocale: () => 'en-US' }));
+
+beforeEach(() => {
+  mockIsFocused = true;
+  mockParams = {};
+});
 
 const MAYA: DiscoveryProfile = {
   id: 'p-maya',
@@ -136,6 +146,39 @@ describe('ChatScreen', () => {
     expect(await screen.findByText('Thursday sounds good')).toBeOnTheScreen();
     const message = fakeBackend.state.messages.get(matchId)?.[0];
     expect(screen.getByTestId(`chat-message-${message?.id}`)).toBeOnTheScreen();
+    expect(screen.getByTestId(`chat-message-motion-${message?.id}`)).toBeOnTheScreen();
+  });
+
+  it('does not animate the history delivered by the first message snapshot', async () => {
+    signIn();
+    const matchId = await seedMatch();
+    fakeBackend.state.messages.set(matchId, [
+      { id: 'history-1', from: MAYA.id, text: 'Before we matched', createdAt: 1 },
+    ]);
+
+    await render(<ChatScreen />);
+
+    expect(await screen.findByText('Before we matched')).toBeOnTheScreen();
+    expect(screen.queryByTestId('chat-message-motion-history-1')).not.toBeOnTheScreen();
+  });
+
+  it('does not replay a message that arrived while Chat was hidden', async () => {
+    signIn();
+    const matchId = await seedMatch();
+    mockIsFocused = false;
+
+    const view = await render(<ChatScreen />);
+    await screen.findByTestId('chat-input');
+    await act(() => fakeBackend.receiveMessage(matchId, MAYA.id, 'While you were away'));
+
+    expect(await screen.findByText('While you were away')).toBeOnTheScreen();
+    const message = fakeBackend.state.messages.get(matchId)?.[0];
+    expect(screen.queryByTestId(`chat-message-motion-${message?.id}`)).not.toBeOnTheScreen();
+
+    mockIsFocused = true;
+    await view.rerender(<ChatScreen />);
+
+    expect(screen.queryByTestId(`chat-message-motion-${message?.id}`)).not.toBeOnTheScreen();
   });
 
   it('keeps the composer outside the scrolling messages so it stays at the bottom', async () => {

@@ -100,7 +100,8 @@ test.describe('onboarding S2–S4', () => {
     await signUp(page);
     await completeOnboarding(page);
 
-    await page.reload();
+    // The route and controls below establish app readiness; avoid waiting for `load`.
+    await page.reload({ waitUntil: 'domcontentloaded' });
 
     await expectPathname(page, '/discover');
     await expect(page.getByTestId('discover-like')).toBeVisible();

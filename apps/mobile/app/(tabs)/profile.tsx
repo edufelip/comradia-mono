@@ -1,10 +1,15 @@
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useIsFocused } from '@react-navigation/native';
+import { useRef, useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+import { DsMotionPressable } from '@/components/ds/motion/DsMotionPressable';
+import { DsMotionView } from '@/components/ds/motion/DsMotionView';
 import { DsCard } from '@/components/ds/primitives/DsCard';
 import { DsPillButton } from '@/components/ds/primitives/DsPillButton';
 import { DsScreen } from '@/components/ds/primitives/DsScreen';
 import { DsRadius, DsSpace, DsTypography, getDsTheme } from '@/constants/design-system';
 import { useSessionStore } from '@/features/auth/session-store';
+import { NotificationSettings } from '@/features/notifications/NotificationSettings';
+import { useNotificationSettings } from '@/features/notifications/use-notification-settings';
 import { pickPhoto } from '@/features/profile/pick-photo';
 import { ProfilePhoto } from '@/features/profile/ProfilePhoto';
 import { needsRecentSignIn } from '@/features/safety/safety';
@@ -25,6 +30,10 @@ export default function ProfileScreen() {
   const { t } = useTranslation();
   const uid = useSessionStore((state) => state.user?.uid);
   const profile = useSessionStore((state) => state.profile);
+  const notificationSettings = useNotificationSettings(uid);
+  const isFocused = useIsFocused();
+  const isFocusedRef = useRef(isFocused);
+  isFocusedRef.current = isFocused;
   const [signingOut, setSigningOut] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -32,17 +41,22 @@ export default function ProfileScreen() {
   const [needsReauth, setNeedsReauth] = useState(false);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [photoError, setPhotoError] = useState(false);
+  const [animatePhotoError, setAnimatePhotoError] = useState(false);
+  const [animateDeleteError, setAnimateDeleteError] = useState(false);
+  const [animateDeleteReauth, setAnimateDeleteReauth] = useState(false);
 
   // Saves a new photo (a local uri) or removes the current one (null), then updates my card.
   const savePhoto = async (localUri: string | null) => {
     if (!uid || !profile || photoBusy) return;
     setPhotoError(false);
+    setAnimatePhotoError(false);
     setPhotoBusy(true);
     try {
       const photoPath = await backend.setProfilePhoto(uid, localUri);
       useSessionStore.getState().updateProfile({ ...profile, photoPath });
     } catch {
       setPhotoError(true);
+      setAnimatePhotoError(isFocusedRef.current);
     } finally {
       setPhotoBusy(false);
     }
@@ -51,11 +65,13 @@ export default function ProfileScreen() {
   const choosePhoto = async () => {
     if (photoBusy) return;
     setPhotoError(false);
+    setAnimatePhotoError(false);
     let localUri: string | null;
     try {
       localUri = await pickPhoto();
     } catch {
       setPhotoError(true);
+      setAnimatePhotoError(isFocusedRef.current);
       return;
     }
     if (localUri) await savePhoto(localUri);
@@ -73,6 +89,8 @@ export default function ProfileScreen() {
   const openDeletePanel = () => {
     setDeleteError(null);
     setNeedsReauth(false);
+    setAnimateDeleteError(false);
+    setAnimateDeleteReauth(false);
     setConfirmingDelete(true);
   };
 
@@ -85,11 +103,14 @@ export default function ProfileScreen() {
     if (!uid || deleting) return;
     setDeleteError(null);
     setNeedsReauth(false);
+    setAnimateDeleteError(false);
+    setAnimateDeleteReauth(false);
 
     // Delete nothing without a fresh sign-in: the Auth call would fail anyway, and the copy
     // tells the person to sign out and back in.
     if (needsRecentSignIn(backend.lastSignInAt(), Date.now())) {
       setNeedsReauth(true);
+      setAnimateDeleteReauth(isFocusedRef.current);
       return;
     }
 
@@ -100,7 +121,9 @@ export default function ProfileScreen() {
     } catch (error) {
       const { code } = toBackendError(error);
       setDeleteError(code);
+      setAnimateDeleteError(isFocusedRef.current);
       if (code === 'requires_recent_login') setNeedsReauth(true);
+      if (code === 'requires_recent_login') setAnimateDeleteReauth(isFocusedRef.current);
       setDeleting(false);
     }
   };
@@ -139,17 +162,17 @@ export default function ProfileScreen() {
               variant="secondary"
             />
             {profile.photoPath ? (
-              <Pressable
+              <DsMotionPressable
                 accessibilityRole="button"
                 disabled={photoBusy}
                 onPress={() => void savePhoto(null)}
-                style={({ pressed }) => [styles.textButton, { opacity: pressed ? 0.7 : 1 }]}
+                style={styles.textButton}
                 testID="profile-photo-remove"
               >
                 <Text style={[DsTypography.caption, { color: ds.color.danger }]}>
                   {t('photo.remove')}
                 </Text>
-              </Pressable>
+              </DsMotionPressable>
             ) : null}
             {photoBusy ? (
               <Text
@@ -160,13 +183,25 @@ export default function ProfileScreen() {
               </Text>
             ) : null}
             {photoError ? (
-              <Text
-                accessibilityRole="alert"
-                style={[DsTypography.caption, { color: ds.color.danger }]}
-                testID="profile-photo-error"
-              >
-                {t('photo.error')}
-              </Text>
+              animatePhotoError ? (
+                <DsMotionView testID="profile-photo-error-motion" variant="reveal">
+                  <Text
+                    accessibilityRole="alert"
+                    style={[DsTypography.caption, { color: ds.color.danger }]}
+                    testID="profile-photo-error"
+                  >
+                    {t('photo.error')}
+                  </Text>
+                </DsMotionView>
+              ) : (
+                <Text
+                  accessibilityRole="alert"
+                  style={[DsTypography.caption, { color: ds.color.danger }]}
+                  testID="profile-photo-error"
+                >
+                  {t('photo.error')}
+                </Text>
+              )
             ) : null}
 
             <Text
@@ -223,49 +258,85 @@ export default function ProfileScreen() {
         </>
       ) : null}
 
+      <NotificationSettings {...notificationSettings} motionActive={isFocused} />
+
       {confirmingDelete ? (
-        <DsCard scheme={scheme} style={styles.card} testID="profile-delete-panel" variant="warning">
-          <Text style={[DsTypography.cardTitle, { color: ds.color.textPrimary }]}>
-            {t('profile.delete.title')}
-          </Text>
-          <Text style={[DsTypography.body, { color: ds.color.textSecondary }]}>
-            {t('profile.delete.body')}
-          </Text>
-          {deleteError ? (
-            <Text
-              accessibilityRole="alert"
-              style={[DsTypography.body, { color: ds.color.danger }]}
-              testID="profile-delete-error"
-            >
-              {t('profile.delete.error')}
-            </Text>
-          ) : null}
-          {needsReauth ? (
-            <Text
-              style={[DsTypography.body, { color: ds.color.textPrimary }]}
-              testID="profile-delete-reauth"
-            >
-              {t('profile.delete.reauth')}
-            </Text>
-          ) : null}
-          <DsPillButton
-            disabled={deleting}
-            label={t('profile.delete.confirm')}
-            loading={deleting}
-            onPress={() => void deleteAccount()}
+        <DsMotionView testID="profile-delete-motion" variant="scale">
+          <DsCard
             scheme={scheme}
-            testID="profile-delete-confirm"
-            variant="primary"
-          />
-          <DsPillButton
-            disabled={deleting}
-            label={t('profile.delete.cancel')}
-            onPress={cancelDelete}
-            scheme={scheme}
-            testID="profile-delete-cancel"
-            variant="ghost"
-          />
-        </DsCard>
+            style={styles.card}
+            testID="profile-delete-panel"
+            variant="warning"
+          >
+            <Text style={[DsTypography.cardTitle, { color: ds.color.textPrimary }]}>
+              {t('profile.delete.title')}
+            </Text>
+            <Text style={[DsTypography.body, { color: ds.color.textSecondary }]}>
+              {t('profile.delete.body')}
+            </Text>
+            {deleteError ? (
+              animateDeleteError ? (
+                <DsMotionView
+                  key={deleteError}
+                  testID="profile-delete-error-motion"
+                  variant="reveal"
+                >
+                  <Text
+                    accessibilityRole="alert"
+                    style={[DsTypography.body, { color: ds.color.danger }]}
+                    testID="profile-delete-error"
+                  >
+                    {t('profile.delete.error')}
+                  </Text>
+                </DsMotionView>
+              ) : (
+                <Text
+                  accessibilityRole="alert"
+                  style={[DsTypography.body, { color: ds.color.danger }]}
+                  testID="profile-delete-error"
+                >
+                  {t('profile.delete.error')}
+                </Text>
+              )
+            ) : null}
+            {needsReauth ? (
+              animateDeleteReauth ? (
+                <DsMotionView testID="profile-delete-reauth-motion" variant="reveal">
+                  <Text
+                    style={[DsTypography.body, { color: ds.color.textPrimary }]}
+                    testID="profile-delete-reauth"
+                  >
+                    {t('profile.delete.reauth')}
+                  </Text>
+                </DsMotionView>
+              ) : (
+                <Text
+                  style={[DsTypography.body, { color: ds.color.textPrimary }]}
+                  testID="profile-delete-reauth"
+                >
+                  {t('profile.delete.reauth')}
+                </Text>
+              )
+            ) : null}
+            <DsPillButton
+              disabled={deleting}
+              label={t('profile.delete.confirm')}
+              loading={deleting}
+              onPress={() => void deleteAccount()}
+              scheme={scheme}
+              testID="profile-delete-confirm"
+              variant="primary"
+            />
+            <DsPillButton
+              disabled={deleting}
+              label={t('profile.delete.cancel')}
+              onPress={cancelDelete}
+              scheme={scheme}
+              testID="profile-delete-cancel"
+              variant="ghost"
+            />
+          </DsCard>
+        </DsMotionView>
       ) : (
         <DsPillButton
           label={t('profile.delete_account')}

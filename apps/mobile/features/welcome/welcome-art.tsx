@@ -2,14 +2,15 @@ import { useEffect, useId } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
+  cancelAnimation,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
-  withRepeat,
   withTiming,
 } from 'react-native-reanimated';
 import Svg, { Circle, Defs, Ellipse, G, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { DsFontFamily, getDsTheme, type DsColorScheme } from '@/constants/design-system';
+import { DS_MOTION } from '@/constants/motion';
 
 const RAY_ANGLES = Array.from({ length: 16 }, (_, index) => index * 22.5);
 
@@ -64,7 +65,12 @@ export function SunBurst({ size = 280 }: { size?: number }) {
       return;
     }
 
-    spin.value = withRepeat(withTiming(360, { duration: 60000, easing: Easing.linear }), -1);
+    spin.value = withTiming(360, {
+      duration: DS_MOTION.duration.slow * 8,
+      easing: Easing.bezier(...DS_MOTION.easing.easeOut),
+    });
+
+    return () => cancelAnimation(spin);
   }, [reduceMotion, spin]);
 
   return (

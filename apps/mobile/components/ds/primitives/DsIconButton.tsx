@@ -1,6 +1,7 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { Pressable, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { DsRadius, type DsColorScheme, getDsTheme } from '@/constants/design-system';
+import { DsMotionPressable } from '../motion/DsMotionPressable';
 
 type IconName = keyof typeof MaterialIcons.glyphMap;
 
@@ -24,24 +25,25 @@ export function DsIconButton({
   const theme = getDsTheme(scheme);
 
   return (
-    <Pressable
+    <DsMotionPressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
+      feedbackScale={0.95}
+      hitSlop={1}
       onPress={onPress}
-      style={({ pressed }) => [
+      style={[
         styles.button,
         {
           width: size,
           height: size,
           borderRadius: DsRadius.pill,
           backgroundColor: theme.color.surface,
-          transform: [{ scale: pressed ? 0.96 : 1 }],
         },
       ]}
       testID={testID}
     >
       <MaterialIcons color={theme.color.textPrimary} name={icon} size={20} />
-    </Pressable>
+    </DsMotionPressable>
   );
 }
 

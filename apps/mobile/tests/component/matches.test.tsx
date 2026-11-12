@@ -12,6 +12,7 @@ const HIDDEN = { includeHiddenElements: true };
 
 const mockPush = jest.fn();
 const mockNavigate = jest.fn();
+let mockIsFocused = true;
 /** Every focus callback the screen registered, so a test can simulate regaining focus. */
 let mockFocusEffects: (() => void)[] = [];
 jest.mock('expo-router', () => {
@@ -31,6 +32,10 @@ jest.mock('expo-router', () => {
     }),
   };
 });
+jest.mock('@react-navigation/native', () => ({
+  ...jest.requireActual('@react-navigation/native'),
+  useIsFocused: () => mockIsFocused,
+}));
 jest.mock('@/localization/get-device-locale', () => ({ getDeviceLocale: () => 'en-US' }));
 
 const MAYA: DiscoveryProfile = {
@@ -71,6 +76,7 @@ function seedProfiles(...people: DiscoveryProfile[]) {
 
 beforeEach(() => {
   mockFocusEffects = [];
+  mockIsFocused = true;
 });
 
 describe('MatchesScreen', () => {
@@ -109,11 +115,67 @@ describe('MatchesScreen', () => {
     await render(<MatchesScreen />);
 
     const row = await screen.findByTestId(`match-row-${matchId}`);
+    expect(screen.queryByTestId(`match-row-motion-${matchId}`)).not.toBeOnTheScreen();
     expect(row).toHaveAccessibleName('Open chat with Maya');
     expect(screen.getByText('Maya, 28')).toBeOnTheScreen();
     expect(screen.getByText('Outdoorsy')).toBeOnTheScreen();
     expect(screen.getByText('You both care about Bookshops & coffee')).toBeOnTheScreen();
     expect(screen.queryByTestId('matches-empty')).not.toBeOnTheScreen();
+  });
+
+  it('animates a new match after the initial live snapshot', async () => {
+    signIn();
+    seedProfiles(MAYA);
+    await render(<MatchesScreen />);
+    await screen.findByTestId('matches-empty');
+
+    fakeBackend.likeFrom(MAYA.id, TEST_USER.uid);
+    await act(async () => fakeBackend.backend.like(TEST_USER.uid, MAYA.id));
+    const matchId = matchIdFor(TEST_USER.uid, MAYA.id);
+
+    expect(await screen.findByTestId(`match-row-${matchId}`)).toBeOnTheScreen();
+    expect(screen.getByTestId(`match-row-motion-${matchId}`)).toBeOnTheScreen();
+  });
+
+  it('does not replay a match that arrived while Matches was hidden', async () => {
+    signIn();
+    seedProfiles(MAYA);
+    mockIsFocused = false;
+    const view = await render(<MatchesScreen />);
+    await screen.findByTestId('matches-empty');
+
+    fakeBackend.likeFrom(MAYA.id, TEST_USER.uid);
+    await act(async () => fakeBackend.backend.like(TEST_USER.uid, MAYA.id));
+    const matchId = matchIdFor(TEST_USER.uid, MAYA.id);
+
+    expect(await screen.findByTestId(`match-row-${matchId}`)).toBeOnTheScreen();
+    expect(screen.queryByTestId(`match-row-motion-${matchId}`)).not.toBeOnTheScreen();
+
+    mockIsFocused = true;
+    await view.rerender(<MatchesScreen />);
+
+    expect(screen.queryByTestId(`match-row-motion-${matchId}`)).not.toBeOnTheScreen();
+  });
+
+  it('does not replay a live match entrance after leaving and returning to Matches', async () => {
+    signIn();
+    seedProfiles(MAYA);
+    const view = await render(<MatchesScreen />);
+    await screen.findByTestId('matches-empty');
+
+    fakeBackend.likeFrom(MAYA.id, TEST_USER.uid);
+    await act(async () => fakeBackend.backend.like(TEST_USER.uid, MAYA.id));
+    const matchId = matchIdFor(TEST_USER.uid, MAYA.id);
+    expect(screen.getByTestId(`match-row-motion-${matchId}`)).toBeOnTheScreen();
+
+    mockIsFocused = false;
+    await view.rerender(<MatchesScreen />);
+    expect(screen.queryByTestId(`match-row-motion-${matchId}`)).not.toBeOnTheScreen();
+
+    mockIsFocused = true;
+    await view.rerender(<MatchesScreen />);
+    expect(screen.getByTestId(`match-row-${matchId}`)).toBeOnTheScreen();
+    expect(screen.queryByTestId(`match-row-motion-${matchId}`)).not.toBeOnTheScreen();
   });
 
   it('lists matches newest first and opens the chat of the tapped row', async () => {

@@ -30,6 +30,19 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       bundleIdentifier: isDev ? 'com.edufelip.comradia.dev' : 'com.edufelip.comradia',
       usesAppleSignIn: true,
       googleServicesFile: files.ios,
+      entitlements: {
+        ...config.ios?.entitlements,
+        'aps-environment': isDev ? 'development' : 'production',
+      },
+      infoPlist: {
+        ...config.ios?.infoPlist,
+        UIBackgroundModes: [
+          ...new Set([
+            ...((config.ios?.infoPlist?.UIBackgroundModes as string[] | undefined) ?? []),
+            'remote-notification',
+          ]),
+        ],
+      },
     },
     android: {
       ...config.android,
@@ -40,9 +53,11 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       ...(config.plugins ?? []),
       '@react-native-firebase/app',
       '@react-native-firebase/auth',
+      '@react-native-firebase/messaging',
       // Adds the Crashlytics Gradle plugin; without it the Android app crashes at startup
       // ("The Crashlytics build ID is missing") because the package is linked natively.
       '@react-native-firebase/crashlytics',
+      'expo-notifications',
       // Photo library only: the camera and microphone keys and Android permissions stay out.
       [
         'expo-image-picker',
@@ -65,6 +80,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
             forceStaticLinking: [
               'RNFBApp',
               'RNFBAuth',
+              'RNFBMessaging',
               'RNFBCrashlytics',
               'RNFBFirestore',
               'RNFBStorage',

@@ -1,6 +1,7 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import { DsRadius, type DsColorScheme, getDsTheme } from '@/constants/design-system';
+import { DsMotionPressable } from '../motion/DsMotionPressable';
 
 type DsBackButtonProps = {
   scheme: DsColorScheme;
@@ -20,22 +21,23 @@ export function DsBackButton({
   const theme = getDsTheme(scheme);
 
   return (
-    <Pressable
+    <DsMotionPressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
+      feedbackScale={0.95}
+      hitSlop={4}
       onPress={onPress}
-      style={({ pressed }) => [
+      style={[
         styles.button,
         {
           backgroundColor: theme.color.surface,
-          opacity: pressed ? 0.75 : 1,
         },
         style,
       ]}
       testID={testID}
     >
       <MaterialIcons color={theme.color.textPrimary} name="arrow-back" size={20} />
-    </Pressable>
+    </DsMotionPressable>
   );
 }
 

@@ -1,5 +1,15 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { useEffect } from 'react';
+import { StyleSheet, View } from 'react-native';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
+import { DsMotionPressable } from '@/components/ds/motion/DsMotionPressable';
 import { DsRadius, getDsTheme, type DsColorScheme } from '@/constants/design-system';
+import { DS_MOTION } from '@/constants/motion';
 
 type OnboardingSwitchProps = {
   scheme: DsColorScheme;
@@ -27,13 +37,30 @@ export function OnboardingSwitch({
   onValueChange,
 }: OnboardingSwitchProps) {
   const ds = getDsTheme(scheme);
+  const reduceMotion = useReducedMotion();
+  const progress = useSharedValue(value ? 1 : 0);
+  const thumbStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: progress.value * 18 }],
+  }));
+
+  useEffect(() => {
+    progress.value = reduceMotion
+      ? value
+        ? 1
+        : 0
+      : withTiming(value ? 1 : 0, {
+          duration: DS_MOTION.duration.fast,
+          easing: Easing.bezier(...DS_MOTION.easing.easeOut),
+        });
+  }, [progress, reduceMotion, value]);
 
   return (
-    <Pressable
+    <DsMotionPressable
       accessibilityLabel={accessibilityLabel}
       accessibilityRole="switch"
       accessibilityState={{ checked: value }}
       aria-checked={value}
+      feedbackScale={0.96}
       onPress={() => onValueChange(!value)}
       style={styles.hitArea}
       testID={testID}
@@ -44,9 +71,15 @@ export function OnboardingSwitch({
           { backgroundColor: value ? ds.color.accentPrimary : ds.color.disabledBorder },
         ]}
       >
-        <View style={[styles.thumb, { transform: [{ translateX: value ? 18 : 0 }] }]} />
+        <Animated.View
+          style={[
+            styles.thumb,
+            reduceMotion ? { transform: [{ translateX: value ? 18 : 0 }] } : thumbStyle,
+          ]}
+          testID={`${testID}.thumb`}
+        />
       </View>
-    </Pressable>
+    </DsMotionPressable>
   );
 }
 

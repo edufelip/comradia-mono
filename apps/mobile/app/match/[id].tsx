@@ -1,17 +1,21 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useIsFocused, type ParamListBase } from '@react-navigation/native';
+import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
+import { Platform, StyleSheet, Text, View } from 'react-native';
+import { useReducedMotion } from 'react-native-reanimated';
 import { DsCard } from '@/components/ds/primitives/DsCard';
 import { DsPillButton } from '@/components/ds/primitives/DsPillButton';
 import { DsScreen } from '@/components/ds/primitives/DsScreen';
 import { DsRadius, DsSpace, DsTypography, getDsTheme } from '@/constants/design-system';
 import { useSessionStore } from '@/features/auth/session-store';
+import { MatchCelebration } from '@/features/matches/MatchCelebration';
 import { sharedValues } from '@/features/matches/shared-values';
 import { ProfilePhoto } from '@/features/profile/ProfilePhoto';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTranslation } from '@/localization';
 import { backend } from '@/services/backend';
 import type { Match } from '@/services/backend/types';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 type MatchStatus = 'loading' | 'ready' | 'not_found' | 'error';
 
@@ -20,17 +24,29 @@ type MatchStatus = 'loading' | 'ready' | 'not_found' | 'error';
  * the two cards share, and the two ways out — write now, or go back to the deck.
  */
 export default function MatchScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, celebrate } = useLocalSearchParams<{ id: string; celebrate?: string }>();
   const colorScheme = useColorScheme();
   const scheme = colorScheme === 'dark' ? 'dark' : 'light';
   const ds = getDsTheme(scheme);
   const { t } = useTranslation();
   const router = useRouter();
+  const navigation = useNavigation<NativeStackNavigationProp<ParamListBase>>();
+  const isFocused = useIsFocused();
+  const reduceMotion = useReducedMotion();
   const uid = useSessionStore((state) => state.user?.uid);
   const myProfile = useSessionStore((state) => state.profile);
   const [status, setStatus] = useState<MatchStatus>('loading');
   const [match, setMatch] = useState<Match | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const [celebratingMatchId, setCelebratingMatchId] = useState<string | null>(null);
+  const [cancelledCelebrationId, setCancelledCelebrationId] = useState<string | null>(null);
+  const consumedCelebrationFor = useRef<string | null>(null);
+  const hasBeenFocused = useRef(false);
+  const [settledMatchId, setSettledMatchId] = useState<string | null>(null);
+  const navigationState = navigation.getState();
+  const hasNoNativeTransition =
+    Platform.OS === 'web' || reduceMotion || (navigationState?.routes.length ?? 0) <= 1;
+  const navigationSettled = settledMatchId === id;
 
   useEffect(() => {
     if (!uid) return;
@@ -56,6 +72,49 @@ export default function MatchScreen() {
       active = false;
     };
   }, [uid, id, attempt]);
+
+  useEffect(() => {
+    if (isFocused) {
+      hasBeenFocused.current = true;
+      return;
+    }
+
+    if (celebrate === '1' && hasBeenFocused.current && cancelledCelebrationId !== id) {
+      consumedCelebrationFor.current = id;
+      setCancelledCelebrationId(id);
+      router.setParams({ celebrate: undefined });
+    }
+  }, [cancelledCelebrationId, celebrate, id, isFocused, router]);
+
+  useEffect(() => {
+    if (celebrate !== '1' || navigationSettled || !isFocused) return;
+    if (hasNoNativeTransition) {
+      setSettledMatchId(id);
+      return;
+    }
+
+    return navigation.addListener('transitionEnd', (event) => {
+      if (!event.data.closing) setSettledMatchId(id);
+    });
+  }, [celebrate, hasNoNativeTransition, id, isFocused, navigation, navigationSettled]);
+
+  useEffect(() => {
+    if (
+      celebrate !== '1' ||
+      !isFocused ||
+      !navigationSettled ||
+      status !== 'ready' ||
+      !match ||
+      match.id !== id ||
+      consumedCelebrationFor.current === id
+    ) {
+      return;
+    }
+
+    consumedCelebrationFor.current = id;
+    setCelebratingMatchId(id);
+    router.setParams({ celebrate: undefined });
+  }, [celebrate, id, isFocused, match, navigationSettled, router, status]);
 
   const shared = sharedValues(myProfile?.values, match?.other.values ?? []);
 
@@ -117,26 +176,39 @@ export default function MatchScreen() {
         </DsCard>
       ) : match ? (
         <>
-          <View style={styles.photos}>
-            {myProfile ? (
+          <MatchCelebration
+            active={
+              match.id === id &&
+              cancelledCelebrationId !== match.id &&
+              (celebratingMatchId === match.id || (celebrate === '1' && status === 'ready'))
+            }
+            focused={isFocused && navigationSettled}
+            first={
+              myProfile ? (
+                <ProfilePhoto
+                  name={myProfile.displayName}
+                  path={myProfile.photoPath}
+                  scheme={scheme}
+                  shape="arch"
+                  style={styles.portrait}
+                  testID="match-photo-me"
+                />
+              ) : null
+            }
+            key={match.id}
+            scheme={scheme}
+            second={
               <ProfilePhoto
-                name={myProfile.displayName}
-                path={myProfile.photoPath}
+                name={match.other.displayName}
+                path={match.other.photoPath}
                 scheme={scheme}
                 shape="arch"
                 style={styles.portrait}
-                testID="match-photo-me"
+                testID="match-photo-other"
               />
-            ) : null}
-            <ProfilePhoto
-              name={match.other.displayName}
-              path={match.other.photoPath}
-              scheme={scheme}
-              shape="arch"
-              style={styles.portrait}
-              testID="match-photo-other"
-            />
-          </View>
+            }
+            testID="match-celebration"
+          />
 
           <DsCard scheme={scheme} style={styles.card}>
             <Text
@@ -207,12 +279,6 @@ const styles = StyleSheet.create({
   },
   header: {
     gap: DsSpace.xxs,
-  },
-  photos: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: DsSpace.sm,
-    justifyContent: 'center',
   },
   portrait: {
     aspectRatio: 3 / 4,

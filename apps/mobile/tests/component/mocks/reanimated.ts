@@ -1,17 +1,30 @@
 /* Minimal react-native-reanimated stand-in for component tests. */
+import { useRef } from 'react';
 import { Animated, Easing } from 'react-native';
 
 const identity = <T>(value: T): T => value;
 
+function useMockSharedValue(initial: unknown) {
+  return useRef({ value: initial }).current;
+}
+
 const mock = {
   __esModule: true,
-  default: { View: Animated.View, Text: Animated.Text, ScrollView: Animated.ScrollView },
+  default: {
+    View: Animated.View,
+    Text: Animated.Text,
+    ScrollView: Animated.ScrollView,
+    createAnimatedComponent: <T>(component: T): T => component,
+  },
   Easing,
   useReducedMotion: () => false,
-  useSharedValue: (initial: unknown) => ({ value: initial }),
+  useSharedValue: useMockSharedValue,
   useAnimatedStyle: (factory: () => object) => factory(),
   useAnimatedProps: (factory: () => object) => factory(),
-  withTiming: identity,
+  withTiming: (value: unknown, _config?: unknown, callback?: (finished: boolean) => void) => {
+    callback?.(true);
+    return value;
+  },
   withRepeat: identity,
   withSpring: identity,
   withSequence: identity,

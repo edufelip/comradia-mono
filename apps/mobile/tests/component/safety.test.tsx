@@ -1,4 +1,5 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import * as Reanimated from 'react-native-reanimated';
 import SafetyScreen from '@/app/safety/[uid]';
 import { useSessionStore } from '@/features/auth/session-store';
 import { useDiscoveryStore } from '@/features/discovery/discovery-store';
@@ -11,6 +12,7 @@ const mockBack = jest.fn();
 const mockDismissTo = jest.fn();
 const mockPush = jest.fn();
 let mockParams: { uid?: string; context?: string } = {};
+let mockIsFocused = true;
 jest.mock('expo-router', () => ({
   useLocalSearchParams: () => mockParams,
   useRouter: () => ({
@@ -19,6 +21,10 @@ jest.mock('expo-router', () => ({
     push: mockPush,
     dismissTo: mockDismissTo,
   }),
+}));
+jest.mock('@react-navigation/native', () => ({
+  ...jest.requireActual('@react-navigation/native'),
+  useIsFocused: () => mockIsFocused,
 }));
 jest.mock('@/localization/get-device-locale', () => ({ getDeviceLocale: () => 'en-US' }));
 
@@ -61,6 +67,11 @@ function openFromProfile(person: DiscoveryProfile = MAYA, ...rest: DiscoveryProf
 }
 
 describe('SafetyScreen', () => {
+  beforeEach(() => {
+    mockIsFocused = true;
+    mockParams = {};
+  });
+
   it('offers every reason as a single-select radio group', async () => {
     signIn();
     openFromProfile();
@@ -164,8 +175,10 @@ describe('SafetyScreen', () => {
     openFromProfile();
 
     await render(<SafetyScreen />);
+    expect(screen.queryByTestId('safety-block-confirm-motion')).not.toBeOnTheScreen();
     await fireEvent.press(screen.getByTestId('safety-block'));
 
+    expect(screen.getByTestId('safety-block-confirm-motion')).toBeOnTheScreen();
     expect(screen.getByTestId('safety-block-confirm')).toBeOnTheScreen();
     expect(fakeBackend.callsTo('blockUser')).toEqual([]);
 
@@ -181,6 +194,47 @@ describe('SafetyScreen', () => {
       { method: 'blockUser', args: [TEST_USER.uid, MAYA.id] },
     ]);
     expect(useDiscoveryStore.getState().candidates).toEqual([]);
+  });
+
+  it('shows the block confirmation instantly for reduced-motion users', async () => {
+    signIn();
+    openFromProfile();
+    jest.spyOn(Reanimated, 'useReducedMotion').mockReturnValue(true);
+    const timing = jest.spyOn(Reanimated, 'withTiming');
+
+    await render(<SafetyScreen />);
+    await fireEvent.press(screen.getByTestId('safety-block'));
+
+    expect(screen.getByTestId('safety-block-confirm-motion')).toBeOnTheScreen();
+    expect(timing).not.toHaveBeenCalled();
+  });
+
+  it('keeps a block error static when the request finishes after leaving the sheet', async () => {
+    signIn();
+    openFromProfile();
+    let rejectBlock: (reason: Error) => void = () => undefined;
+    const blockUser = jest.spyOn(fakeBackend.backend, 'blockUser').mockImplementation(
+      () =>
+        new Promise((_resolve, reject) => {
+          rejectBlock = reject;
+        }),
+    );
+
+    const view = await render(<SafetyScreen />);
+    await fireEvent.press(screen.getByTestId('safety-block'));
+    await fireEvent.press(screen.getByTestId('safety-block-confirm'));
+    await waitFor(() => expect(blockUser).toHaveBeenCalled());
+
+    mockIsFocused = false;
+    await view.rerender(<SafetyScreen />);
+    await act(() => rejectBlock(new Error('network')));
+
+    expect(await screen.findByTestId('safety-error')).toBeOnTheScreen();
+    expect(screen.queryByTestId('safety-error-motion')).not.toBeOnTheScreen();
+
+    mockIsFocused = true;
+    await view.rerender(<SafetyScreen />);
+    expect(screen.queryByTestId('safety-error-motion')).not.toBeOnTheScreen();
   });
 
   it('closes without writing anything when Close is pressed', async () => {
@@ -205,6 +259,7 @@ describe('SafetyScreen', () => {
     await fireEvent.press(screen.getByTestId('safety-block-confirm'));
 
     expect(await screen.findByTestId('safety-error')).toBeOnTheScreen();
+    expect(screen.getByTestId('safety-error-motion')).toBeOnTheScreen();
     expect(screen.getByText(enUS['safety.error.network'])).toBeOnTheScreen();
     expect(mockBack).not.toHaveBeenCalled();
     // Usable again, so a second attempt is one press away.
@@ -221,6 +276,7 @@ describe('SafetyScreen', () => {
     await fireEvent.press(screen.getByTestId('report-submit'));
 
     expect(await screen.findByTestId('safety-error')).toBeOnTheScreen();
+    expect(screen.getByTestId('safety-error-motion')).toBeOnTheScreen();
     expect(screen.getByText(enUS['safety.error.generic'])).toBeOnTheScreen();
     expect(mockBack).not.toHaveBeenCalled();
   });

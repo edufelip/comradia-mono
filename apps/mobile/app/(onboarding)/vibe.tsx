@@ -1,6 +1,8 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { DsMotionPressable } from '@/components/ds/motion/DsMotionPressable';
+import { DsMotionView } from '@/components/ds/motion/DsMotionView';
 import { DsCard } from '@/components/ds/primitives/DsCard';
 import { DsPillButton } from '@/components/ds/primitives/DsPillButton';
 import { DsFontFamily, DsRadius, DsSpace, getDsTheme } from '@/constants/design-system';
@@ -105,8 +107,9 @@ export default function VibeScreen() {
           variant="secondary"
         />
         {draft.photoUri ? (
-          <Pressable
+          <DsMotionPressable
             accessibilityRole="button"
+            feedbackScale={0.97}
             onPress={() => draft.setPhotoUri(null)}
             style={styles.photoRemove}
             testID="onboarding-photo-remove"
@@ -114,19 +117,21 @@ export default function VibeScreen() {
             <Text style={[styles.photoRemoveLabel, { color: ds.color.textSecondary }]}>
               {t('photo.remove')}
             </Text>
-          </Pressable>
+          </DsMotionPressable>
         ) : null}
         <Text style={[styles.hint, styles.photoHint, { color: ds.color.textTertiary }]}>
           {t('photo.hint')}
         </Text>
         {photoError ? (
-          <Text
-            accessibilityRole="alert"
-            style={[styles.error, styles.photoHint, { color: ds.color.danger }]}
-            testID="onboarding-photo-error"
-          >
-            {t('photo.error')}
-          </Text>
+          <DsMotionView testID="onboarding-photo-error-motion" variant="reveal">
+            <Text
+              accessibilityRole="alert"
+              style={[styles.error, styles.photoHint, { color: ds.color.danger }]}
+              testID="onboarding-photo-error"
+            >
+              {t('photo.error')}
+            </Text>
+          </DsMotionView>
         ) : null}
       </View>
 
@@ -162,9 +167,11 @@ export default function VibeScreen() {
           value={draft.displayName}
         />
         {showNameError ? (
-          <Text style={[styles.error, { color: ds.color.danger }]} testID="onboarding-name-error">
-            {t('onboarding.error.name_required')}
-          </Text>
+          <DsMotionView testID="onboarding-name-error-motion" variant="reveal">
+            <Text style={[styles.error, { color: ds.color.danger }]} testID="onboarding-name-error">
+              {t('onboarding.error.name_required')}
+            </Text>
+          </DsMotionView>
         ) : null}
       </View>
 
@@ -192,12 +199,14 @@ export default function VibeScreen() {
           value={draft.birthDateInput}
         />
         {showBirthdayError && basicsError ? (
-          <Text
-            style={[styles.error, { color: ds.color.danger }]}
-            testID="onboarding-birthday-error"
-          >
-            {t(`onboarding.error.${basicsError}`)}
-          </Text>
+          <DsMotionView testID="onboarding-birthday-error-motion" variant="reveal">
+            <Text
+              style={[styles.error, { color: ds.color.danger }]}
+              testID="onboarding-birthday-error"
+            >
+              {t(`onboarding.error.${basicsError}`)}
+            </Text>
+          </DsMotionView>
         ) : (
           <Text style={[styles.hint, { color: ds.color.textTertiary }]}>
             {t('onboarding.basics.birthday_hint')}
