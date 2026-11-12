@@ -1,10 +1,8 @@
 import assert from 'node:assert/strict';
 import { beforeEach, describe, it } from 'node:test';
-
+import { INITIAL_DISCOVERY, useDiscoveryStore, type DiscoveryBackend } from './discovery-store';
 import type { DiscoveryProfile } from '@/features/profile/profile-schema';
 import type { LikeResult } from '@/services/backend/types';
-
-import { INITIAL_DISCOVERY, useDiscoveryStore, type DiscoveryBackend } from './discovery-store';
 
 function profile(id: string, name: string): DiscoveryProfile {
   return {
@@ -18,6 +16,7 @@ function profile(id: string, name: string): DiscoveryProfile {
     values: ['bookshops_coffee', 'tenant_rights', 'cycling'],
     promptId: 'perfect_sunday',
     promptAnswer: 'Feira, then a long lunch.',
+    photoPath: null,
   };
 }
 

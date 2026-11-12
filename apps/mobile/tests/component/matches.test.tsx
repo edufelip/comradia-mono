@@ -1,13 +1,14 @@
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
-
+import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 import MatchesScreen from '@/app/(tabs)/matches';
 import { useSessionStore } from '@/features/auth/session-store';
-import type { DiscoveryProfile } from '@/features/profile/profile-schema';
 import { enUS } from '@/localization/en-US';
 import { matchIdFor } from '@/services/backend/shared';
+import { TEST_PROFILE, TEST_USER, fakeBackend } from './mocks/backend';
+import type { DiscoveryProfile } from '@/features/profile/profile-schema';
 import type { Match } from '@/services/backend/types';
 
-import { TEST_PROFILE, TEST_USER, fakeBackend } from './mocks/backend';
+/** The portrait's image and initial are hidden from screen readers; its root carries the name. */
+const HIDDEN = { includeHiddenElements: true };
 
 const mockPush = jest.fn();
 const mockNavigate = jest.fn();
@@ -43,6 +44,7 @@ const MAYA: DiscoveryProfile = {
   values: ['bookshops_coffee', 'tenant_rights', 'cycling'],
   promptId: 'perfect_sunday',
   promptAnswer: 'Community garden at sunrise, then a long lunch.',
+  photoPath: null,
 };
 
 const VAL: DiscoveryProfile = {
@@ -56,6 +58,7 @@ const VAL: DiscoveryProfile = {
   values: ['volunteering', 'community_gardens', 'pets_parks'],
   promptId: 'together_we_could',
   promptAnswer: 'Run a bike-to-work convoy.',
+  photoPath: null,
 };
 
 function signIn() {
@@ -134,6 +137,28 @@ describe('MatchesScreen', () => {
 
     await fireEvent.press(screen.getByTestId(`match-row-${val}`));
     expect(mockPush).toHaveBeenCalledWith(`/chat/${val}`);
+  });
+
+  it('shows each match portrait in its row', async () => {
+    signIn();
+    seedProfiles({ ...MAYA, photoPath: 'photos/p-maya/a.jpg' }, VAL);
+    fakeBackend.likeFrom(MAYA.id, TEST_USER.uid);
+    fakeBackend.likeFrom(TEST_USER.uid, MAYA.id);
+    fakeBackend.likeFrom(VAL.id, TEST_USER.uid);
+    fakeBackend.likeFrom(TEST_USER.uid, VAL.id);
+    const maya = matchIdFor(TEST_USER.uid, MAYA.id);
+    const val = matchIdFor(TEST_USER.uid, VAL.id);
+
+    await render(<MatchesScreen />);
+
+    expect(await screen.findByTestId(`match-row-photo-${maya}-image`, HIDDEN)).toHaveProp(
+      'source',
+      [{ uri: 'https://photos.test/photos/p-maya/a.jpg' }],
+    );
+    expect(screen.queryByTestId(`match-row-photo-${val}-image`, HIDDEN)).not.toBeOnTheScreen();
+    expect(
+      within(screen.getByTestId(`match-row-photo-${val}`)).getByText('V', HIDDEN),
+    ).toBeOnTheScreen();
   });
 
   it('shows a failed reconciliation and recovers through Retry', async () => {

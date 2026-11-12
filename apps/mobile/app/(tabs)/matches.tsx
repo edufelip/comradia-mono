@@ -1,6 +1,5 @@
 import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-
 import { DsCard } from '@/components/ds/primitives/DsCard';
 import { DsPillButton } from '@/components/ds/primitives/DsPillButton';
 import { DsScreen } from '@/components/ds/primitives/DsScreen';
@@ -8,6 +7,7 @@ import { DsRadius, DsSpace, DsTypography, getDsTheme } from '@/constants/design-
 import { useSessionStore } from '@/features/auth/session-store';
 import { sharedValues } from '@/features/matches/shared-values';
 import { useMatches } from '@/features/matches/use-matches';
+import { ProfilePhoto } from '@/features/profile/ProfilePhoto';
 import { useBlockedUids } from '@/features/safety/use-blocked-uids';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTranslation } from '@/localization';
@@ -98,12 +98,24 @@ export default function MatchesScreen() {
               testID={`match-row-${match.id}`}
             >
               <DsCard scheme={scheme} style={styles.card}>
-                <Text style={[DsTypography.cardTitle, { color: ds.color.textPrimary }]}>
-                  {match.other.displayName}, {match.other.age}
-                </Text>
-                <Text style={[DsTypography.caption, { color: ds.color.accentPrimary }]}>
-                  {t(`onboarding.vibe.${match.other.vibe}`)}
-                </Text>
+                <View style={styles.row}>
+                  <ProfilePhoto
+                    name={match.other.displayName}
+                    path={match.other.photoPath}
+                    scheme={scheme}
+                    shape="circle"
+                    style={{ width: 48 }}
+                    testID={`match-row-photo-${match.id}`}
+                  />
+                  <View style={styles.rowText}>
+                    <Text style={[DsTypography.cardTitle, { color: ds.color.textPrimary }]}>
+                      {match.other.displayName}, {match.other.age}
+                    </Text>
+                    <Text style={[DsTypography.caption, { color: ds.color.accentPrimary }]}>
+                      {t(`onboarding.vibe.${match.other.vibe}`)}
+                    </Text>
+                  </View>
+                </View>
                 {shared ? (
                   <View style={[styles.valueChip, { backgroundColor: ds.color.surfaceMuted }]}>
                     <Text style={[DsTypography.caption, { color: ds.color.textSecondary }]}>
@@ -130,6 +142,16 @@ const styles = StyleSheet.create({
   },
   card: {
     gap: DsSpace.xs,
+  },
+  row: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: DsSpace.sm,
+  },
+  rowText: {
+    flex: 1,
+    gap: DsSpace.xxs,
+    minWidth: 0,
   },
   valueChip: {
     alignSelf: 'flex-start',

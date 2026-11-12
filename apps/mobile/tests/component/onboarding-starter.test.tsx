@@ -82,6 +82,7 @@ function expectedProfile() {
     values: ['bookshops_coffee', 'tenant_rights', 'cycling'],
     promptId: 'perfect_sunday',
     promptAnswer: 'Feira, then a long lunch.',
+    photoPath: null,
   };
 }
 
@@ -177,11 +178,45 @@ describe('StarterScreen (S4)', () => {
         profile: expectedProfile(),
         account: { birthDate: '1994-03-14', sharedPassionWeight: 70 },
       },
+      null,
     ]);
     expect(useSessionStore.getState().profile).toEqual(expectedProfile());
     expect(store().displayName).toBe('');
     expect(store().values).toEqual([]);
     expect(screen.queryByTestId('onboarding-error')).not.toBeOnTheScreen();
+  });
+
+  it('saves the photo with the documents and keeps the returned photoPath in the session', async () => {
+    seedDraft({ photoUri: 'file:///tmp/me.jpg' });
+    await renderStarter();
+
+    await type('starter-answer', 'Feira, then a long lunch.');
+    await press('starter-finish');
+
+    await waitFor(() => expect(useSessionStore.getState().status).toBe('ready'));
+
+    const calls = fakeBackend.callsTo('saveOnboarding');
+    expect(calls).toHaveLength(1);
+    expect(calls[0].args[2]).toBe('file:///tmp/me.jpg');
+    expect(useSessionStore.getState().profile).toEqual({
+      ...expectedProfile(),
+      photoPath: 'photos/test-user/p1.jpg',
+    });
+    expect(store().photoUri).toBeNull();
+  });
+
+  it('saves without a photo as a null third argument', async () => {
+    seedDraft();
+    await renderStarter();
+
+    await type('starter-answer', 'Feira, then a long lunch.');
+    await press('starter-finish');
+
+    await waitFor(() => expect(useSessionStore.getState().status).toBe('ready'));
+
+    const calls = fakeBackend.callsTo('saveOnboarding');
+    expect(calls[0].args[2]).toBeNull();
+    expect(useSessionStore.getState().profile?.photoPath).toBeNull();
   });
 
   it('keeps the draft and explains a failed save', async () => {

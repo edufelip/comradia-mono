@@ -130,14 +130,26 @@ describe('onboarding draft store', () => {
     assert.equal(state().promptAnswer.length, 280);
   });
 
+  it('sets and clears the photo uri', () => {
+    assert.equal(state().photoUri, null);
+
+    state().setPhotoUri('file:///tmp/me.jpg');
+    assert.equal(state().photoUri, 'file:///tmp/me.jpg');
+
+    state().setPhotoUri(null);
+    assert.equal(state().photoUri, null);
+  });
+
   it('resets to the empty draft and stays usable afterwards', () => {
     state().setDisplayName('Rosa');
     state().setVibe('foodie');
     state().setPromptAnswer('Feira.');
+    state().setPhotoUri('file:///tmp/me.jpg');
 
     state().reset();
 
     assert.equal(state().displayName, '');
+    assert.equal(state().photoUri, null);
     assert.equal(state().vibe, null);
     assert.deepEqual(state().values, []);
     assert.equal(state().promptAnswer, '');

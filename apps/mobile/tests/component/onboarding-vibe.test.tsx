@@ -2,17 +2,24 @@ import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-librar
 import { View } from 'react-native';
 import VibeScreen from '@/app/(onboarding)/vibe';
 import { createEmptyDraft, useOnboardingStore } from '@/features/onboarding/onboarding-store';
+import { pickPhoto } from '@/features/profile/pick-photo';
 import { enUS } from '@/localization/en-US';
+
+/** The portrait's image and initial are hidden from screen readers; its root carries the name. */
+const HIDDEN = { includeHiddenElements: true };
 
 let mockColorScheme: 'light' | 'dark' = 'light';
 
 jest.mock('@/hooks/use-color-scheme', () => ({ useColorScheme: () => mockColorScheme }));
 jest.mock('@/localization/get-device-locale', () => ({ getDeviceLocale: () => 'en-US' }));
+jest.mock('@/features/profile/pick-photo', () => ({ pickPhoto: jest.fn() }));
 
+const mockPickPhoto = pickPhoto as jest.MockedFunction<typeof pickPhoto>;
 const store = () => useOnboardingStore.getState();
 
 beforeEach(() => {
   mockColorScheme = 'light';
+  mockPickPhoto.mockReset();
   useOnboardingStore.setState(createEmptyDraft());
 });
 
@@ -207,6 +214,67 @@ describe('VibeScreen (S2)', () => {
 
     expect(router.getPathname()).toBe('/values');
     expect(store().vibe).toBe('bookworm');
+  });
+
+  it('shows the picked photo and turns the button into Change photo', async () => {
+    mockPickPhoto.mockResolvedValueOnce('file:///tmp/me.jpg');
+    await renderVibe();
+    expect(screen.getByTestId('onboarding-photo-pick')).toHaveTextContent(enUS['photo.add']);
+
+    await press('onboarding-photo-pick');
+
+    expect(store().photoUri).toBe('file:///tmp/me.jpg');
+    expect(screen.getByTestId('onboarding-photo-image', HIDDEN)).toBeOnTheScreen();
+    expect(screen.getByTestId('onboarding-photo-pick')).toHaveTextContent(enUS['photo.change']);
+    expect(screen.getByTestId('onboarding-photo-remove')).toBeOnTheScreen();
+  });
+
+  it('keeps the photo empty when the picker is cancelled', async () => {
+    mockPickPhoto.mockResolvedValueOnce(null);
+    await renderVibe();
+
+    await press('onboarding-photo-pick');
+
+    expect(store().photoUri).toBeNull();
+    expect(screen.queryByTestId('onboarding-photo-image', HIDDEN)).not.toBeOnTheScreen();
+    expect(screen.getByTestId('onboarding-photo-pick')).toHaveTextContent(enUS['photo.add']);
+    expect(screen.queryByTestId('onboarding-photo-error')).not.toBeOnTheScreen();
+  });
+
+  it('removes the photo again', async () => {
+    mockPickPhoto.mockResolvedValueOnce('file:///tmp/me.jpg');
+    await renderVibe();
+    await press('onboarding-photo-pick');
+
+    await press('onboarding-photo-remove');
+
+    expect(store().photoUri).toBeNull();
+    expect(screen.queryByTestId('onboarding-photo-image', HIDDEN)).not.toBeOnTheScreen();
+    expect(screen.queryByTestId('onboarding-photo-remove')).not.toBeOnTheScreen();
+  });
+
+  it('explains a failed pick and clears the error on the next attempt', async () => {
+    mockPickPhoto.mockRejectedValueOnce(new Error('picker broke'));
+    await renderVibe();
+
+    await press('onboarding-photo-pick');
+
+    expect(screen.getByTestId('onboarding-photo-error')).toHaveTextContent(enUS['photo.error']);
+    expect(screen.getByRole('alert')).toBeOnTheScreen();
+
+    mockPickPhoto.mockResolvedValueOnce('file:///tmp/me.jpg');
+    await press('onboarding-photo-pick');
+
+    expect(screen.queryByTestId('onboarding-photo-error')).not.toBeOnTheScreen();
+    expect(screen.getByTestId('onboarding-photo-image', HIDDEN)).toBeOnTheScreen();
+  });
+
+  it('does not require a photo to continue', async () => {
+    await renderVibe();
+    await fillValidAnswers();
+
+    expect(store().photoUri).toBeNull();
+    expect(screen.getByTestId('onboarding-continue')).toBeEnabled();
   });
 
   it('renders in the dark scheme', async () => {

@@ -97,6 +97,25 @@ describe('profiles create', () => {
     await assertFails(setDoc(aliceCard(), without(profile(), 'union')));
   });
 
+  it('allows a card with no portrait (photoPath null)', async () => {
+    await assertSucceeds(setDoc(aliceCard(), profile({ photoPath: null })));
+  });
+
+  it('allows a card with the owner’s own portrait path', async () => {
+    await assertSucceeds(setDoc(aliceCard(), profile({ photoPath: 'photos/alice/abc123.jpg' })));
+  });
+
+  it('denies a portrait path outside the owner’s folder, not a jpg, or escaping the folder', async () => {
+    await assertFails(setDoc(aliceCard(), profile({ photoPath: 'photos/bob/abc123.jpg' })));
+    await assertFails(setDoc(aliceCard(), profile({ photoPath: 'photos/alice/abc.png' })));
+    await assertFails(setDoc(aliceCard(), profile({ photoPath: 'photos/alice/../x.jpg' })));
+    await assertFails(setDoc(aliceCard(), profile({ photoPath: 42 })));
+  });
+
+  it('denies a card with a missing photoPath key', async () => {
+    await assertFails(setDoc(aliceCard(), without(profile(), 'photoPath')));
+  });
+
   it('denies a card with an extra key', async () => {
     await assertFails(setDoc(aliceCard(), profile({ phoneNumber: '+5511987654321' })));
   });
@@ -187,6 +206,19 @@ describe('profiles update and delete', () => {
   it('allows the owner to update a field and refresh updatedAt', async () => {
     await assertSucceeds(
       updateDoc(aliceCard(), { promptAnswer: 'Sunrise at the feira.', updatedAt: serverTimestamp() }),
+    );
+  });
+
+  it('allows the owner to attach an own portrait to a card with none', async () => {
+    const existing = await getDoc(aliceCard());
+    await assertSucceeds(
+      setDoc(
+        aliceCard(),
+        profile({
+          photoPath: 'photos/alice/abc123.jpg',
+          createdAt: existing.data()?.createdAt,
+        }),
+      ),
     );
   });
 

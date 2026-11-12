@@ -40,6 +40,9 @@ const FIREBASE_CODES: Record<string, BackendErrorCode> = {
   '12501': 'cancelled',
   ERR_REQUEST_CANCELED: 'cancelled',
   ERR_CANCELED: 'cancelled',
+  // Photo uploads (Cloud Storage).
+  'storage/canceled': 'cancelled',
+  'storage/retry-limit-exceeded': 'network',
 };
 
 /** Normalizes Firebase / Google / Apple errors so screens only handle BackendErrorCode. */

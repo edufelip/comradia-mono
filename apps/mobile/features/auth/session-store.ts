@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-
 import type { PublicProfile } from '@/features/profile/profile-schema';
 import type { AuthUser } from '@/services/backend/types';
 
@@ -20,6 +19,8 @@ type SessionState = {
   setSignedIn: (user: AuthUser, profile: PublicProfile | null) => void;
   setProfileError: (user: AuthUser) => void;
   completeOnboarding: (profile: PublicProfile) => void;
+  /** Replaces my card after an edit (photo); ignored when signed out. */
+  updateProfile: (profile: PublicProfile) => void;
 };
 
 export const INITIAL_SESSION = { status: 'loading', user: null, profile: null } as const;
@@ -32,4 +33,5 @@ export const useSessionStore = create<SessionState>((set) => ({
   setProfileError: (user) => set({ status: 'error', user, profile: null }),
   completeOnboarding: (profile) =>
     set((state) => (state.user ? { status: 'ready', profile } : state)),
+  updateProfile: (profile) => set((state) => (state.user && state.profile ? { profile } : state)),
 }));

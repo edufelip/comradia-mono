@@ -11,9 +11,11 @@ import { serverTimestamp, type Firestore } from 'firebase/firestore';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 export const RULES = readFileSync(join(ROOT, 'firestore.rules'), 'utf8');
+export const STORAGE_RULES = readFileSync(join(ROOT, 'storage.rules'), 'utf8');
 
 const [HOST, PORT] = (process.env.FIRESTORE_EMULATOR_HOST ?? '127.0.0.1:8089').split(':');
 export const EMULATOR_ORIGIN = `http://${HOST}:${PORT}`;
+const STORAGE_PORT = 9199;
 
 /**
  * Starts a rules environment for one test file and deploys firestore.rules to it. Every
@@ -21,11 +23,17 @@ export const EMULATOR_ORIGIN = `http://${HOST}:${PORT}`;
  * clear each other's documents, and they stay out of the `demo-comradia` data the E2E
  * suite seeds.
  */
-export async function testEnvironment(name: string): Promise<RulesTestEnvironment> {
+export async function testEnvironment(
+  name: string,
+  { storage = false } = {},
+): Promise<RulesTestEnvironment> {
   const projectId = `demo-comradia-rules-${name}`;
   const env = await initializeTestEnvironment({
     projectId,
     firestore: { host: HOST, port: Number(PORT), rules: RULES },
+    // The Storage emulator has one ruleset for every project. Loading it from each file in
+    // parallel left gaps with no ruleset, so only the Storage tests load it.
+    ...(storage && { storage: { host: '127.0.0.1', port: STORAGE_PORT, rules: STORAGE_RULES } }),
   });
   await assertRulesDeployed(projectId);
   return env;
@@ -68,6 +76,7 @@ export function profile(overrides: Record<string, unknown> = {}): Record<string,
     values: ['climate_outdoors', 'public_transit', 'cycling'],
     promptId: 'perfect_sunday',
     promptAnswer: 'Feira, then a long lunch.',
+    photoPath: null,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
     ...overrides,

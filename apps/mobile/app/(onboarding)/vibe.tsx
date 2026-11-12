@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { DsCard } from '@/components/ds/primitives/DsCard';
 import { DsPillButton } from '@/components/ds/primitives/DsPillButton';
 import { DsFontFamily, DsRadius, DsSpace, getDsTheme } from '@/constants/design-system';
@@ -10,6 +10,7 @@ import { OnboardingScreen } from '@/features/onboarding/components/OnboardingScr
 import { OnboardingSwitch } from '@/features/onboarding/components/OnboardingSwitch';
 import { useOnboardingStore } from '@/features/onboarding/onboarding-store';
 import { VIBE_VISUALS } from '@/features/onboarding/visuals';
+import { pickPhoto } from '@/features/profile/pick-photo';
 import {
   canLeaveVibeStep,
   LOOKING_FOR,
@@ -18,6 +19,7 @@ import {
   validateBasics,
   VIBES,
 } from '@/features/profile/profile-schema';
+import { ProfilePhoto } from '@/features/profile/ProfilePhoto';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTranslation } from '@/localization';
 
@@ -37,6 +39,17 @@ export default function VibeScreen() {
   const [nameTouched, setNameTouched] = useState(false);
   const [birthdayTouched, setBirthdayTouched] = useState(false);
   const [attempted, setAttempted] = useState(false);
+  const [photoError, setPhotoError] = useState(false);
+
+  const handlePickPhoto = async () => {
+    setPhotoError(false);
+    try {
+      const uri = await pickPhoto();
+      if (uri) draft.setPhotoUri(uri);
+    } catch {
+      setPhotoError(true);
+    }
+  };
 
   const today = new Date();
   const basicsError = validateBasics(draft, today);
@@ -72,6 +85,51 @@ export default function VibeScreen() {
       testID="onboarding-vibe"
       title={t('onboarding.vibe.title')}
     >
+      <View style={styles.photoBlock}>
+        <ProfilePhoto
+          name={draft.displayName}
+          path={draft.photoUri}
+          scheme={scheme}
+          shape="arch"
+          style={styles.photo}
+          testID="onboarding-photo"
+        />
+        <DsPillButton
+          label={draft.photoUri ? t('photo.change') : t('photo.add')}
+          onPress={() => {
+            void handlePickPhoto();
+          }}
+          scheme={scheme}
+          fullWidth={false}
+          testID="onboarding-photo-pick"
+          variant="secondary"
+        />
+        {draft.photoUri ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => draft.setPhotoUri(null)}
+            style={styles.photoRemove}
+            testID="onboarding-photo-remove"
+          >
+            <Text style={[styles.photoRemoveLabel, { color: ds.color.textSecondary }]}>
+              {t('photo.remove')}
+            </Text>
+          </Pressable>
+        ) : null}
+        <Text style={[styles.hint, styles.photoHint, { color: ds.color.textTertiary }]}>
+          {t('photo.hint')}
+        </Text>
+        {photoError ? (
+          <Text
+            accessibilityRole="alert"
+            style={[styles.error, styles.photoHint, { color: ds.color.danger }]}
+            testID="onboarding-photo-error"
+          >
+            {t('photo.error')}
+          </Text>
+        ) : null}
+      </View>
+
       <Text
         accessibilityRole="header"
         style={[styles.sectionLabel, { color: ds.color.textPrimary }]}
@@ -222,6 +280,26 @@ export default function VibeScreen() {
 }
 
 const styles = StyleSheet.create({
+  photoBlock: {
+    alignItems: 'center',
+    marginTop: DsSpace.md,
+  },
+  photo: {
+    width: 120,
+    aspectRatio: 3 / 4,
+  },
+  photoRemove: {
+    marginTop: DsSpace.xs,
+    paddingVertical: 6,
+  },
+  photoRemoveLabel: {
+    fontFamily: DsFontFamily.semibold,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  photoHint: {
+    textAlign: 'center',
+  },
   field: {
     marginTop: DsSpace.md,
   },

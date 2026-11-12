@@ -7,9 +7,12 @@ import {
   canLeaveValuesStep,
   canLeaveVibeStep,
   EMPTY_DRAFT,
+  isPhotoPathFor,
   MAX_AGE,
   NAME_MAX,
+  newPhotoId,
   parseBirthDate,
+  photoPathFor,
   toggleValue,
   validateBasics,
   VALUE_IDS,
@@ -206,6 +209,7 @@ describe('buildDocuments', () => {
         values: ['bookshops_coffee', 'tenant_rights', 'cycling'],
         promptId: 'green_flag',
         promptAnswer: 'You know your neighbours by name.',
+        photoPath: null,
       },
       account: { birthDate: '1994-03-14', sharedPassionWeight: 60 },
     });
@@ -241,5 +245,37 @@ describe('buildDocuments', () => {
     assert.throws(() => buildDocuments(draft({ ...COMPLETE, vibe: null }), TODAY));
     assert.throws(() => buildDocuments(draft({ ...COMPLETE, values: [] }), TODAY));
     assert.throws(() => buildDocuments(draft({ ...COMPLETE, promptAnswer: ' ' }), TODAY));
+  });
+});
+
+describe('photo paths', () => {
+  it('builds photos/{uid}/{id}.jpg', () => {
+    assert.equal(photoPathFor('u1', 'abc'), 'photos/u1/abc.jpg');
+  });
+
+  it('accepts only a portrait under the given uid', () => {
+    const path = photoPathFor('u1', 'abc');
+    assert.equal(isPhotoPathFor('u1', path), true);
+    assert.equal(isPhotoPathFor('u2', path), false);
+    assert.equal(isPhotoPathFor('u1', 'photos/u1/../u2/abc.jpg'), false);
+    assert.equal(isPhotoPathFor('u1', 'photos/u1/abc.png'), false);
+    assert.equal(isPhotoPathFor('u1', 'photos/u1/.jpg'), false);
+    assert.equal(isPhotoPathFor('u1', `photos/u1/${'a'.repeat(65)}.jpg`), false);
+    assert.equal(isPhotoPathFor('u1', `photos/u1/${'a'.repeat(64)}.jpg`), true);
+  });
+
+  it('makes deterministic ids made only of [a-z0-9]', () => {
+    assert.equal(
+      newPhotoId(0, () => 0),
+      newPhotoId(0, () => 0),
+    );
+    assert.match(
+      newPhotoId(1_700_000_000_000, () => 0.5),
+      /^[a-z0-9]+$/,
+    );
+  });
+
+  it('round-trips a freshly made id through isPhotoPathFor', () => {
+    assert.equal(isPhotoPathFor('u1', photoPathFor('u1', newPhotoId())), true);
   });
 });

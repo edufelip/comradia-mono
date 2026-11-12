@@ -1,13 +1,11 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-
 import SafetyScreen from '@/app/safety/[uid]';
 import { useSessionStore } from '@/features/auth/session-store';
 import { useDiscoveryStore } from '@/features/discovery/discovery-store';
-import type { DiscoveryProfile } from '@/features/profile/profile-schema';
 import { enUS } from '@/localization/en-US';
 import { REPORT_REASONS } from '@/services/backend/types';
-
 import { TEST_PROFILE, TEST_USER, fakeBackend } from './mocks/backend';
+import type { DiscoveryProfile } from '@/features/profile/profile-schema';
 
 const mockBack = jest.fn();
 const mockDismissTo = jest.fn();
@@ -35,6 +33,7 @@ const MAYA: DiscoveryProfile = {
   values: ['bookshops_coffee', 'tenant_rights', 'cycling'],
   promptId: 'perfect_sunday',
   promptAnswer: 'Community garden at sunrise, then a long lunch.',
+  photoPath: null,
 };
 
 const LUCAS: DiscoveryProfile = {
@@ -48,6 +47,7 @@ const LUCAS: DiscoveryProfile = {
   values: ['bookshops_coffee', 'indie_film_music', 'cycling'],
   promptId: 'hill_to_die_on',
   promptAnswer: 'Public libraries are the best thing a city does.',
+  photoPath: null,
 };
 
 function signIn() {

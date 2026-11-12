@@ -8,7 +8,7 @@ Five test layers, fastest first. Run the cheapest layer that proves your change,
 | Component | Screens and components render and react to taps; routing redirects | Jest + `jest-expo` + React Native Testing Library + `expo-router/testing-library` | `apps/mobile/tests/component/*.test.tsx` | `yarn test:component` (`:coverage` to enforce thresholds) | ~2 s warm, ~10 s cold |
 | E2E web | Real user journeys in real browsers (Chromium + WebKit, 390×844 and 320×568, dark mode, pt-BR / es-ES, accessibility tree) | Playwright, against `expo start --web` and the Firebase emulators | `apps/mobile/tests/e2e/*.spec.ts` | `yarn test:e2e` (`:ui` to debug) | ~16 s |
 | E2E native | The same journeys on iOS / Android | Maestro | `apps/mobile/.maestro/*.yaml` | `maestro --device <simulator or emulator id> test .maestro` from `apps/mobile`, against a dev build (see "E2E native on iOS" and "E2E native on Android" below) | ~4 min iOS, ~6 min Android |
-| Firestore rules | Every allow and deny in `firestore.rules`, plus parity between the rules' option lists and `features/profile/profile-schema.ts` | `node:test` via `tsx` + `@firebase/rules-unit-testing` against the Firestore emulator | `apps/firebase/tests/*.test.ts` | `yarn test` (starts its own emulator; with one already on `:8089`, run `FIRESTORE_EMULATOR_HOST=127.0.0.1:8089 node --import tsx --test tests/*.test.ts`) | ~1 s |
+| Firebase rules | Every allow and deny in `firestore.rules` and `storage.rules`, plus parity between the rules' option lists and `features/profile/profile-schema.ts` | `node:test` via `tsx` + `@firebase/rules-unit-testing` against the Firestore and Storage emulators | `apps/firebase/tests/*.test.ts` | `yarn test` (starts its own emulators; with them already on `:8089` and `:9199`, run `FIRESTORE_EMULATOR_HOST=127.0.0.1:8089 node --import tsx --test tests/*.test.ts`) | ~1 s |
 
 `yarn test:all` in `apps/mobile` runs typecheck, lint, unit, component (with coverage) and E2E web in that order.
 
@@ -129,7 +129,7 @@ Gotchas:
 
 ## CI
 
-Every job runs on our own self-hosted runner, `comradia-ci-ubuntu-1` on the home PC (`ssh pc`, labels `self-hosted, Linux, X64, comradia-ci`). The repo has no GitHub-hosted minutes, so `ubuntu-latest` jobs would sit in the queue forever. There is one runner on purpose: the emulators and the web server use fixed ports (9099, 8089, 8199), so Comradia jobs must run one at a time.
+Every job runs on our own self-hosted runner, `comradia-ci-ubuntu-1` on the home PC (`ssh pc`, labels `self-hosted, Linux, X64, comradia-ci`). The repo has no GitHub-hosted minutes, so `ubuntu-latest` jobs would sit in the queue forever. There is one runner on purpose: the emulators and the web server use fixed ports (9099, 8089, 9199, 8199), so Comradia jobs must run one at a time.
 
 - Service: `systemctl --user status actions.runner.edufelip-comradia-mono.comradia-ci-ubuntu-1` on the PC; files in `~/actions-runners/comradia-ci-ubuntu-1`. Its `.env` sets `PLAYWRIGHT_BROWSERS_PATH=~/.cache/ms-playwright-comradia` and `TMPDIR=~/ci-tmp/comradia`.
 - The runner has no sudo, so never use `playwright install --with-deps` or `apt-get` in a job.
@@ -158,6 +158,7 @@ Every job runs on our own self-hosted runner, `comradia-ci-ubuntu-1` on the home
 - `apps/firebase/.yarnrc` sets `ignore-engines`: `@firebase/rules-unit-testing` 6 declares Node 24, and yarn 1 would otherwise refuse to install it on the Node 22 that the rules workflow uses.
 - Each rules test file deploys `firestore.rules` to its own `demo-comradia-rules-*` project before it runs, so parallel files never clear each other's documents or the `demo-comradia` profiles the E2E suite seeds. A project with no deployed ruleset is open, so `tests/helpers.ts` fails the file when the deployment did not land.
 - Component tests replace the Firebase backend with the in-memory fake in `tests/component/mocks/backend.ts`: `fakeBackend` signs a user in, seeds profiles, fails the next call with a `BackendErrorCode`, and records what the screen wrote.
+- The Storage emulator runs on port 9199 with bucket `demo-comradia.appspot.com`. E2E tests check files with its REST API and the admin header `Authorization: Bearer owner` (`tests/e2e/support/storage.ts`). Test portraits are `tests/e2e/fixtures/portrait-*.jpg`.
 - The E2E suite reads the SMS code from the auth emulator's REST API (`latestSmsCode` in `tests/e2e/support/firebase.ts`); it is not delivered anywhere.
 - Discover is `/discover` (`discover-like`, `discover-pass`, `discover-refresh`); a test that lands on `/` follows the session redirect first.
 - `expo-router/testing-library`'s `renderRouter` still assumes React Native Testing Library 13's synchronous render. Keep the returned value and `await` it; wrapping it in an `async` helper drops `getPathname`. See `renderWelcome` in `tests/component/welcome.test.tsx`.
@@ -169,11 +170,11 @@ Every job runs on our own self-hosted runner, `comradia-ci-ubuntu-1` on the home
 
 ## Known gaps
 
-From `docs/architecture.md` "Deferred", all of these wait on the Blaze plan or a later task:
+From `docs/architecture.md` "Deferred" and "Costs":
 
-- **Real SMS** to any number: Spark only allows Firebase test numbers, so phone sign-in is emulator- or test-number-only.
+- **Real SMS:** `comradia-dev` is on Blaze, so real numbers would get real (paid) texts. Tests use the emulator or the Firebase test numbers only.
 - **Match and message notifications.** Matches and chat work without a server, but push notifications need Cloud Functions.
-- **Voice intros and photos:** Cloud Storage on new projects needs Blaze.
+- **Voice intros.** Photos run on the emulator in tests; `comradia-dev` has a real bucket since 2026-11-12.
 - **Age recompute, ranking by shared passions and distance:** a Cloud Function.
 - **App Check.** Account deletion, blocking and reporting are implemented in `apps/mobile` (S12 and S11).
 

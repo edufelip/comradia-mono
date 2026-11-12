@@ -16,6 +16,8 @@ const PROFILE_KEYS = [
 export function toPublicProfile(data: Record<string, unknown>): PublicProfile {
   const out: Record<string, unknown> = {};
   for (const key of PROFILE_KEYS) out[key] = data[key];
+  // Profiles written before photos existed have no `photoPath`.
+  out.photoPath = typeof data.photoPath === 'string' ? data.photoPath : null;
   return out as PublicProfile;
 }
 

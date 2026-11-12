@@ -41,9 +41,10 @@ export default function StarterScreen() {
     setFailed(false);
     try {
       const documents = buildDocuments(draft, new Date());
-      await backend.saveOnboarding(user.uid, documents);
+      const photoUri = draft.photoUri;
+      const profile = await backend.saveOnboarding(user.uid, documents, photoUri);
       draft.reset();
-      useSessionStore.getState().completeOnboarding(documents.profile);
+      useSessionStore.getState().completeOnboarding(profile);
     } catch {
       setFailed(true);
       setSaving(false);

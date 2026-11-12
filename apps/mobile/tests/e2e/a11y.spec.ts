@@ -51,7 +51,9 @@ test.describe('discover accessibility', () => {
     expect(snapshot).toContain('- button "Like"');
     expect(snapshot).toContain('- button "Pass"');
 
-    await expect(deck(page).getByRole('img')).toHaveCount(0, { timeout: 1_500 });
+    // The portrait (or its initial) is the only image, and it is named.
+    await expect(deck(page).getByRole('img')).toHaveCount(1);
+    await expect(deck(page).getByRole('img', { name: /^Photo of \S/ })).toBeVisible();
   });
 
   test('the tab bar exposes named tabs and hides its icons', async ({ page }) => {
@@ -80,6 +82,8 @@ test.describe('profile accessibility', () => {
     expect(snapshot).toContain('- heading "Your Profile"');
     expect(snapshot).toContain('- button "Sign out"');
 
-    await expect(profile(page).getByRole('img')).toHaveCount(0, { timeout: 1_500 });
+    // The portrait (or its initial) is the only image, and it is named.
+    await expect(profile(page).getByRole('img')).toHaveCount(1);
+    await expect(profile(page).getByRole('img', { name: /^Photo of \S/ })).toBeVisible();
   });
 });

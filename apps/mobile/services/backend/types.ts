@@ -71,8 +71,24 @@ export type Backend = {
   confirmPhoneCode(code: string): Promise<void>;
   signOut(): Promise<void>;
   getProfile(uid: string): Promise<PublicProfile | null>;
-  /** Writes the public profile and private account documents in one batch. */
-  saveOnboarding(uid: string, docs: OnboardingDocuments): Promise<void>;
+  /**
+   * Uploads `photoUri` (when given) to `photos/{uid}/{newPhotoId()}.jpg`, sets
+   * `docs.profile.photoPath` to it, then writes the public profile and private account
+   * documents in one batch. Returns the profile as written.
+   */
+  saveOnboarding(
+    uid: string,
+    docs: OnboardingDocuments,
+    photoUri: string | null,
+  ): Promise<PublicProfile>;
+  /**
+   * Replaces (`localUri`) or removes (null) my portrait: uploads the new file, points
+   * `profiles/{uid}.photoPath` at it, then deletes the previous file (best effort).
+   * Returns the new `photoPath`.
+   */
+  setProfilePhoto(uid: string, localUri: string | null): Promise<string | null>;
+  /** Download URL for a `photoPath`; cached for the session. */
+  photoUrl(path: string): Promise<string>;
   listDiscovery(uid: string): Promise<DiscoveryProfile[]>;
   /** Records a pass. Likes go through `like`. */
   recordSwipe(uid: string, targetId: string, direction: SwipeDirection): Promise<void>;
@@ -108,8 +124,8 @@ export type Backend = {
    * Deletes everything I own, then my sign-in. Order: my swipes (and for each 'like' swipe
    * the doc likes/{target}/from/{uid}); likes I received (likes/{uid}/from/*); my blocks
    * (blocks/{t}/by/{uid} and users/{uid}/blocks/{t}); in every match where users
-   * array-contains uid: my messages (from == uid) then the match doc; then profiles/{uid}
-   * and users/{uid}; finally the Firebase Auth user. Batches of at most 450 writes.
+   * array-contains uid: my messages (from == uid) then the match doc; then every file under
+   * photos/{uid}/; then profiles/{uid} and users/{uid}; finally the Firebase Auth user. Batches of at most 450 writes.
    */
   deleteAccount(uid: string): Promise<void>;
 };

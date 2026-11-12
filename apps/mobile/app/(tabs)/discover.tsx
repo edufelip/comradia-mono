@@ -1,13 +1,13 @@
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-
+import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { DsCard } from '@/components/ds/primitives/DsCard';
 import { DsPillButton } from '@/components/ds/primitives/DsPillButton';
 import { DsScreen } from '@/components/ds/primitives/DsScreen';
 import { DsRadius, DsSpace, DsTypography, getDsTheme } from '@/constants/design-system';
 import { useSessionStore } from '@/features/auth/session-store';
 import { useDiscoveryStore } from '@/features/discovery/discovery-store';
+import { ProfilePhoto } from '@/features/profile/ProfilePhoto';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTranslation } from '@/localization';
 import { backend } from '@/services/backend';
@@ -22,6 +22,7 @@ export default function DiscoverScreen() {
   const ds = getDsTheme(scheme);
   const { t } = useTranslation();
   const router = useRouter();
+  const { height } = useWindowDimensions();
   const uid = useSessionStore((state) => state.user?.uid);
   const status = useDiscoveryStore((state) => state.status);
   const candidates = useDiscoveryStore((state) => state.candidates);
@@ -85,6 +86,20 @@ export default function DiscoverScreen() {
           style={styles.card}
           testID={`discover-person-${activeCandidate.id}`}
         >
+          <ProfilePhoto
+            key={activeCandidate.id}
+            path={activeCandidate.photoPath}
+            name={activeCandidate.displayName}
+            shape="arch"
+            scheme={scheme}
+            style={{
+              width: '100%',
+              aspectRatio: 4 / 5,
+              maxHeight: Math.round(height * 0.42),
+              alignSelf: 'center',
+            }}
+            testID="discover-photo"
+          />
           <View style={styles.titleRow}>
             <Text
               style={[DsTypography.title, { color: ds.color.textPrimary }]}

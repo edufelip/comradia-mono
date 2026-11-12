@@ -1,6 +1,3 @@
-import * as AppleAuthentication from 'expo-apple-authentication';
-import * as Crypto from 'expo-crypto';
-import { Platform } from 'react-native';
 import {
   AppleAuthProvider,
   connectAuthEmulator,
@@ -27,18 +24,32 @@ import {
   query,
   serverTimestamp,
   setDoc,
+  updateDoc,
   where,
   writeBatch,
   type FirebaseFirestoreTypes,
 } from '@react-native-firebase/firestore';
+import {
+  connectStorageEmulator,
+  deleteObject,
+  getDownloadURL,
+  getStorage,
+  listAll,
+  putFile,
+  ref,
+} from '@react-native-firebase/storage';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
-
+import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Crypto from 'expo-crypto';
+import { Platform } from 'react-native';
+import { newPhotoId, PHOTO_METADATA, photoPathFor } from '@/features/profile/profile-schema';
 import { chunk, DELETE_BATCH_SIZE } from './batches';
 import {
   AUTH_EMULATOR_PORT,
   DISCOVERY_PAGE_SIZE,
   emulatorHost,
   FIRESTORE_EMULATOR_PORT,
+  STORAGE_EMULATOR_PORT,
 } from './config';
 import { BackendError, toBackendError } from './errors';
 import { filterDiscovery, matchIdFor, MESSAGE_MAX, otherUid, toPublicProfile } from './shared';
@@ -46,11 +57,13 @@ import type { AuthUser, Backend, LikeResult, Match } from './types';
 
 const auth = getAuth();
 const db = getFirestore();
+const storage = getStorage();
 
 const host = emulatorHost();
 if (host) {
   connectAuthEmulator(auth, `http://${host}:${AUTH_EMULATOR_PORT}`);
   connectFirestoreEmulator(db, host, FIRESTORE_EMULATOR_PORT);
+  connectStorageEmulator(storage, host, STORAGE_EMULATOR_PORT);
 }
 
 GoogleSignin.configure({ webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID });
@@ -78,6 +91,21 @@ async function run<T>(task: () => Promise<T>): Promise<T> {
 }
 
 const MESSAGE_PAGE_SIZE = 200;
+
+/** Download URLs per path. Photo files are never overwritten, so an entry never goes stale. */
+const photoUrls = new Map<string, Promise<string>>();
+
+/** Uploads a picked JPEG under a fresh id and returns its storage path. */
+async function uploadPhoto(uid: string, localUri: string): Promise<string> {
+  const path = photoPathFor(uid, newPhotoId());
+  await putFile(ref(storage, path), localUri, PHOTO_METADATA);
+  return path;
+}
+
+/** Best effort: an orphan file costs storage, but must not fail the caller. */
+async function deletePhotoQuietly(path: string): Promise<void> {
+  await deleteObject(ref(storage, path)).catch(() => undefined);
+}
 
 type DocRef = FirebaseFirestoreTypes.DocumentReference;
 
@@ -185,8 +213,10 @@ export const backend: Backend = {
       return data ? toPublicProfile(data) : null;
     }),
 
-  saveOnboarding: (uid, { profile, account }) =>
+  saveOnboarding: (uid, docs, photoUri) =>
     run(async () => {
+      const photoPath = photoUri ? await uploadPhoto(uid, photoUri) : null;
+      const profile = { ...docs.profile, photoPath };
       const batch = writeBatch(db);
       batch.set(doc(db, 'profiles', uid), {
         ...profile,
@@ -194,12 +224,49 @@ export const backend: Backend = {
         updatedAt: serverTimestamp(),
       });
       batch.set(doc(db, 'users', uid), {
-        ...account,
+        ...docs.account,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
-      await batch.commit();
+      try {
+        await batch.commit();
+      } catch (error) {
+        if (photoPath) await deletePhotoQuietly(photoPath);
+        throw error;
+      }
+      return profile;
     }),
+
+  setProfilePhoto: (uid, localUri) =>
+    run(async () => {
+      const current = await getDoc(doc(db, 'profiles', uid));
+      const data = current.data();
+      const previous = data ? toPublicProfile(data).photoPath : null;
+      const next = localUri ? await uploadPhoto(uid, localUri) : null;
+      try {
+        await updateDoc(doc(db, 'profiles', uid), {
+          photoPath: next,
+          updatedAt: serverTimestamp(),
+        });
+      } catch (error) {
+        if (next) await deletePhotoQuietly(next);
+        throw error;
+      }
+      if (previous && previous !== next) await deletePhotoQuietly(previous);
+      return next;
+    }),
+
+  photoUrl: (path) => {
+    let url = photoUrls.get(path);
+    if (!url) {
+      url = getDownloadURL(ref(storage, path)).catch((error: unknown) => {
+        photoUrls.delete(path);
+        throw toBackendError(error);
+      });
+      photoUrls.set(path, url);
+    }
+    return url;
+  },
 
   listDiscovery: (uid) =>
     run(async () => {
@@ -434,10 +501,20 @@ export const backend: Backend = {
       }
       await deleteInBatches(matches.docs.map((d: Snapshot) => doc(db, 'matches', d.id)));
 
-      // 5. My public card, then my private account.
+      // 5. My portraits. Every file is tried; a real failure stops here, before the profile
+      // that points at them is gone, so the deletion can be retried.
+      const photos = await listAll(ref(storage, `photos/${uid}`));
+      const results = await Promise.allSettled(photos.items.map((item) => deleteObject(item)));
+      const failed = results.find(
+        (result) =>
+          result.status === 'rejected' && result.reason?.code !== 'storage/object-not-found',
+      );
+      if (failed?.status === 'rejected') throw failed.reason;
+
+      // 6. My public card, then my private account.
       await deleteInBatches([doc(db, 'profiles', uid), doc(db, 'users', uid)]);
 
-      // 6. The sign-in itself, last: without it no step above can be retried.
+      // 7. The sign-in itself, last: without it no step above can be retried.
       const user = auth.currentUser;
       if (!user) throw new BackendError('unknown');
       await user.delete();

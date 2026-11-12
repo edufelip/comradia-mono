@@ -1,11 +1,9 @@
 import { act, fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library';
-
 import { useSessionStore } from '@/features/auth/session-store';
-import type { PublicProfile } from '@/features/profile/profile-schema';
 import { enUS } from '@/localization/en-US';
 import { matchIdFor } from '@/services/backend/shared';
-
 import { TEST_PROFILE, TEST_USER, fakeBackend } from './mocks/backend';
+import type { PublicProfile } from '@/features/profile/profile-schema';
 
 jest.mock('expo-font', () => ({
   ...jest.requireActual('expo-font'),
@@ -29,6 +27,7 @@ const MAYA: PublicProfile = {
   values: ['bookshops_coffee', 'tenant_rights', 'cycling'],
   promptId: 'perfect_sunday',
   promptAnswer: 'Community garden at sunrise.',
+  photoPath: null,
 };
 
 /** A ready user with a real match against Maya; returns its id. */

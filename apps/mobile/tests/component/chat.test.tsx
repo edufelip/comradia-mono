@@ -1,13 +1,14 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
-
 import ChatScreen from '@/app/chat/[id]';
 import { useSessionStore } from '@/features/auth/session-store';
-import type { DiscoveryProfile } from '@/features/profile/profile-schema';
 import { enUS } from '@/localization/en-US';
 import { matchIdFor } from '@/services/backend/shared';
+import { TEST_PROFILE, TEST_USER, fakeBackend } from './mocks/backend';
+import type { DiscoveryProfile } from '@/features/profile/profile-schema';
 import type { ChatMessage } from '@/services/backend/types';
 
-import { TEST_PROFILE, TEST_USER, fakeBackend } from './mocks/backend';
+/** The portrait's image and initial are hidden from screen readers; its root carries the name. */
+const HIDDEN = { includeHiddenElements: true };
 
 const mockBack = jest.fn();
 const mockPush = jest.fn();
@@ -39,6 +40,7 @@ const MAYA: DiscoveryProfile = {
   values: ['bookshops_coffee', 'tenant_rights', 'cycling'],
   promptId: 'perfect_sunday',
   promptAnswer: 'Community garden at sunrise, then a long lunch.',
+  photoPath: null,
 };
 
 function signIn() {
@@ -97,6 +99,29 @@ describe('ChatScreen', () => {
     expect(fakeBackend.callsTo('getMatch')).toEqual([
       { method: 'getMatch', args: [TEST_USER.uid, matchId] },
     ]);
+  });
+
+  it('shows the other person portrait in the header', async () => {
+    signIn();
+    await seedMatch();
+    fakeBackend.state.profiles.set(MAYA.id, { ...MAYA, photoPath: 'photos/p-maya/a.jpg' });
+
+    await render(<ChatScreen />);
+
+    expect(await screen.findByTestId('chat-photo-image', HIDDEN)).toHaveProp('source', [
+      { uri: 'https://photos.test/photos/p-maya/a.jpg' },
+    ]);
+  });
+
+  it('shows the initial in the header when the other person has no portrait', async () => {
+    signIn();
+    await seedMatch();
+
+    await render(<ChatScreen />);
+
+    expect(await screen.findByTestId('chat-photo')).toBeOnTheScreen();
+    expect(screen.queryByTestId('chat-photo-image', HIDDEN)).not.toBeOnTheScreen();
+    expect(within(screen.getByTestId('chat-photo')).getByText('M', HIDDEN)).toBeOnTheScreen();
   });
 
   it('renders a live message from the other person', async () => {
