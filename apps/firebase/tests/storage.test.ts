@@ -11,7 +11,7 @@ const JPEG = new Uint8Array(1024);
 const JPEG_TYPE = { contentType: 'image/jpeg' };
 
 before(async () => {
-  env = await testEnvironment('storage');
+  env = await testEnvironment('storage', { storage: true });
   alice = env.authenticatedContext('alice');
   bob = env.authenticatedContext('bob');
   signedOut = env.unauthenticatedContext();

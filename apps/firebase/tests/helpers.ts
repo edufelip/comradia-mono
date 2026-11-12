@@ -23,12 +23,17 @@ const STORAGE_PORT = 9199;
  * clear each other's documents, and they stay out of the `demo-comradia` data the E2E
  * suite seeds.
  */
-export async function testEnvironment(name: string): Promise<RulesTestEnvironment> {
+export async function testEnvironment(
+  name: string,
+  { storage = false } = {},
+): Promise<RulesTestEnvironment> {
   const projectId = `demo-comradia-rules-${name}`;
   const env = await initializeTestEnvironment({
     projectId,
     firestore: { host: HOST, port: Number(PORT), rules: RULES },
-    storage: { host: '127.0.0.1', port: STORAGE_PORT, rules: STORAGE_RULES },
+    // The Storage emulator has one ruleset for every project. Loading it from each file in
+    // parallel left gaps with no ruleset, so only the Storage tests load it.
+    ...(storage && { storage: { host: '127.0.0.1', port: STORAGE_PORT, rules: STORAGE_RULES } }),
   });
   await assertRulesDeployed(projectId);
   return env;
