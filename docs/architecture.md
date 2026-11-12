@@ -53,7 +53,7 @@ apps/firebase
 | `loading` | Firebase is restoring the session | spinner only |
 | `signedOut` | no user | `(auth)`: `/welcome`, `/register`, `/verify-phone` |
 | `needsOnboarding` | signed in, no `profiles/{uid}` | `(onboarding)`: `/vibe`, `/values`, `/starter` |
-| `ready` | signed in with a profile | `(tabs)`: `/discover`, `/matches`, `/profile`; `/match/[id]`, `/chat/[id]` |
+| `ready` | signed in with a profile | `(tabs)`: `/discover`, `/matches`, `/profile`; `/match/[id]`, `/chat/[id]`, `/safety/[uid]` |
 | `error` | signed in, profile read failed | retry / sign-out view |
 
 When the status changes, the user lands on `app/index.tsx`, which redirects to the right first screen. Screens never navigate across groups themselves: signing in, finishing onboarding or signing out changes the status, and routing follows.
@@ -68,6 +68,9 @@ When the status changes, the user lands on `app/index.tsx`, which redirects to t
 | `likes/{targetUid}/from/{likerUid}` | the liked person and the liker | the liker, not on self | `createdAt` |
 | `matches/{a_b}` (uids sorted, `_`) | the two people in it | create only, by one of the two, when both likes exist | `users` ([a, b] sorted), `createdAt` |
 | `matches/{a_b}/messages/{id}` | the two people | the sender, one of the two; never edited | `from`, `text` (1–1000), `createdAt` |
+| `users/{uid}/blocks/{targetUid}` | owner | owner, not on self | `createdAt` |
+| `blocks/{uid}/by/{blockerUid}` | the blocked person and the blocker | the blocker, not on self | `createdAt` |
+| `reports/{id}` | nobody (write-only) | any signed-in user, about someone else | `reporter`, `target`, `reason`, `details` (≤500), `context` (`profile` / `chat`), `createdAt` |
 
 Everything else is denied. Option ids are listed once in `features/profile/profile-schema.ts` and mirrored in `firestore.rules`; a rules test fails when they drift. Labels come from localization (`onboarding.*`).
 
@@ -84,8 +87,9 @@ Everything else is denied. Option ids are listed once in `features/profile/profi
 | S5 | `/discover` | Deck from Firestore (oldest profiles first, 50 per load); Like / Pass are saved as swipes | `discover-screen`, `discover-person-<id>`, `discover-card-name`, `discover-like`, `discover-pass`, `discover-retry`, `discover-refresh` |
 | S8 | `/match/[id]` (modal) | Shown right after a like that matched: both names, shared values, "Send a message" / "Keep swiping" | `match-screen`, `match-send-message`, `match-keep-swiping` |
 | S9 | `/matches` | Live list of matches, newest first; tap opens the chat | `matches-screen`, `match-row-<matchId>`, `matches-empty` |
-| S10 | `/chat/[id]` | Live chat with one match; text only for now | `chat-screen`, `chat-input`, `chat-send`, `chat-message-<id>`, `chat-error` |
-| S11 | `/profile` | Own card from the session; sign out | `profile-screen`, `profile-card-name`, `profile-sign-out` |
+| S10 | `/chat/[id]` | Live chat with one match; text only for now. A block on either side closes it: the messages stay, the composer goes | `chat-screen`, `chat-input`, `chat-send`, `chat-message-<id>`, `chat-error`, `chat-safety`, `chat-closed` |
+| S11 | `/profile` | Own card from the session; sign out; delete the account behind an inline confirm panel (needs a sign-in newer than five minutes) | `profile-screen`, `profile-card-name`, `profile-sign-out`, `profile-delete-account`, `profile-delete-confirm`, `profile-delete-cancel`, `profile-delete-error`, `profile-delete-reauth` |
+| S12 | `/safety/[uid]` (modal) | Block or report one person, from Discover (`context=profile`) or a chat (`context=chat`); a report also blocks. A block drops them from the deck and hides the match | `safety-screen`, `safety-error`, `safety-block`, `safety-block-confirm`, `report-reason-<id>`, `report-details`, `report-submit` |
 
 ## Environments
 
@@ -103,12 +107,12 @@ Web reads its Firebase config from `EXPO_PUBLIC_FIREBASE_API_KEY`, `_AUTH_DOMAIN
 - No private data in public documents. Phone and email stay in Firebase Auth; birth date stays in `users/{uid}`.
 - Apple sign-in uses a SHA-256 nonce; the raw nonce never leaves the device except to Firebase.
 - Error messages shown to users come from `BackendErrorCode`, never raw Firebase text.
-- Not done yet: App Check, account deletion, reporting and blocking, rate limits beyond Firebase's defaults.
+- Not done yet: App Check, rate limits beyond Firebase's defaults.
 
 ## Deferred (needs the Blaze plan or a later task)
 
 - Real SMS to any number (Spark only allows test numbers).
-- Match and message notifications (needs Cloud Functions + push). Unmatch, block and report.
+- Match and message notifications (needs Cloud Functions + push). Unmatch; block and report exist without one.
 - Voice intros and photos (Cloud Storage on new projects needs Blaze).
 - Age recompute, ranking by shared passions and distance (Cloud Function).
-- App Check, account deletion, report / block.
+- App Check.

@@ -175,7 +175,7 @@ From `docs/architecture.md` "Deferred", all of these wait on the Blaze plan or a
 - **Match and message notifications.** Matches and chat work without a server, but push notifications need Cloud Functions.
 - **Voice intros and photos:** Cloud Storage on new projects needs Blaze.
 - **Age recompute, ranking by shared passions and distance:** a Cloud Function.
-- **App Check, account deletion, report / block.**
+- **App Check.** Account deletion, blocking and reporting are implemented in `apps/mobile` (S12 and S11).
 
 Known flaky test:
 
