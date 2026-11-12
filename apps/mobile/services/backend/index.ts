@@ -49,6 +49,7 @@ import {
 } from '@/features/notifications/notifications';
 import { newPhotoId, PHOTO_METADATA, photoPathFor } from '@/features/profile/profile-schema';
 import { chunk, DELETE_BATCH_SIZE } from './batches';
+import { phoneFailureSummary } from './phone-diagnostics';
 import {
   AUTH_EMULATOR_PORT,
   DISCOVERY_PAGE_SIZE,
@@ -194,13 +195,31 @@ export const backend: Backend = {
 
   startPhoneSignIn: (e164Phone) =>
     run(async () => {
-      pendingConfirmation = await signInWithPhoneNumber(auth, e164Phone);
+      try {
+        pendingConfirmation = await signInWithPhoneNumber(auth, e164Phone);
+      } catch (error) {
+        if (__DEV__)
+          console.info(
+            '[Comradia phone auth]',
+            JSON.stringify({ operation: 'request', ...phoneFailureSummary(error) }),
+          );
+        throw error;
+      }
     }),
 
   confirmPhoneCode: (code) =>
     run(async () => {
       if (!pendingConfirmation) throw new BackendError('no_pending_code');
-      await pendingConfirmation.confirm(code);
+      try {
+        await pendingConfirmation.confirm(code);
+      } catch (error) {
+        if (__DEV__)
+          console.info(
+            '[Comradia phone auth]',
+            JSON.stringify({ operation: 'confirm', ...phoneFailureSummary(error) }),
+          );
+        throw error;
+      }
       pendingConfirmation = null;
     }),
 
