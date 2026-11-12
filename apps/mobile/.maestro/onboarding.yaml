@@ -72,8 +72,11 @@ tags:
 - assertVisible: 'Step 2 of 3'
 - tapOn:
     id: onboarding-back
-- assertVisible:
-    id: vibe-bookworm
+# Android keeps the scroll offset of S2; iOS starts at the top. Scroll up to the first answer.
+- scrollUntilVisible:
+    element:
+      id: vibe-bookworm
+    direction: UP
 - scrollUntilVisible:
     element:
       id: onboarding-continue
