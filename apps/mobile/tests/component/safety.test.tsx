@@ -10,12 +10,17 @@ import { REPORT_REASONS } from '@/services/backend/types';
 import { TEST_PROFILE, TEST_USER, fakeBackend } from './mocks/backend';
 
 const mockBack = jest.fn();
-const mockReplace = jest.fn();
+const mockDismissTo = jest.fn();
 const mockPush = jest.fn();
 let mockParams: { uid?: string; context?: string } = {};
 jest.mock('expo-router', () => ({
   useLocalSearchParams: () => mockParams,
-  useRouter: () => ({ back: mockBack, navigate: jest.fn(), push: mockPush, replace: mockReplace }),
+  useRouter: () => ({
+    back: mockBack,
+    navigate: jest.fn(),
+    push: mockPush,
+    dismissTo: mockDismissTo,
+  }),
 }));
 jest.mock('@/localization/get-device-locale', () => ({ getDeviceLocale: () => 'en-US' }));
 
@@ -141,7 +146,7 @@ describe('SafetyScreen', () => {
     await fireEvent.press(screen.getByTestId('report-reason-harassment'));
     await fireEvent.press(screen.getByTestId('report-submit'));
 
-    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/matches'));
+    await waitFor(() => expect(mockDismissTo).toHaveBeenCalledWith('/matches'));
     expect(fakeBackend.callsTo('reportUser')).toEqual([
       {
         method: 'reportUser',

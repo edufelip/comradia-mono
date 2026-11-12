@@ -72,7 +72,7 @@ export default function SafetyScreen() {
   /** Closes the sheet the way each context expects after the write landed. */
   const finish = () => {
     if (context === 'chat') {
-      router.replace('/matches');
+      router.dismissTo('/matches');
       return;
     }
     removeCandidate(targetId);
