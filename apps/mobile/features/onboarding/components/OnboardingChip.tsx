@@ -1,4 +1,7 @@
-import { Pressable, StyleSheet, Text, type StyleProp, type ViewStyle } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { StyleSheet, Text, type StyleProp, type ViewStyle } from 'react-native';
+import { DsMotionPressable } from '@/components/ds/motion/DsMotionPressable';
+import { DsMotionView } from '@/components/ds/motion/DsMotionView';
 import { DsRadius, getDsTheme, type DsColorScheme } from '@/constants/design-system';
 
 type OnboardingChipProps = {
@@ -29,6 +32,14 @@ export function OnboardingChip({
   style,
 }: OnboardingChipProps) {
   const ds = getDsTheme(scheme);
+  const previousSelected = useRef(selected);
+  const [selectionMotion, setSelectionMotion] = useState(false);
+
+  useEffect(() => {
+    if (previousSelected.current === selected) return;
+    previousSelected.current = selected;
+    setSelectionMotion(selected);
+  }, [selected]);
 
   const backgroundColor = disabled
     ? ds.color.disabledSurface
@@ -45,21 +56,31 @@ export function OnboardingChip({
     : selected
       ? ds.color.onAccent
       : ds.color.textPrimary;
+  const labelContent = (
+    <Text style={[styles.text, { color }]}>{icon ? `${icon} ${label}` : label}</Text>
+  );
 
   return (
-    <Pressable
+    <DsMotionPressable
       aria-checked={selected}
       accessibilityLabel={label}
       accessibilityRole={role}
       accessibilityState={{ checked: selected, disabled }}
       disabled={disabled}
+      feedbackScale={0.98}
       onPress={onPress}
       style={[styles.chip, { backgroundColor, borderColor }, style]}
       testID={testID}
     >
       {/* The emoji is decoration; `accessibilityLabel` above is the spoken name. */}
-      <Text style={[styles.text, { color }]}>{icon ? `${icon} ${label}` : label}</Text>
-    </Pressable>
+      {selected && selectionMotion ? (
+        <DsMotionView testID={`${testID}-selected-motion`} variant="scale">
+          {labelContent}
+        </DsMotionView>
+      ) : (
+        labelContent
+      )}
+    </DsMotionPressable>
   );
 }
 

@@ -1,8 +1,10 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
-
+import { Easing } from 'react-native';
+import { useReducedMotion } from 'react-native-reanimated';
 import { HapticTab } from '@/components/haptic-tab';
 import { getDsTheme } from '@/constants/design-system';
+import { DS_MOTION } from '@/constants/motion';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTranslation } from '@/localization';
 
@@ -11,9 +13,18 @@ export default function TabLayout() {
   const scheme = colorScheme === 'dark' ? 'dark' : 'light';
   const ds = getDsTheme(scheme);
   const { t } = useTranslation();
+  const reduceMotion = useReducedMotion();
   return (
     <Tabs
       screenOptions={{
+        animation: reduceMotion ? 'none' : 'fade',
+        transitionSpec: {
+          animation: 'timing',
+          config: {
+            duration: reduceMotion ? 0 : DS_MOTION.duration.standard,
+            easing: Easing.bezier(...DS_MOTION.easing.easeOut),
+          },
+        },
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarActiveTintColor: ds.color.accentPrimary,

@@ -1,4 +1,12 @@
+import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { DsBackButton } from '@/components/ds/primitives/DsBackButton';
 import {
   DsFontFamily,
@@ -7,6 +15,7 @@ import {
   getDsTheme,
   type DsColorScheme,
 } from '@/constants/design-system';
+import { DS_MOTION } from '@/constants/motion';
 import { ONBOARDING_STEPS } from '@/features/onboarding/visuals';
 import { useTranslation } from '@/localization';
 
@@ -25,8 +34,6 @@ type OnboardingProgressProps = {
 export function OnboardingProgress({ scheme, step, onBack }: OnboardingProgressProps) {
   const { t } = useTranslation();
   const ds = getDsTheme(scheme);
-  const segments = Array.from({ length: ONBOARDING_STEPS }, (_, index) => index < step);
-
   return (
     <View style={styles.row}>
       {onBack ? (
@@ -43,20 +50,49 @@ export function OnboardingProgress({ scheme, step, onBack }: OnboardingProgressP
           {t('onboarding.progress', { current: step, total: ONBOARDING_STEPS })}
         </Text>
         <View aria-hidden style={styles.segments}>
-          {segments.map((filled, index) => (
+          {Array.from({ length: ONBOARDING_STEPS }, (_, index) => (
             <View
               key={index}
               style={[
                 styles.segment,
                 {
-                  backgroundColor: filled ? ds.color.accentPrimary : ds.color.surfaceMuted,
+                  backgroundColor:
+                    index < step - 1 ? ds.color.accentPrimary : ds.color.surfaceMuted,
                 },
               ]}
-            />
+            >
+              {index === step - 1 ? <ProgressFill color={ds.color.accentPrimary} /> : null}
+            </View>
           ))}
         </View>
       </View>
     </View>
+  );
+}
+
+function ProgressFill({ color }: { color: string }) {
+  const reduceMotion = useReducedMotion();
+  const progress = useSharedValue(reduceMotion ? 1 : 0);
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scaleX: progress.value }],
+  }));
+
+  useEffect(() => {
+    progress.value = reduceMotion
+      ? 1
+      : withTiming(1, {
+          duration: DS_MOTION.duration.standard,
+          easing: Easing.bezier(...DS_MOTION.easing.easeOut),
+        });
+  }, [progress, reduceMotion]);
+
+  return (
+    <Animated.View
+      style={[StyleSheet.absoluteFillObject, { transformOrigin: 'left center' }, animatedStyle]}
+      testID="onboarding-progress-motion"
+    >
+      <View style={[StyleSheet.absoluteFillObject, { backgroundColor: color }]} />
+    </Animated.View>
   );
 }
 
@@ -87,5 +123,6 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 4,
     overflow: 'hidden',
+    position: 'relative',
   },
 });

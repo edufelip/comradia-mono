@@ -1,5 +1,8 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+import { DsMotionPressable } from '@/components/ds/motion/DsMotionPressable';
+import { DsMotionView } from '@/components/ds/motion/DsMotionView';
 import { DsCard } from '@/components/ds/primitives/DsCard';
 import {
   DsFontFamily,
@@ -46,6 +49,18 @@ export function OnboardingStepper({
   const step = (delta: number) => onChange(clampSharedPassionWeight(value + delta));
   const canDecrease = value > SHARED_PASSION_MIN;
   const canIncrease = value < SHARED_PASSION_MAX;
+  const previousValue = useRef(value);
+  const [valueHasChanged, setValueHasChanged] = useState(false);
+
+  useEffect(() => {
+    if (previousValue.current === value) return;
+    previousValue.current = value;
+    setValueHasChanged(true);
+  }, [value]);
+
+  const valueLabel = (
+    <Text style={[styles.value, { color: ds.color.accentPrimary }]}>{valueText}</Text>
+  );
 
   return (
     <DsCard scheme={scheme} style={styles.card}>
@@ -55,17 +70,17 @@ export function OnboardingStepper({
       </View>
 
       <View style={styles.controls}>
-        <Pressable
+        <DsMotionPressable
           accessibilityLabel={decreaseLabel}
           accessibilityRole="button"
           accessibilityState={{ disabled: !canDecrease }}
           disabled={!canDecrease}
+          feedbackScale={0.94}
           onPress={() => step(-SHARED_PASSION_STEP)}
-          style={({ pressed }) => [
+          style={[
             styles.button,
             {
               backgroundColor: canDecrease ? ds.color.surfaceMuted : ds.color.disabledSurface,
-              opacity: pressed ? 0.75 : 1,
             },
           ]}
           testID="weight-decrease"
@@ -75,7 +90,7 @@ export function OnboardingStepper({
             name="remove"
             size={20}
           />
-        </Pressable>
+        </DsMotionPressable>
 
         <View
           accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
@@ -95,20 +110,26 @@ export function OnboardingStepper({
           style={styles.valueBox}
           testID="weight-value"
         >
-          <Text style={[styles.value, { color: ds.color.accentPrimary }]}>{valueText}</Text>
+          {valueHasChanged ? (
+            <DsMotionView key={value} testID="weight-value-motion" variant="scale">
+              {valueLabel}
+            </DsMotionView>
+          ) : (
+            valueLabel
+          )}
         </View>
 
-        <Pressable
+        <DsMotionPressable
           accessibilityLabel={increaseLabel}
           accessibilityRole="button"
           accessibilityState={{ disabled: !canIncrease }}
           disabled={!canIncrease}
+          feedbackScale={0.94}
           onPress={() => step(SHARED_PASSION_STEP)}
-          style={({ pressed }) => [
+          style={[
             styles.button,
             {
               backgroundColor: canIncrease ? ds.color.surfaceMuted : ds.color.disabledSurface,
-              opacity: pressed ? 0.75 : 1,
             },
           ]}
           testID="weight-increase"
@@ -118,7 +139,7 @@ export function OnboardingStepper({
             name="add"
             size={20}
           />
-        </Pressable>
+        </DsMotionPressable>
       </View>
     </DsCard>
   );

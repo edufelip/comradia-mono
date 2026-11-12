@@ -1,4 +1,5 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import * as Reanimated from 'react-native-reanimated';
 import ProfileScreen from '@/app/(tabs)/profile';
 import { useSessionStore } from '@/features/auth/session-store';
 import { pickPhoto } from '@/features/profile/pick-photo';
@@ -8,15 +9,25 @@ import type { PublicProfile } from '@/features/profile/profile-schema';
 
 /** The portrait's image and initial are hidden from screen readers; its root carries the name. */
 const HIDDEN = { includeHiddenElements: true };
+let mockIsFocused = true;
 
 jest.mock('@/localization/get-device-locale', () => ({ getDeviceLocale: () => 'en-US' }));
+jest.mock('@react-navigation/native', () => ({
+  ...jest.requireActual('@react-navigation/native'),
+  useIsFocused: () => mockIsFocused,
+}));
 jest.mock('@/features/profile/pick-photo', () => ({ pickPhoto: jest.fn() }));
+const notificationApi = jest.requireMock('@/features/notifications/notifications');
 
 function signIn(profile: PublicProfile | null = TEST_PROFILE) {
   useSessionStore.setState({ status: 'ready', user: TEST_USER, profile });
 }
 
 describe('ProfileScreen', () => {
+  beforeEach(() => {
+    mockIsFocused = true;
+  });
+
   it('shows the signed-in user own card', async () => {
     signIn();
 
@@ -66,6 +77,25 @@ describe('ProfileScreen', () => {
     expect(screen.getByTestId('profile-sign-out')).toBeOnTheScreen();
   });
 
+  it('does not request notification permission until the Profile opt-in is tapped', async () => {
+    signIn();
+    notificationApi.getNotificationSettings
+      .mockResolvedValueOnce('disabled')
+      .mockResolvedValueOnce('enabled');
+
+    await render(<ProfileScreen />);
+
+    expect(await screen.findByText(enUS['notifications.status.disabled'])).toBeOnTheScreen();
+    expect(notificationApi.enableNotifications).not.toHaveBeenCalled();
+
+    await fireEvent.press(screen.getByTestId('notifications-enable'));
+
+    await waitFor(() =>
+      expect(notificationApi.enableNotifications).toHaveBeenCalledWith(TEST_USER.uid),
+    );
+    expect(await screen.findByText(enUS['notifications.status.enabled'])).toBeOnTheScreen();
+  });
+
   it('hides the union badge when the user is not a member', async () => {
     signIn({ ...TEST_PROFILE, unionMember: false, union: null });
 
@@ -84,6 +114,29 @@ describe('ProfileScreen', () => {
     async function confirmDelete() {
       await fireEvent.press(await screen.findByTestId('profile-delete-confirm'));
     }
+
+    it('reveals the delete confirmation only after the action', async () => {
+      signIn();
+      await render(<ProfileScreen />);
+
+      expect(screen.queryByTestId('profile-delete-motion')).not.toBeOnTheScreen();
+      await fireEvent.press(screen.getByTestId('profile-delete-account'));
+
+      expect(screen.getByTestId('profile-delete-motion')).toBeOnTheScreen();
+      expect(screen.getByTestId('profile-delete-panel')).toBeOnTheScreen();
+    });
+
+    it('opens the delete confirmation without motion when reduced motion is enabled', async () => {
+      signIn();
+      jest.spyOn(Reanimated, 'useReducedMotion').mockReturnValue(true);
+      const timing = jest.spyOn(Reanimated, 'withTiming');
+
+      await render(<ProfileScreen />);
+      await fireEvent.press(screen.getByTestId('profile-delete-account'));
+
+      expect(screen.getByTestId('profile-delete-motion')).toBeOnTheScreen();
+      expect(timing).not.toHaveBeenCalled();
+    });
 
     it('asks first, with the consequences spelled out, and deletes nothing on cancel', async () => {
       signIn();
@@ -150,6 +203,7 @@ describe('ProfileScreen', () => {
       await confirmDelete();
 
       expect(await screen.findByTestId('profile-delete-error')).toBeOnTheScreen();
+      expect(screen.getByTestId('profile-delete-error-motion')).toBeOnTheScreen();
       expect(screen.getByText(enUS['profile.delete.error'])).toBeOnTheScreen();
       expect(fakeBackend.callsTo('deleteAccount')).toHaveLength(1);
       expect(screen.queryByTestId('profile-delete-reauth')).not.toBeOnTheScreen();
@@ -284,6 +338,7 @@ describe('ProfileScreen', () => {
       expect(await screen.findByTestId('profile-photo-error')).toHaveTextContent(
         enUS['photo.error'],
       );
+      expect(screen.getByTestId('profile-photo-error-motion')).toBeOnTheScreen();
       expect(screen.getByTestId('profile-photo-error')).toHaveProp('accessibilityRole', 'alert');
       expect(screen.getByTestId('profile-photo-image', HIDDEN)).toHaveProp('source', [
         { uri: `https://photos.test/${PHOTO}` },
@@ -319,6 +374,33 @@ describe('ProfileScreen', () => {
       await waitFor(() =>
         expect(screen.queryByTestId('profile-photo-error')).not.toBeOnTheScreen(),
       );
+    });
+
+    it('keeps a photo error static if the save finishes while Profile is hidden', async () => {
+      seedMine(PHOTO);
+      jest.mocked(pickPhoto).mockResolvedValueOnce('file:///tmp/me.jpg');
+      let rejectSave: (reason: Error) => void = () => undefined;
+      const setProfilePhoto = jest.spyOn(fakeBackend.backend, 'setProfilePhoto').mockImplementation(
+        () =>
+          new Promise((_resolve, reject) => {
+            rejectSave = reject;
+          }),
+      );
+
+      const view = await render(<ProfileScreen />);
+      await fireEvent.press(screen.getByTestId('profile-photo-change'));
+      await waitFor(() => expect(setProfilePhoto).toHaveBeenCalled());
+
+      mockIsFocused = false;
+      await view.rerender(<ProfileScreen />);
+      await act(() => rejectSave(new Error('network')));
+
+      expect(await screen.findByTestId('profile-photo-error')).toBeOnTheScreen();
+      expect(screen.queryByTestId('profile-photo-error-motion')).not.toBeOnTheScreen();
+
+      mockIsFocused = true;
+      await view.rerender(<ProfileScreen />);
+      expect(screen.queryByTestId('profile-photo-error-motion')).not.toBeOnTheScreen();
     });
   });
 });

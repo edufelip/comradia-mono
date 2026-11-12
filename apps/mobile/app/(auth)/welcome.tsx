@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
+import { DsMotionView } from '@/components/ds/motion/DsMotionView';
 import { DsPillButton } from '@/components/ds/primitives/DsPillButton';
 import { DsFontFamily, DsTypography, getDsTheme } from '@/constants/design-system';
 import { DateMapCard, FaceStack, SunBurst, TopoRings } from '@/features/welcome/welcome-art';
@@ -35,7 +35,7 @@ export default function WelcomeScreen() {
         showsVerticalScrollIndicator={false}
         style={styles.scroll}
       >
-        <View>
+        <DsMotionView testID="welcome-story-motion" variant="slide">
           <Text style={[styles.location, { color: ds.color.textSecondary }]}>
             {t('welcome.location_city')} ·{' '}
             <Text style={{ color: ds.color.accentPrimary }}>{t('welcome.location_coords')}</Text>
@@ -62,7 +62,7 @@ export default function WelcomeScreen() {
               scheme={scheme}
             />
           </View>
-        </View>
+        </DsMotionView>
 
         <View style={styles.bottom}>
           <View style={styles.faces}>

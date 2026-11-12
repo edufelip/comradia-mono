@@ -1,7 +1,12 @@
 /* Minimal react-native-reanimated stand-in for component tests. */
+import { useRef } from 'react';
 import { Animated, Easing } from 'react-native';
 
 const identity = <T>(value: T): T => value;
+
+function useMockSharedValue(initial: unknown) {
+  return useRef({ value: initial }).current;
+}
 
 const mock = {
   __esModule: true,
@@ -13,7 +18,7 @@ const mock = {
   },
   Easing,
   useReducedMotion: () => false,
-  useSharedValue: (initial: unknown) => ({ value: initial }),
+  useSharedValue: useMockSharedValue,
   useAnimatedStyle: (factory: () => object) => factory(),
   useAnimatedProps: (factory: () => object) => factory(),
   withTiming: identity,

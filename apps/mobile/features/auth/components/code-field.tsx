@@ -1,7 +1,15 @@
 import { useRef } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
-
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
+import { DsMotionView } from '@/components/ds/motion/DsMotionView';
 import { DsFontFamily, DsRadius, getDsTheme, type DsColorScheme } from '@/constants/design-system';
+import { DS_MOTION } from '@/constants/motion';
 
 const CODE_LENGTH = 6;
 
@@ -23,32 +31,63 @@ type CodeFieldProps = {
 export function CodeField({ scheme, value, onChangeText, label, testID }: CodeFieldProps) {
   const ds = getDsTheme(scheme);
   const inputRef = useRef<TextInput>(null);
+  const reduceMotion = useReducedMotion();
+  const focusProgress = useSharedValue(0);
+  const focusStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: 1 + focusProgress.value * 0.006 }],
+  }));
   const activeIndex = Math.min(value.length, CODE_LENGTH - 1);
+  const updateFocus = (focused: boolean) => {
+    focusProgress.value = reduceMotion
+      ? 0
+      : withTiming(focused ? 1 : 0, {
+          duration: DS_MOTION.duration.fast,
+          easing: Easing.bezier(...DS_MOTION.easing.easeOut),
+        });
+  };
 
   return (
     <View style={styles.wrap}>
-      <View aria-hidden style={styles.boxes}>
+      <Animated.View
+        aria-hidden
+        style={[styles.boxes, focusStyle]}
+        testID={testID ? `${testID}.motion` : undefined}
+      >
         {Array.from({ length: CODE_LENGTH }, (_, index) => {
           const isActive = index === activeIndex && value.length < CODE_LENGTH;
+          const isFilled = index < value.length;
+          const digit = value[index] ?? '';
+          const digitContent = (
+            <Text style={[styles.digit, { color: ds.color.textPrimary }]}>{digit}</Text>
+          );
+
           return (
             <View
               key={index}
               style={[
                 styles.box,
                 {
-                  backgroundColor: ds.color.surface,
-                  borderColor: isActive ? ds.color.accentPrimary : ds.color.borderStrong,
+                  backgroundColor: isFilled ? ds.color.surfaceMuted : ds.color.surface,
+                  borderColor:
+                    isActive || isFilled ? ds.color.accentPrimary : ds.color.borderStrong,
                   borderWidth: isActive ? 2 : 1,
                 },
               ]}
             >
-              <Text style={[styles.digit, { color: ds.color.textPrimary }]}>
-                {value[index] ?? ''}
-              </Text>
+              {index === CODE_LENGTH - 1 && value.length === CODE_LENGTH ? (
+                <DsMotionView
+                  testID={testID ? `${testID}.complete-motion` : undefined}
+                  variant="scale"
+                >
+                  {digitContent}
+                </DsMotionView>
+              ) : (
+                digitContent
+              )}
             </View>
           );
         })}
-      </View>
+      </Animated.View>
       <TextInput
         accessibilityLabel={label}
         autoComplete="sms-otp"
@@ -56,7 +95,9 @@ export function CodeField({ scheme, value, onChangeText, label, testID }: CodeFi
         caretHidden
         keyboardType="number-pad"
         maxLength={CODE_LENGTH}
+        onBlur={() => updateFocus(false)}
         onChangeText={onChangeText}
+        onFocus={() => updateFocus(true)}
         ref={inputRef}
         style={styles.input}
         testID={testID}

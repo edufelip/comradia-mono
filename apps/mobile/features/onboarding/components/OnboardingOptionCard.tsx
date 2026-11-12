@@ -1,4 +1,7 @@
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { StyleSheet, Text } from 'react-native';
+import { DsMotionPressable } from '@/components/ds/motion/DsMotionPressable';
+import { DsMotionView } from '@/components/ds/motion/DsMotionView';
 import { DsFontFamily, getDsTheme, type DsColorScheme } from '@/constants/design-system';
 
 type OnboardingOptionCardProps = {
@@ -30,28 +33,48 @@ export function OnboardingOptionCard({
   onPress,
 }: OnboardingOptionCardProps) {
   const ds = getDsTheme(scheme);
+  const previousSelected = useRef(selected);
+  const [selectionMotion, setSelectionMotion] = useState(false);
+
+  useEffect(() => {
+    if (previousSelected.current === selected) return;
+    previousSelected.current = selected;
+    setSelectionMotion(selected);
+  }, [selected]);
+
+  const iconTile = <Text style={[styles.icon, { backgroundColor: `${accent}22` }]}>{icon}</Text>;
 
   return (
-    <Pressable
+    <DsMotionPressable
       aria-checked={selected}
       accessibilityLabel={`${label}. ${description}`}
       accessibilityRole="radio"
       accessibilityState={{ checked: selected }}
+      feedbackScale={0.985}
       onPress={onPress}
-      style={({ pressed }) => [
+      style={[
         styles.card,
         {
           backgroundColor: selected ? `${accent}22` : ds.color.surface,
           borderColor: selected ? accent : ds.color.border,
-          opacity: pressed ? 0.9 : 1,
         },
       ]}
       testID={testID}
     >
-      <Text style={[styles.icon, { backgroundColor: `${accent}22` }]}>{icon}</Text>
+      {selected && selectionMotion ? (
+        <DsMotionView
+          style={styles.iconMotion}
+          testID={`${testID}-selected-motion`}
+          variant="scale"
+        >
+          {iconTile}
+        </DsMotionView>
+      ) : (
+        iconTile
+      )}
       <Text style={[styles.label, { color: ds.color.textPrimary }]}>{label}</Text>
       <Text style={[styles.description, { color: ds.color.textSecondary }]}>{description}</Text>
-    </Pressable>
+    </DsMotionPressable>
   );
 }
 
@@ -72,6 +95,10 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     overflow: 'hidden',
     textAlign: 'center',
+    width: 34,
+  },
+  iconMotion: {
+    alignSelf: 'flex-start',
     width: 34,
   },
   label: {

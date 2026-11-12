@@ -5,6 +5,11 @@ import { matchIdFor } from '@/services/backend/shared';
 import { TEST_PROFILE, TEST_USER, fakeBackend } from './mocks/backend';
 import type { PublicProfile } from '@/features/profile/profile-schema';
 
+const notificationApi = jest.requireMock('@/features/notifications/notifications') as {
+  subscribeToPushEvents: jest.Mock;
+  emitPushEvent(event: { kind: 'foreground' | 'tap'; data: Record<string, unknown> }): void;
+};
+
 jest.mock('expo-font', () => ({
   ...jest.requireActual('expo-font'),
   useFonts: () => [true, null],
@@ -224,5 +229,114 @@ describe('RootLayout session routing', () => {
     await router;
 
     await expectPathname(router, '/welcome');
+  });
+
+  it('routes a verified notification tap to its match after checking membership and blocks', async () => {
+    const matchId = await seedMatch();
+    restoreUser(TEST_PROFILE);
+
+    const router = renderRoot();
+    await router;
+    await expectPathname(router, '/discover');
+    await waitFor(() => expect(notificationApi.subscribeToPushEvents).toHaveBeenCalled());
+
+    await act(async () => {
+      notificationApi.emitPushEvent({
+        kind: 'tap',
+        data: { type: 'message', matchId, recipientUid: TEST_USER.uid, text: 'private text' },
+      });
+    });
+
+    await expectPathname(router, `/chat/${matchId}`);
+    expect(fakeBackend.state.calls).toContainEqual({
+      method: 'getMatch',
+      args: [TEST_USER.uid, matchId],
+    });
+    expect(fakeBackend.state.calls).toContainEqual({
+      method: 'listBlockedUids',
+      args: [TEST_USER.uid],
+    });
+  });
+
+  it('discards a notification tap when the account is not its recipient', async () => {
+    const matchId = await seedMatch();
+    restoreUser(TEST_PROFILE);
+
+    const router = renderRoot();
+    await router;
+    await expectPathname(router, '/discover');
+    await waitFor(() => expect(notificationApi.subscribeToPushEvents).toHaveBeenCalled());
+
+    await act(async () => {
+      notificationApi.emitPushEvent({
+        kind: 'tap',
+        data: { type: 'message', matchId, recipientUid: 'someone-else' },
+      });
+    });
+
+    expect(router.getPathname()).toBe('/discover');
+    expect(fakeBackend.state.calls).not.toContainEqual({
+      method: 'getMatch',
+      args: ['someone-else', matchId],
+    });
+  });
+
+  it('does not route a notification for a blocked match', async () => {
+    const matchId = await seedMatch();
+    fakeBackend.state.blocked.add('p-maya');
+    restoreUser(TEST_PROFILE);
+
+    const router = renderRoot();
+    await router;
+    await expectPathname(router, '/discover');
+    await waitFor(() => expect(notificationApi.subscribeToPushEvents).toHaveBeenCalled());
+
+    await act(async () => {
+      notificationApi.emitPushEvent({
+        kind: 'tap',
+        data: { type: 'match', matchId, recipientUid: TEST_USER.uid },
+      });
+    });
+
+    await waitFor(() =>
+      expect(fakeBackend.state.calls).toContainEqual({
+        method: 'listBlockedUids',
+        args: [TEST_USER.uid],
+      }),
+    );
+    expect(router.getPathname()).toBe('/discover');
+  });
+
+  it('shows generic foreground copy and clears it when the session signs out', async () => {
+    const matchId = await seedMatch();
+    restoreUser(TEST_PROFILE);
+
+    const router = renderRoot();
+    await router;
+    await expectPathname(router, '/discover');
+    await waitFor(() => expect(notificationApi.subscribeToPushEvents).toHaveBeenCalled());
+
+    await act(async () => {
+      notificationApi.emitPushEvent({
+        kind: 'foreground',
+        data: {
+          type: 'message',
+          matchId,
+          recipientUid: TEST_USER.uid,
+          text: 'this private message must never appear',
+        },
+      });
+    });
+
+    expect(await screen.findByTestId('notifications-foreground')).toBeOnTheScreen();
+    expect(screen.getByText(enUS['notifications.foreground.message'])).toBeOnTheScreen();
+    expect(screen.queryByText('this private message must never appear')).toBeNull();
+
+    await act(async () => {
+      fakeBackend.emit(null);
+    });
+
+    await expectPathname(router, '/welcome');
+    expect(screen.queryByTestId('notifications-foreground')).toBeNull();
   });
 });

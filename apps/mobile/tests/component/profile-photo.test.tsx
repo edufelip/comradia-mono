@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import * as Reanimated from 'react-native-reanimated';
 import { manipulateAsync } from 'expo-image-manipulator';
 import { launchImageLibraryAsync } from 'expo-image-picker';
 import { pickPhoto } from '@/features/profile/pick-photo';
@@ -82,9 +83,45 @@ describe('ProfilePhoto', () => {
     ]);
     expect(fakeBackend.callsTo('photoUrl')).toHaveLength(0);
     expect(screen.getByLabelText('Photo of Rosa')).toBeOnTheScreen();
+    expect(screen.getByTestId('p-image', HIDDEN).props.transition).toMatchObject({ duration: 150 });
+  });
+
+  it('shows photos without an image transition when reduced motion is enabled', async () => {
+    jest.spyOn(Reanimated, 'useReducedMotion').mockReturnValue(true);
+
+    await render(
+      <ProfilePhoto name="Rosa" path="file:///tmp/me.jpg" scheme="light" shape="arch" testID="p" />,
+    );
+
+    expect(screen.getByTestId('p-image', HIDDEN).props.transition).toMatchObject({ duration: 0 });
+  });
+
+  it('ignores a delayed image error after the portrait has been replaced', async () => {
+    const timing = jest.spyOn(Reanimated, 'withTiming');
+    const view = await render(
+      <ProfilePhoto name="Rosa" path="file:///tmp/old.jpg" scheme="light" shape="arch" testID="p" />,
+    );
+    const oldImage = screen.getByTestId('p-image', HIDDEN);
+
+    await view.rerender(
+      <ProfilePhoto
+        name="Rita"
+        path="file:///tmp/new.jpg"
+        scheme="light"
+        shape="arch"
+        testID="p"
+      />,
+    );
+    await fireEvent(oldImage, 'error', { nativeEvent: { error: 'late' } });
+
+    expect(screen.getByTestId('p-image', HIDDEN).props.source).toEqual([
+      { uri: 'file:///tmp/new.jpg' },
+    ]);
+    expect(timing).not.toHaveBeenCalled();
   });
 
   it('falls back to the initial when the image fails to load', async () => {
+    const timing = jest.spyOn(Reanimated, 'withTiming');
     await render(
       <ProfilePhoto name="rosa" path="photos/u1/a.jpg" scheme="dark" shape="circle" testID="p" />,
     );
@@ -94,6 +131,36 @@ describe('ProfilePhoto', () => {
     });
     expect(screen.queryByTestId('p-image', HIDDEN)).toBeNull();
     expect(screen.getByText('R', HIDDEN)).toBeOnTheScreen();
+    expect(timing).toHaveBeenCalledWith(1, expect.objectContaining({ duration: 120 }));
+  });
+
+  it('uses an instant placeholder when a failed image has reduced motion enabled', async () => {
+    const timing = jest.spyOn(Reanimated, 'withTiming');
+    jest.spyOn(Reanimated, 'useReducedMotion').mockReturnValue(true);
+    await render(
+      <ProfilePhoto name="Rosa" path="file:///tmp/me.jpg" scheme="light" shape="arch" testID="p" />,
+    );
+
+    await fireEvent(screen.getByTestId('p-image', HIDDEN), 'error', {
+      nativeEvent: { error: 'gone' },
+    });
+
+    expect(screen.getByText('R', HIDDEN)).toBeOnTheScreen();
+    expect(timing).not.toHaveBeenCalled();
+  });
+
+  it('cancels a running fallback transition when the portrait unmounts', async () => {
+    const cancel = jest.spyOn(Reanimated, 'cancelAnimation');
+    const view = await render(
+      <ProfilePhoto name="Rosa" path="file:///tmp/me.jpg" scheme="light" shape="arch" testID="p" />,
+    );
+    await fireEvent(screen.getByTestId('p-image', HIDDEN), 'error', {
+      nativeEvent: { error: 'gone' },
+    });
+
+    await view.unmount();
+
+    expect(cancel).toHaveBeenCalled();
   });
 
   it('rounds the top of an arch to half its measured width', async () => {

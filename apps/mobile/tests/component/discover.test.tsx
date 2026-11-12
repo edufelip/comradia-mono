@@ -1,4 +1,5 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import * as Reanimated from 'react-native-reanimated';
 import DiscoverScreen from '@/app/(tabs)/discover';
 import { useSessionStore } from '@/features/auth/session-store';
 import { useDiscoveryStore } from '@/features/discovery/discovery-store';
@@ -6,15 +7,25 @@ import { enUS } from '@/localization/en-US';
 import { matchIdFor } from '@/services/backend/shared';
 import { TEST_PROFILE, TEST_USER, fakeBackend } from './mocks/backend';
 import type { DiscoveryProfile } from '@/features/profile/profile-schema';
+import type { LikeResult } from '@/services/backend/types';
 
 /** The portrait's image and initial are hidden from screen readers; its root carries the name. */
 const HIDDEN = { includeHiddenElements: true };
 
 const mockPush = jest.fn();
+let mockIsFocused = true;
 jest.mock('expo-router', () => ({
   useRouter: () => ({ back: jest.fn(), navigate: jest.fn(), push: mockPush, replace: jest.fn() }),
 }));
+jest.mock('@react-navigation/native', () => ({
+  ...jest.requireActual('@react-navigation/native'),
+  useIsFocused: () => mockIsFocused,
+}));
 jest.mock('@/localization/get-device-locale', () => ({ getDeviceLocale: () => 'en-US' }));
+
+beforeEach(() => {
+  mockIsFocused = true;
+});
 
 const MAYA: DiscoveryProfile = {
   id: 'p-maya',
@@ -153,6 +164,125 @@ describe('DiscoverScreen', () => {
     ]);
   });
 
+  it('keeps the swiped profile in place until the backend confirms the action', async () => {
+    signIn();
+    seedDeck(MAYA, LUCAS);
+    const timing = jest.spyOn(Reanimated, 'withTiming');
+    let finishLike: ((result: { matched: false }) => void) | undefined;
+    jest.spyOn(fakeBackend.backend, 'like').mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finishLike = resolve;
+        }),
+    );
+
+    await render(<DiscoverScreen />);
+    await fireEvent.press(await screen.findByTestId('discover-like'));
+
+    expect(screen.getByText('Maya, 28')).toBeOnTheScreen();
+    expect(screen.queryByText('Lucas, 31')).not.toBeOnTheScreen();
+    expect(timing).not.toHaveBeenCalled();
+
+    await act(async () => finishLike?.({ matched: false }));
+
+    expect(await screen.findByText('Lucas, 31')).toBeOnTheScreen();
+    expect(screen.queryByText('Maya, 28')).not.toBeOnTheScreen();
+    expect(timing).toHaveBeenCalledWith(1, expect.objectContaining({ duration: 220 }));
+  });
+
+  it('ignores a second like tap while the first request is pending', async () => {
+    signIn();
+    seedDeck(MAYA, LUCAS);
+    const writeLike = jest
+      .spyOn(fakeBackend.backend, 'like')
+      .mockReturnValue(new Promise(() => undefined));
+    await render(<DiscoverScreen />);
+    const likeButton = await screen.findByTestId('discover-like');
+
+    await fireEvent.press(likeButton);
+    await fireEvent.press(likeButton);
+
+    expect(writeLike).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('Maya, 28')).toBeOnTheScreen();
+  });
+
+  it('does not navigate to an old match after leaving Discover while the like is pending', async () => {
+    signIn();
+    seedDeck(MAYA, LUCAS);
+    let finishLike: ((result: LikeResult) => void) | undefined;
+    jest.spyOn(fakeBackend.backend, 'like').mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finishLike = resolve;
+        }),
+    );
+    const view = await render(<DiscoverScreen />);
+    await fireEvent.press(await screen.findByTestId('discover-like'));
+
+    mockIsFocused = false;
+    await view.rerender(<DiscoverScreen />);
+    await act(async () => finishLike?.({ matched: true, matchId: 'old-match' }));
+
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it('does not navigate to a match for the previous account after switching users', async () => {
+    signIn();
+    seedDeck(MAYA, LUCAS);
+    let finishLike: ((result: LikeResult) => void) | undefined;
+    jest.spyOn(fakeBackend.backend, 'like').mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finishLike = resolve;
+        }),
+    );
+    await render(<DiscoverScreen />);
+    await fireEvent.press(await screen.findByTestId('discover-like'));
+
+    await act(async () => {
+      useSessionStore.setState({
+        status: 'ready',
+        user: { ...TEST_USER, uid: 'another-user' },
+        profile: { ...TEST_PROFILE, displayName: 'Bea' },
+      });
+    });
+    await act(async () => finishLike?.({ matched: true, matchId: 'old-match' }));
+
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it('does not navigate to a pending match after Discover unmounts', async () => {
+    signIn();
+    seedDeck(MAYA, LUCAS);
+    let finishLike: ((result: LikeResult) => void) | undefined;
+    jest.spyOn(fakeBackend.backend, 'like').mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finishLike = resolve;
+        }),
+    );
+    const view = await render(<DiscoverScreen />);
+    await fireEvent.press(await screen.findByTestId('discover-like'));
+
+    await view.unmount();
+    await act(async () => finishLike?.({ matched: true, matchId: 'old-match' }));
+
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it('advances without motion when reduced motion is enabled', async () => {
+    signIn();
+    seedDeck(MAYA, LUCAS);
+    const timing = jest.spyOn(Reanimated, 'withTiming');
+    jest.spyOn(Reanimated, 'useReducedMotion').mockReturnValue(true);
+
+    await render(<DiscoverScreen />);
+    await fireEvent.press(await screen.findByTestId('discover-pass'));
+
+    expect(await screen.findByText('Lucas, 31')).toBeOnTheScreen();
+    expect(timing).not.toHaveBeenCalled();
+  });
+
   it('opens the match modal when the like is mutual', async () => {
     signIn();
     seedDeck(MAYA, LUCAS);
@@ -163,7 +293,9 @@ describe('DiscoverScreen', () => {
     await fireEvent.press(await screen.findByTestId('discover-like'));
 
     await waitFor(() =>
-      expect(mockPush).toHaveBeenCalledWith(`/match/${matchIdFor(TEST_USER.uid, MAYA.id)}`),
+      expect(mockPush).toHaveBeenCalledWith(
+        `/match/${matchIdFor(TEST_USER.uid, MAYA.id)}?celebrate=1`,
+      ),
     );
     expect(await screen.findByText('Lucas, 31')).toBeOnTheScreen();
   });
@@ -186,6 +318,7 @@ describe('DiscoverScreen', () => {
   it('puts the card back on top when the like cannot be saved', async () => {
     signIn();
     seedDeck(MAYA, LUCAS);
+    const timing = jest.spyOn(Reanimated, 'withTiming');
     fakeBackend.state.failNext.set('like', 'network');
 
     await render(<DiscoverScreen />);
@@ -196,6 +329,7 @@ describe('DiscoverScreen', () => {
     expect(useDiscoveryStore.getState().candidates[0].id).toBe('p-maya');
     expect(mockPush).not.toHaveBeenCalled();
     expect(fakeBackend.callsTo('like')).toHaveLength(1);
+    expect(timing).not.toHaveBeenCalled();
   });
 
   it('puts the card back on top when the pass cannot be saved', async () => {

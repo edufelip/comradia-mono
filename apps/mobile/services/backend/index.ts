@@ -42,6 +42,11 @@ import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
 import { Platform } from 'react-native';
+import {
+  resumeNotificationsAfterAccountDeletionFailure,
+  revokeNotificationsBeforeAccountDeletion,
+  revokeNotificationsBeforeSignOut,
+} from '@/features/notifications/notifications';
 import { newPhotoId, PHOTO_METADATA, photoPathFor } from '@/features/profile/profile-schema';
 import { chunk, DELETE_BATCH_SIZE } from './batches';
 import {
@@ -201,6 +206,8 @@ export const backend: Backend = {
 
   signOut: () =>
     run(async () => {
+      const uid = auth.currentUser?.uid;
+      if (uid) await revokeNotificationsBeforeSignOut(uid);
       pendingConfirmation = null;
       await GoogleSignin.signOut().catch(() => undefined);
       await firebaseSignOut(auth);
@@ -461,62 +468,69 @@ export const backend: Backend = {
 
   deleteAccount: (uid) =>
     run(async () => {
-      // Reads first: later steps are queries, and a batch cannot see its own writes.
-      const [swipes, receivedLikes, myBlocks, matches] = await Promise.all([
-        getDocs(collection(db, 'users', uid, 'swipes')),
-        getDocs(collection(db, 'likes', uid, 'from')),
-        getDocs(collection(db, 'users', uid, 'blocks')),
-        getDocs(query(collection(db, 'matches'), where('users', 'array-contains', uid))),
-      ]);
+      await revokeNotificationsBeforeAccountDeletion(uid);
+      try {
+        // Reads first: later steps are queries, and a batch cannot see its own writes.
+        const [swipes, receivedLikes, myBlocks, matches] = await Promise.all([
+          getDocs(collection(db, 'users', uid, 'swipes')),
+          getDocs(collection(db, 'likes', uid, 'from')),
+          getDocs(collection(db, 'users', uid, 'blocks')),
+          getDocs(query(collection(db, 'matches'), where('users', 'array-contains', uid))),
+        ]);
 
-      // 1. My swipes, and the public like that each 'like' swipe wrote.
-      await deleteInBatches([
-        ...swipes.docs.map((d: Snapshot) => doc(db, 'users', uid, 'swipes', d.id)),
-        ...swipes.docs
-          .filter((d: Snapshot) => d.data().direction === 'like')
-          .map((d: Snapshot) => doc(db, 'likes', d.id, 'from', uid)),
-      ]);
+        // 1. My swipes, and the public like that each 'like' swipe wrote.
+        await deleteInBatches([
+          ...swipes.docs.map((d: Snapshot) => doc(db, 'users', uid, 'swipes', d.id)),
+          ...swipes.docs
+            .filter((d: Snapshot) => d.data().direction === 'like')
+            .map((d: Snapshot) => doc(db, 'likes', d.id, 'from', uid)),
+        ]);
 
-      // 2. Likes I received: only I can still read them, so only I can clear them.
-      await deleteInBatches(
-        receivedLikes.docs.map((d: Snapshot) => doc(db, 'likes', uid, 'from', d.id)),
-      );
-
-      // 3. Blocks I wrote: both mirror docs.
-      await deleteInBatches(
-        myBlocks.docs.flatMap((d: Snapshot) => [
-          doc(db, 'blocks', d.id, 'by', uid),
-          doc(db, 'users', uid, 'blocks', d.id),
-        ]),
-      );
-
-      // 4. My messages in each match, then the match itself.
-      for (const match of matches.docs) {
-        const sent = await getDocs(
-          query(collection(db, 'matches', match.id, 'messages'), where('from', '==', uid)),
-        );
+        // 2. Likes I received: only I can still read them, so only I can clear them.
         await deleteInBatches(
-          sent.docs.map((d: Snapshot) => doc(db, 'matches', match.id, 'messages', d.id)),
+          receivedLikes.docs.map((d: Snapshot) => doc(db, 'likes', uid, 'from', d.id)),
         );
+
+        // 3. Blocks I wrote: both mirror docs.
+        await deleteInBatches(
+          myBlocks.docs.flatMap((d: Snapshot) => [
+            doc(db, 'blocks', d.id, 'by', uid),
+            doc(db, 'users', uid, 'blocks', d.id),
+          ]),
+        );
+
+        // 4. My messages in each match, then the match itself.
+        for (const match of matches.docs) {
+          const sent = await getDocs(
+            query(collection(db, 'matches', match.id, 'messages'), where('from', '==', uid)),
+          );
+          await deleteInBatches(
+            sent.docs.map((d: Snapshot) => doc(db, 'matches', match.id, 'messages', d.id)),
+          );
+        }
+        await deleteInBatches(matches.docs.map((d: Snapshot) => doc(db, 'matches', d.id)));
+
+        // 5. My portraits. Every file is tried; a real failure stops here, before the profile
+        // that points at them is gone, so the deletion can be retried.
+        const photos = await listAll(ref(storage, `photos/${uid}`));
+        const results = await Promise.allSettled(photos.items.map((item) => deleteObject(item)));
+        const failed = results.find(
+          (result) =>
+            result.status === 'rejected' && result.reason?.code !== 'storage/object-not-found',
+        );
+        if (failed?.status === 'rejected') throw failed.reason;
+
+        // 6. My public card, then my private account.
+        await deleteInBatches([doc(db, 'profiles', uid), doc(db, 'users', uid)]);
+
+        // 7. The sign-in itself, last: without it no step above can be retried.
+        const user = auth.currentUser;
+        if (!user) throw new BackendError('unknown');
+        await user.delete();
+      } catch (error) {
+        // If any later cleanup failed, the account still exists; release the session fence.
+        await resumeNotificationsAfterAccountDeletionFailure(uid).catch(() => undefined);
+        throw error;
       }
-      await deleteInBatches(matches.docs.map((d: Snapshot) => doc(db, 'matches', d.id)));
-
-      // 5. My portraits. Every file is tried; a real failure stops here, before the profile
-      // that points at them is gone, so the deletion can be retried.
-      const photos = await listAll(ref(storage, `photos/${uid}`));
-      const results = await Promise.allSettled(photos.items.map((item) => deleteObject(item)));
-      const failed = results.find(
-        (result) =>
-          result.status === 'rejected' && result.reason?.code !== 'storage/object-not-found',
-      );
-      if (failed?.status === 'rejected') throw failed.reason;
-
-      // 6. My public card, then my private account.
-      await deleteInBatches([doc(db, 'profiles', uid), doc(db, 'users', uid)]);
-
-      // 7. The sign-in itself, last: without it no step above can be retried.
-      const user = auth.currentUser;
-      if (!user) throw new BackendError('unknown');
-      await user.delete();
     }),
 };

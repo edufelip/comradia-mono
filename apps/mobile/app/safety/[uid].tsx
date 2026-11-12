@@ -1,7 +1,8 @@
+import { useIsFocused } from '@react-navigation/native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
-
+import { DsMotionView } from '@/components/ds/motion/DsMotionView';
 import { DsBackButton } from '@/components/ds/primitives/DsBackButton';
 import { DsCard } from '@/components/ds/primitives/DsCard';
 import { DsPillButton } from '@/components/ds/primitives/DsPillButton';
@@ -33,6 +34,9 @@ export default function SafetyScreen() {
   const ds = getDsTheme(scheme);
   const { t } = useTranslation();
   const router = useRouter();
+  const isFocused = useIsFocused();
+  const isFocusedRef = useRef(isFocused);
+  isFocusedRef.current = isFocused;
   const uid = useSessionStore((state) => state.user?.uid);
   const deckName = useDiscoveryStore(
     (state) => state.candidates.find((person) => person.id === targetId)?.displayName,
@@ -45,6 +49,7 @@ export default function SafetyScreen() {
   const [details, setDetails] = useState('');
   const [busy, setBusy] = useState<BusyAction | null>(null);
   const [errorCode, setErrorCode] = useState<BackendErrorCode | null>(null);
+  const [animatedErrorCode, setAnimatedErrorCode] = useState<BackendErrorCode | null>(null);
 
   const name = deckName ?? fetchedName ?? t('safety.someone');
 
@@ -83,11 +88,14 @@ export default function SafetyScreen() {
     if (!uid || !targetId || busy) return;
     setBusy('block');
     setErrorCode(null);
+    setAnimatedErrorCode(null);
     try {
       await backend.blockUser(uid, targetId);
       finish();
     } catch (error) {
-      setErrorCode(toBackendError(error).code);
+      const code = toBackendError(error).code;
+      setErrorCode(code);
+      setAnimatedErrorCode(isFocusedRef.current ? code : null);
       setBusy(null);
     }
   };
@@ -96,11 +104,14 @@ export default function SafetyScreen() {
     if (!uid || !targetId || !reason || busy) return;
     setBusy('report');
     setErrorCode(null);
+    setAnimatedErrorCode(null);
     try {
       await backend.reportUser(uid, { targetId, reason, details: details.trim(), context });
       finish();
     } catch (error) {
-      setErrorCode(toBackendError(error).code);
+      const code = toBackendError(error).code;
+      setErrorCode(code);
+      setAnimatedErrorCode(isFocusedRef.current ? code : null);
       setBusy(null);
     }
   };
@@ -140,14 +151,27 @@ export default function SafetyScreen() {
       </View>
 
       {errorCode ? (
-        <Text
-          accessibilityLiveRegion="polite"
-          accessibilityRole="alert"
-          style={[DsTypography.body, { color: ds.color.danger }]}
-          testID="safety-error"
-        >
-          {t(safetyErrorKey(errorCode))}
-        </Text>
+        animatedErrorCode === errorCode ? (
+          <DsMotionView key={errorCode} testID="safety-error-motion" variant="reveal">
+            <Text
+              accessibilityLiveRegion="polite"
+              accessibilityRole="alert"
+              style={[DsTypography.body, { color: ds.color.danger }]}
+              testID="safety-error"
+            >
+              {t(safetyErrorKey(errorCode))}
+            </Text>
+          </DsMotionView>
+        ) : (
+          <Text
+            accessibilityLiveRegion="polite"
+            accessibilityRole="alert"
+            style={[DsTypography.body, { color: ds.color.danger }]}
+            testID="safety-error"
+          >
+            {t(safetyErrorKey(errorCode))}
+          </Text>
+        )
       ) : null}
 
       <DsCard scheme={scheme} style={styles.card} testID="safety-block-card">
@@ -159,28 +183,30 @@ export default function SafetyScreen() {
         </Text>
 
         {confirmingBlock ? (
-          <View style={styles.confirmPanel} testID="safety-block-confirm-panel">
-            <Text style={[DsTypography.body, { color: ds.color.textPrimary }]}>
-              {t('safety.block.confirm_text', { name })}
-            </Text>
-            <DsPillButton
-              disabled={busy !== null}
-              label={t('safety.block.confirm')}
-              loading={busy === 'block'}
-              onPress={() => void block()}
-              scheme={scheme}
-              testID="safety-block-confirm"
-              variant="primary"
-            />
-            <DsPillButton
-              disabled={busy !== null}
-              label={t('safety.block.cancel')}
-              onPress={() => setConfirmingBlock(false)}
-              scheme={scheme}
-              testID="safety-block-cancel"
-              variant="ghost"
-            />
-          </View>
+          <DsMotionView testID="safety-block-confirm-motion" variant="scale">
+            <View style={styles.confirmPanel} testID="safety-block-confirm-panel">
+              <Text style={[DsTypography.body, { color: ds.color.textPrimary }]}>
+                {t('safety.block.confirm_text', { name })}
+              </Text>
+              <DsPillButton
+                disabled={busy !== null}
+                label={t('safety.block.confirm')}
+                loading={busy === 'block'}
+                onPress={() => void block()}
+                scheme={scheme}
+                testID="safety-block-confirm"
+                variant="primary"
+              />
+              <DsPillButton
+                disabled={busy !== null}
+                label={t('safety.block.cancel')}
+                onPress={() => setConfirmingBlock(false)}
+                scheme={scheme}
+                testID="safety-block-cancel"
+                variant="ghost"
+              />
+            </View>
+          </DsMotionView>
         ) : (
           <DsPillButton
             disabled={busy !== null}

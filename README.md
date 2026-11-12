@@ -2,14 +2,14 @@
 
 **Where solidarity meets romance.**
 
-Comradia is a dating app for people on the left: sign in, build a card from your vibe, values and a prompt answer, and swipe through other members. One Expo app on top of Firebase — no server of our own. Firebase Auth signs people in, Firestore stores profile data, Cloud Storage stores portraits, and Firestore and Storage security rules control access.
+Comradia is a dating app for people on the left: sign in, build a card from your vibe, values and a prompt answer, and swipe through other members. One Expo app on top of Firebase — Firebase Functions handle notification dispatch. Firebase Auth signs people in, Firestore stores profile data, Cloud Storage stores portraits, and Firestore and Storage security rules control access.
 
 ## Layout
 
 | Path | What it is | Toolchain |
 | --- | --- | --- |
 | `apps/mobile` | The app (iOS, Android, web) | Expo, yarn 1 |
-| `apps/firebase` | Firestore and Storage rules, emulator config, seed script, rules tests | firebase-tools 13, yarn 1 |
+| `apps/firebase` | Firestore and Storage rules, notification Functions, emulator config and tests | firebase-tools 13, yarn 1 |
 | `apps/website` | Public landing page (static HTML, no build) | none |
 | `docs` | Architecture and testing notes | — |
 
@@ -42,3 +42,5 @@ On an Android emulator the host is `10.0.2.2` instead of `127.0.0.1`. Without `E
 
 - [docs/architecture.md](docs/architecture.md) — decisions, data model, rules, screens, environments.
 - [docs/testing.md](docs/testing.md) — the test layers and how to run them.
+
+For notification backend build and emulator tests, also install the lockfile in `apps/firebase/functions`. See [notification delivery](docs/notifications.md) and [Functions setup](apps/firebase/functions/README.md).

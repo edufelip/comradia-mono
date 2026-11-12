@@ -10,9 +10,9 @@
 
 ## Task 1: Documentation
 
-- [ ] Compare README, docs/architecture.md and docs/testing.md with source and merged PR8.
-- [ ] Correct dev SMS policy and Storage reader/owner distinctions without publishing private test phone numbers.
-- [ ] Run git diff --check and inspect every changed claim.
+- [x] Compare README, docs/architecture.md and docs/testing.md with source and merged PR8.
+- [x] Correct dev SMS policy and Storage reader/owner distinctions without publishing private test phone numbers.
+- [x] Run git diff --check and inspect every changed claim.
 
 ## Task 2: Existing native two-account journey
 
@@ -28,7 +28,7 @@ Ownership: apps/firebase/** and .github/workflows/firebase-rules.yml.
 - [ ] Add failing rules tests for users/{uid}/pushTokens/{sha256(token)} exact fields token/platform/updatedAt, owner binding, platform enum and timestamp; default deny server delivery state.
 - [ ] Implement token rules and verify allow/deny tests with emulators.
 - [ ] Add failing handler tests for match/message recipient selection, privacy, blocked/deleted members, invalid sender, duplicates and invalid-token pruning.
-- [ ] Implement v2 Functions handlers and real Admin adapters; use generic payload data type/matchId and Android channel matches-messages.
+- [ ] Implement v2 Functions handlers and real Admin adapters; use generic payload data type/matchId/recipientUid and Android channel matches-messages.
 - [ ] Document the delivery claim crash-window tradeoff; never claim exactly-once external delivery.
 - [ ] Add Functions build/test to local scripts/config and existing validation CI; run checks without deployment.
 

@@ -198,8 +198,9 @@ async function sendMessageAs(
 
 /** The Firestore id of the top card, or null when the deck shows no card. */
 async function currentPerson(page: Page): Promise<string | null> {
-  if ((await personCard(page).count()) === 0) return null;
-  const testId = await personCard(page).first().getAttribute('data-testid');
+  const testId = await personCard(page).evaluateAll(
+    (cards) => cards[0]?.getAttribute('data-testid') ?? null,
+  );
   return testId?.replace('discover-person-', '') ?? null;
 }
 
@@ -304,12 +305,15 @@ test.describe('safety', () => {
     await expectPathname(page, '/discover');
     await expect(deck(page)).toBeVisible();
 
-    const seen = new Set<string>();
-    await passUntil(page, (id) => {
-      seen.add(id);
-      return false;
-    });
-    expect(seen.has(target)).toBe(false);
+    // This was the first card in the stable oldest-first deck. Without the persisted
+    // block filter it would be first again; traversing every unrelated signup created
+    // by parallel tests adds no proof of this reload behavior.
+    await expect
+      .poll(async () => {
+        const person = await currentPerson(page);
+        return person === null ? 'loading' : person === target ? 'blocked-target' : 'other-person';
+      })
+      .toBe('other-person');
   });
 
   test('blocking from a chat closes it for both people and hides the match', async ({ page }) => {

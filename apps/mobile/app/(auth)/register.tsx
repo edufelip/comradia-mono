@@ -4,10 +4,11 @@ import {
   AppleAuthenticationButtonType,
 } from 'expo-apple-authentication';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
+import { DsMotionPressable } from '@/components/ds/motion/DsMotionPressable';
+import { DsMotionView } from '@/components/ds/motion/DsMotionView';
 import { DsBackButton } from '@/components/ds/primitives/DsBackButton';
 import { DsPillButton } from '@/components/ds/primitives/DsPillButton';
 import { DsFontFamily, DsRadius, DsTypography, getDsTheme } from '@/constants/design-system';
@@ -41,6 +42,8 @@ export default function RegisterScreen() {
   const [busy, setBusy] = useState<BusyAction | null>(null);
   const [errorCode, setErrorCode] = useState<AuthErrorCode | null>(null);
   const [appleAvailable, setAppleAvailable] = useState(false);
+  const previousMode = useRef(isLogin);
+  const [modeChanged, setModeChanged] = useState(false);
 
   const e164 = toE164BR(phone);
 
@@ -58,6 +61,12 @@ export default function RegisterScreen() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (previousMode.current === isLogin) return;
+    previousMode.current = isLogin;
+    setModeChanged(true);
+  }, [isLogin]);
 
   const handleBack = () => {
     if (router.canGoBack()) {
@@ -103,6 +112,36 @@ export default function RegisterScreen() {
     router.setParams({ mode: isLogin ? 'signup' : 'login' });
   };
 
+  const heading = (
+    <>
+      <Text style={[styles.step, { color: ds.color.accentPrimary }]}>
+        {isLogin ? t('auth.step_login') : t('auth.step')}
+      </Text>
+
+      <Text accessibilityRole="header" style={[styles.title, { color: ds.color.textPrimary }]}>
+        {isLogin ? t('auth.title_login') : t('auth.title')}
+      </Text>
+
+      <Text style={[DsTypography.body, styles.lede, { color: ds.color.textSecondary }]}>
+        {isLogin ? t('auth.lede_login') : t('auth.lede')}
+      </Text>
+    </>
+  );
+
+  const sendCodeButton = (
+    <DsPillButton
+      contentColor={ds.color.onAccent}
+      disabled={!e164 || (busy !== null && busy !== 'phone')}
+      label={t('auth.send_code')}
+      loading={busy === 'phone'}
+      onPress={() => void handleSendCode()}
+      scheme={scheme}
+      style={[styles.sendButton, e164 ? { backgroundColor: ds.color.accentPrimary } : null]}
+      testID="register-send-code"
+      variant="primary"
+    />
+  );
+
   return (
     <View style={[styles.screen, { backgroundColor: ds.color.canvas }]}>
       <ScrollView
@@ -121,17 +160,17 @@ export default function RegisterScreen() {
             testID="register-back"
           />
 
-          <Text style={[styles.step, { color: ds.color.accentPrimary }]}>
-            {isLogin ? t('auth.step_login') : t('auth.step')}
-          </Text>
-
-          <Text accessibilityRole="header" style={[styles.title, { color: ds.color.textPrimary }]}>
-            {isLogin ? t('auth.title_login') : t('auth.title')}
-          </Text>
-
-          <Text style={[DsTypography.body, styles.lede, { color: ds.color.textSecondary }]}>
-            {isLogin ? t('auth.lede_login') : t('auth.lede')}
-          </Text>
+          {modeChanged ? (
+            <DsMotionView
+              key={isLogin ? 'login' : 'signup'}
+              testID="register-heading-motion"
+              variant="slide"
+            >
+              {heading}
+            </DsMotionView>
+          ) : (
+            heading
+          )}
         </View>
 
         <View style={styles.form}>
@@ -197,19 +236,19 @@ export default function RegisterScreen() {
             value={phone}
           />
 
-          <DsPillButton
-            contentColor={ds.color.onAccent}
-            disabled={!e164 || (busy !== null && busy !== 'phone')}
-            label={t('auth.send_code')}
-            loading={busy === 'phone'}
-            onPress={() => void handleSendCode()}
-            scheme={scheme}
-            style={[styles.sendButton, e164 ? { backgroundColor: ds.color.accentPrimary } : null]}
-            testID="register-send-code"
-            variant="primary"
-          />
+          {e164 ? (
+            <DsMotionView testID="register-send-code-motion" variant="scale">
+              {sendCodeButton}
+            </DsMotionView>
+          ) : (
+            sendCodeButton
+          )}
 
-          <AuthError code={errorCode} scheme={scheme} testID="register-error" />
+          {errorCode ? (
+            <DsMotionView key={errorCode} testID="register-error-motion" variant="reveal">
+              <AuthError code={errorCode} scheme={scheme} testID="register-error" />
+            </DsMotionView>
+          ) : null}
         </View>
 
         <View style={styles.footer}>
@@ -219,8 +258,9 @@ export default function RegisterScreen() {
           <Text style={[styles.footerNote, { color: ds.color.textTertiary }]}>
             {t('auth.terms')}
           </Text>
-          <Pressable
+          <DsMotionPressable
             accessibilityRole="link"
+            feedbackScale={0.985}
             onPress={handleSwitchMode}
             style={styles.switchMode}
             testID="register-switch-mode"
@@ -228,7 +268,7 @@ export default function RegisterScreen() {
             <Text style={[styles.switchModeText, { color: ds.color.accentPrimary }]}>
               {isLogin ? t('auth.switch_to_signup') : t('auth.switch_to_login')}
             </Text>
-          </Pressable>
+          </DsMotionPressable>
         </View>
       </ScrollView>
     </View>

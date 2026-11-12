@@ -8,6 +8,21 @@ import { DS_MOTION } from '@/constants/motion';
 describe('shared press feedback', () => {
   afterEach(() => jest.restoreAllMocks());
 
+  it('releases normal press feedback and dispatches the action once', async () => {
+    const withTiming = jest.spyOn(Reanimated, 'withTiming');
+    const onPress = jest.fn();
+    await render(<DsPillButton label="Continue" onPress={onPress} scheme="light" />);
+    const button = screen.getByRole('button', { name: 'Continue' });
+
+    await fireEvent(button, 'pressIn');
+    await fireEvent.press(button);
+    await fireEvent(button, 'pressOut');
+
+    expect(withTiming.mock.calls.map(([target]) => target)).toEqual([1, 0]);
+    expect(onPress).toHaveBeenCalledTimes(1);
+    expect(button).toBeEnabled();
+  });
+
   it('uses the fast shared timing scale for every core button press', async () => {
     const withTiming = jest.spyOn(Reanimated, 'withTiming');
 

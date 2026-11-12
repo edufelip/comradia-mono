@@ -1,8 +1,9 @@
 import { isHiddenFromAccessibility } from '@testing-library/react-native';
 import { fireEvent, renderRouter, screen } from 'expo-router/testing-library';
-import { Text } from 'react-native';
-
+import { Animated, Text } from 'react-native';
+import * as Reanimated from 'react-native-reanimated';
 import TabLayout from '@/app/(tabs)/_layout';
+import { DS_MOTION } from '@/constants/motion';
 import { enUS } from '@/localization/en-US';
 
 jest.mock('@/localization/get-device-locale', () => ({ getDeviceLocale: () => 'en-US' }));
@@ -35,10 +36,15 @@ describe('TabLayout', () => {
   it('moves to Matches when its tab is pressed', async () => {
     const router = renderTabs();
     await router;
+    const transition = jest.spyOn(Animated, 'timing');
 
     await fireEvent.press(screen.getByRole('button', { name: /Matches/ }));
 
     expect(router.getPathname()).toBe('/matches');
+    expect(transition).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ duration: DS_MOTION.duration.standard }),
+    );
     expect(screen.getByText('Matches screen')).toBeOnTheScreen();
   });
 
@@ -50,6 +56,42 @@ describe('TabLayout', () => {
 
     expect(router.getPathname()).toBe('/profile');
     expect(screen.getByText('Profile screen')).toBeOnTheScreen();
+  });
+
+  it('gives tab presses a short visual acknowledgement and still switches screens', async () => {
+    const timing = jest.spyOn(Reanimated, 'withTiming');
+    const router = renderTabs();
+    await router;
+    const matchesTab = screen.getByRole('button', { name: /Matches/ });
+
+    await fireEvent(matchesTab, 'pressIn');
+    expect(timing).toHaveBeenCalledWith(0.96, expect.objectContaining({ duration: 120 }));
+
+    await fireEvent(matchesTab, 'pressOut');
+    expect(timing).toHaveBeenCalledWith(1, expect.objectContaining({ duration: 120 }));
+
+    await fireEvent.press(matchesTab);
+    expect(router.getPathname()).toBe('/matches');
+  });
+
+  it('skips tab press movement when reduced motion is enabled', async () => {
+    const timing = jest.spyOn(Reanimated, 'withTiming');
+    const transition = jest.spyOn(Animated, 'timing');
+    jest.spyOn(Reanimated, 'useReducedMotion').mockReturnValue(true);
+    const router = renderTabs();
+    await router;
+    const profileTab = screen.getByRole('button', { name: /Profile/ });
+
+    await fireEvent(profileTab, 'pressIn');
+    await fireEvent(profileTab, 'pressOut');
+
+    expect(timing).not.toHaveBeenCalled();
+    await fireEvent.press(profileTab);
+    expect(router.getPathname()).toBe('/profile');
+    expect(transition).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ duration: 0 }),
+    );
   });
 
   it('keeps the tab icons out of the accessibility tree', async () => {

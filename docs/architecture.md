@@ -1,6 +1,6 @@
 # Architecture
 
-Comradia is one Expo app (`apps/mobile`) on top of Firebase (`apps/firebase`). There is no server of our own: Firebase Auth signs people in, Firestore stores profile data, Cloud Storage stores portraits, and Firestore and Storage security rules control access. A static landing page lives in `apps/website`.
+Comradia is one Expo app (`apps/mobile`) on top of Firebase (`apps/firebase`). Firebase Functions dispatch match and message notifications; Firebase Auth signs people in, Firestore stores profile data, Cloud Storage stores portraits, and Firestore and Storage security rules control access. A static landing page lives in `apps/website`.
 
 ## Decisions
 
@@ -42,6 +42,7 @@ apps/firebase
   firestore.rules            security rules (the trust boundary)
   storage.rules              photo upload rules
   firebase.json              emulator ports: auth 9099, Firestore 8089, Storage 9199
+  functions/                 match/message push triggers and emulator-backed adapter tests
   scripts/seed.mjs           Discover profiles for the emulators
   tests/                     rules tests against the Firestore and Storage emulators
 ```
@@ -119,6 +120,7 @@ Web reads its Firebase config from `EXPO_PUBLIC_FIREBASE_API_KEY`, `_AUTH_DOMAIN
 
 - Firestore rules are the trust boundary: every write is validated (allowed keys, types, sizes, enums, owner, server timestamps). The rules tests in `apps/firebase/tests` cover each allow and deny.
 - Storage rules let any signed-in user read photos; only the owner can create or delete them. Uploads must be JPEG, no larger than 5 MB and cannot overwrite an existing file. Account deletion removes files under `photos/{uid}/` first and stops if one fails, so it can be retried.
+- Notification tokens stay in owner-private `users/{uid}/pushTokens`; event dispatch markers are Admin-only. Functions and native client changes require a separate dev rollout before provider delivery can be verified (see [notifications](notifications.md)).
 - No private data in public documents. Phone and email stay in Firebase Auth; birth date stays in `users/{uid}`.
 - Apple sign-in uses a SHA-256 nonce; the raw nonce never leaves the device except to Firebase.
 - Error messages shown to users come from `BackendErrorCode`, never raw Firebase text.
@@ -126,7 +128,7 @@ Web reads its Firebase config from `EXPO_PUBLIC_FIREBASE_API_KEY`, `_AUTH_DOMAIN
 
 ## Deferred (needs a Cloud Function or a later task)
 
-- Match and message notifications (needs Cloud Functions + push). Unmatch; block and report exist without one.
+- Native notification delivery verification and dev rollout (Functions and client implementation: see [notifications](notifications.md)). Unmatch; block and report exist without one.
 - Voice intros, more than one photo, photo moderation.
 - Age recompute, ranking by shared passions and distance (Cloud Function).
 - Unblock (there is no UI yet).

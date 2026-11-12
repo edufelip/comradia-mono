@@ -1,7 +1,9 @@
+import { useIsFocused } from '@react-navigation/native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { DsMotionView } from '@/components/ds/motion/DsMotionView';
 import { DsBackButton } from '@/components/ds/primitives/DsBackButton';
 import { DsCard } from '@/components/ds/primitives/DsCard';
 import { DsPillButton } from '@/components/ds/primitives/DsPillButton';
@@ -29,6 +31,7 @@ export default function ChatScreen() {
   const ds = getDsTheme(scheme);
   const { t } = useTranslation();
   const router = useRouter();
+  const isFocused = useIsFocused();
   const uid = useSessionStore((state) => state.user?.uid);
   const myProfile = useSessionStore((state) => state.profile);
   const { status, match, messages, retry } = useChat(backend, uid, id);
@@ -36,6 +39,12 @@ export default function ChatScreen() {
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const [sendFailed, setSendFailed] = useState(false);
+  const [animatedMessageIds, setAnimatedMessageIds] = useState<Set<string>>(() => new Set());
+  const messageSnapshot = useRef<{ key: string; initialized: boolean; ids: Set<string> }>({
+    key: `${uid ?? ''}:${id}`,
+    initialized: false,
+    ids: new Set(),
+  });
   const insets = useSafeAreaInsets();
   const rootRef = useRef<View>(null);
   const scrollRef = useRef<ScrollView>(null);
@@ -48,6 +57,38 @@ export default function ChatScreen() {
   // A block on either side closes the conversation: the messages stay readable, the
   // composer goes away.
   const closed = match ? blockedUids.includes(match.other.id) : false;
+
+  useEffect(() => {
+    if (!isFocused || status !== 'ready') {
+      setAnimatedMessageIds((current) => (current.size === 0 ? current : new Set()));
+    }
+
+    const key = `${uid ?? ''}:${id}`;
+    if (messageSnapshot.current.key !== key) {
+      messageSnapshot.current = { key, initialized: false, ids: new Set() };
+      setAnimatedMessageIds(new Set());
+      return;
+    }
+
+    if (status !== 'ready') {
+      messageSnapshot.current.initialized = false;
+      return;
+    }
+
+    if (!messageSnapshot.current.initialized) {
+      messageSnapshot.current.initialized = true;
+      messageSnapshot.current.ids = new Set(messages.map((message) => message.id));
+      return;
+    }
+
+    const incoming = messages.filter((message) => !messageSnapshot.current.ids.has(message.id));
+    messages.forEach((message) => messageSnapshot.current.ids.add(message.id));
+    if (isFocused && incoming.length > 0) {
+      setAnimatedMessageIds(
+        (current) => new Set([...current, ...incoming.map((message) => message.id)]),
+      );
+    }
+  }, [id, isFocused, messages, status, uid]);
 
   const send = async () => {
     if (!uid || !canSend) return;
@@ -177,7 +218,7 @@ export default function ChatScreen() {
             <>
               {messages.map((message) => {
                 const mine = message.from === uid;
-                return (
+                const bubble = (
                   <View
                     key={message.id}
                     style={[
@@ -198,6 +239,18 @@ export default function ChatScreen() {
                       {message.text}
                     </Text>
                   </View>
+                );
+
+                return isFocused && animatedMessageIds.has(message.id) ? (
+                  <DsMotionView
+                    key={message.id}
+                    variant="slide"
+                    testID={`chat-message-motion-${message.id}`}
+                  >
+                    {bubble}
+                  </DsMotionView>
+                ) : (
+                  bubble
                 );
               })}
             </>
