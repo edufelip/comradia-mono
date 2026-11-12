@@ -115,4 +115,7 @@ Web reads its Firebase config from `EXPO_PUBLIC_FIREBASE_API_KEY`, `_AUTH_DOMAIN
 - Match and message notifications (needs Cloud Functions + push). Unmatch; block and report exist without one.
 - Voice intros and photos (Cloud Storage on new projects needs Blaze).
 - Age recompute, ranking by shared passions and distance (Cloud Function).
+- Unblock (there is no UI yet).
+- Cleaning up the messages the other person sent after an account deletion (the match document is deleted, their messages stay orphaned; needs a Cloud Function).
+- Moderation tooling for `reports` (reviewed in the Firebase console for now).
 - App Check.
