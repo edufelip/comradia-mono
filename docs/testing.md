@@ -172,7 +172,7 @@ Every job runs on our own self-hosted runner, `comradia-ci-ubuntu-1` on the home
 
 From `docs/architecture.md` "Deferred" and "Costs":
 
-- **Real SMS:** `comradia-dev` is on Blaze, so real numbers would get real (paid) texts. Tests use the emulator or the Firebase test numbers only.
+- **Real SMS:** `comradia-dev` is on Blaze, but real SMS is disabled because the SMS region policy has an empty allowlist, so no paid SMS can go out. Tests use the emulator or the two owner-set Firebase test numbers (code `123456`; listed in the Firebase console, not here). Enabling SMS in all regions, with no Brazil-only limit, needs the owner's yes.
 - **Match and message notifications.** Matches and chat work without a server, but push notifications need Cloud Functions.
 - **Voice intros.** Photos run on the emulator in tests; `comradia-dev` has a real bucket since 2026-11-12.
 - **Age recompute, ranking by shared passions and distance:** a Cloud Function.
