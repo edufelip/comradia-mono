@@ -1,6 +1,5 @@
 import {
   ActivityIndicator,
-  Pressable,
   StyleSheet,
   Text,
   type ColorValue,
@@ -8,6 +7,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { DsRadius, DsTypography, type DsColorScheme, getDsTheme } from '@/constants/design-system';
+import { DsMotionPressable } from '../motion/DsMotionPressable';
 import type { ReactNode } from 'react';
 
 type DsPillButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost';
@@ -29,6 +29,8 @@ type DsPillButtonProps = {
   contentColor?: ColorValue;
   /** Overrides the spoken name when the visible label alone is ambiguous. */
   accessibilityLabel?: string;
+  /** Marks a selectable pill as active. */
+  selected?: boolean;
 };
 
 export function DsPillButton({
@@ -46,10 +48,10 @@ export function DsPillButton({
   fullWidth = true,
   contentColor,
   accessibilityLabel,
+  selected,
 }: DsPillButtonProps) {
   const theme = getDsTheme(scheme);
   const isPrimary = variant === 'primary';
-  const isSecondary = variant === 'secondary';
   const isOutline = variant === 'outline';
   const isGhost = variant === 'ghost';
   const isSmall = size === 'sm';
@@ -57,7 +59,14 @@ export function DsPillButton({
 
   const resolvedContentColor = disabled
     ? theme.color.disabledText
-    : (contentColor ?? (isPrimary ? theme.color.onActionPrimary : theme.color.textPrimary));
+    : (contentColor ??
+      (selected
+        ? isPrimary
+          ? theme.color.onActionPrimary
+          : theme.color.accentPrimary
+        : isPrimary
+          ? theme.color.onActionPrimary
+          : theme.color.textPrimary));
 
   const getVariantStyles = () => {
     if (disabled) {
@@ -74,6 +83,19 @@ export function DsPillButton({
         borderColor: theme.color.disabledBorder,
         borderWidth: 1,
       };
+    }
+
+    if (selected) {
+      return isPrimary
+        ? {
+            backgroundColor: theme.color.accentPrimary,
+            borderColor: theme.color.accentPrimary,
+          }
+        : {
+            backgroundColor: theme.color.accentPrimarySoft,
+            borderColor: theme.color.accentPrimary,
+            borderWidth: 1.5,
+          };
     }
 
     if (isPrimary) {
@@ -115,18 +137,22 @@ export function DsPillButton({
   };
 
   return (
-    <Pressable
+    <DsMotionPressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
-      accessibilityState={{ busy: loading, disabled: disabled || loading }}
+      accessibilityState={{
+        busy: loading,
+        disabled: disabled || loading,
+        ...(selected === undefined ? {} : { selected }),
+      }}
       disabled={disabled || loading}
+      hitSlop={1}
       onPress={onPress}
-      style={({ pressed }) => [
+      style={[
         styles.button,
         getSizeStyles(),
         getVariantStyles(),
         { width: fullWidth ? '100%' : undefined },
-        { transform: [{ scale: pressed && !disabled && !loading ? 0.97 : 1 }] },
         style,
       ]}
       testID={testID}
@@ -145,7 +171,7 @@ export function DsPillButton({
           {rightIcon}
         </>
       )}
-    </Pressable>
+    </DsMotionPressable>
   );
 }
 

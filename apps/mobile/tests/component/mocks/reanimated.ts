@@ -5,7 +5,12 @@ const identity = <T>(value: T): T => value;
 
 const mock = {
   __esModule: true,
-  default: { View: Animated.View, Text: Animated.Text, ScrollView: Animated.ScrollView },
+  default: {
+    View: Animated.View,
+    Text: Animated.Text,
+    ScrollView: Animated.ScrollView,
+    createAnimatedComponent: <T>(component: T): T => component,
+  },
   Easing,
   useReducedMotion: () => false,
   useSharedValue: (initial: unknown) => ({ value: initial }),
