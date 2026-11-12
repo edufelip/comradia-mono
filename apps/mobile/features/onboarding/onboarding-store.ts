@@ -57,6 +57,8 @@ type OnboardingState = OnboardingDraft & {
   setSharedPassionWeight: (weight: number) => void;
   setPromptId: (promptId: PromptId) => void;
   setPromptAnswer: (answer: string) => void;
+  /** A local JPEG from `pickPhoto`, or null to drop it. */
+  setPhotoUri: (photoUri: string | null) => void;
   reset: () => void;
 };
 
@@ -79,5 +81,6 @@ export const useOnboardingStore = create<OnboardingState>((set) => ({
     set({ sharedPassionWeight: clampSharedPassionWeight(weight) }),
   setPromptId: (promptId) => set({ promptId }),
   setPromptAnswer: (answer) => set({ promptAnswer: answer.slice(0, ANSWER_MAX) }),
+  setPhotoUri: (photoUri) => set({ photoUri }),
   reset: () => set(createEmptyDraft()),
 }));

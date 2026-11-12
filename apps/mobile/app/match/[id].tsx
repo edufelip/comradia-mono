@@ -1,13 +1,13 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-
 import { DsCard } from '@/components/ds/primitives/DsCard';
 import { DsPillButton } from '@/components/ds/primitives/DsPillButton';
 import { DsScreen } from '@/components/ds/primitives/DsScreen';
 import { DsRadius, DsSpace, DsTypography, getDsTheme } from '@/constants/design-system';
 import { useSessionStore } from '@/features/auth/session-store';
 import { sharedValues } from '@/features/matches/shared-values';
+import { ProfilePhoto } from '@/features/profile/ProfilePhoto';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTranslation } from '@/localization';
 import { backend } from '@/services/backend';
@@ -117,6 +117,27 @@ export default function MatchScreen() {
         </DsCard>
       ) : match ? (
         <>
+          <View style={styles.photos}>
+            {myProfile ? (
+              <ProfilePhoto
+                name={myProfile.displayName}
+                path={myProfile.photoPath}
+                scheme={scheme}
+                shape="arch"
+                style={styles.portrait}
+                testID="match-photo-me"
+              />
+            ) : null}
+            <ProfilePhoto
+              name={match.other.displayName}
+              path={match.other.photoPath}
+              scheme={scheme}
+              shape="arch"
+              style={styles.portrait}
+              testID="match-photo-other"
+            />
+          </View>
+
           <DsCard scheme={scheme} style={styles.card}>
             <Text
               style={[DsTypography.cardTitle, { color: ds.color.textPrimary }]}
@@ -186,6 +207,16 @@ const styles = StyleSheet.create({
   },
   header: {
     gap: DsSpace.xxs,
+  },
+  photos: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: DsSpace.sm,
+    justifyContent: 'center',
+  },
+  portrait: {
+    aspectRatio: 3 / 4,
+    width: 120,
   },
   card: {
     gap: DsSpace.xs,

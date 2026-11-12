@@ -2,7 +2,6 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
 import { DsBackButton } from '@/components/ds/primitives/DsBackButton';
 import { DsCard } from '@/components/ds/primitives/DsCard';
 import { DsPillButton } from '@/components/ds/primitives/DsPillButton';
@@ -12,6 +11,7 @@ import { DsRadius, DsSpace, DsTypography, getDsTheme } from '@/constants/design-
 import { useSessionStore } from '@/features/auth/session-store';
 import { useChat } from '@/features/chat/use-chat';
 import { sharedValues } from '@/features/matches/shared-values';
+import { ProfilePhoto } from '@/features/profile/ProfilePhoto';
 import { useBlockedUids } from '@/features/safety/use-blocked-uids';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTranslation } from '@/localization';
@@ -81,6 +81,16 @@ export default function ChatScreen() {
             scheme={scheme}
             testID="chat-back"
           />
+          {match ? (
+            <ProfilePhoto
+              name={match.other.displayName}
+              path={match.other.photoPath}
+              scheme={scheme}
+              shape="circle"
+              style={{ width: 40 }}
+              testID="chat-photo"
+            />
+          ) : null}
           <View style={styles.headerText}>
             <Text
               accessibilityRole="header"

@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { DsCard } from '@/components/ds/primitives/DsCard';
 import { DsPillButton } from '@/components/ds/primitives/DsPillButton';
 import { DsScreen } from '@/components/ds/primitives/DsScreen';
 import { DsRadius, DsSpace, DsTypography, getDsTheme } from '@/constants/design-system';
 import { useSessionStore } from '@/features/auth/session-store';
+import { pickPhoto } from '@/features/profile/pick-photo';
+import { ProfilePhoto } from '@/features/profile/ProfilePhoto';
 import { needsRecentSignIn } from '@/features/safety/safety';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTranslation } from '@/localization';
@@ -29,6 +30,36 @@ export default function ProfileScreen() {
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<BackendErrorCode | null>(null);
   const [needsReauth, setNeedsReauth] = useState(false);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoError, setPhotoError] = useState(false);
+
+  // Saves a new photo (a local uri) or removes the current one (null), then updates my card.
+  const savePhoto = async (localUri: string | null) => {
+    if (!uid || !profile || photoBusy) return;
+    setPhotoError(false);
+    setPhotoBusy(true);
+    try {
+      const photoPath = await backend.setProfilePhoto(uid, localUri);
+      useSessionStore.getState().updateProfile({ ...profile, photoPath });
+    } catch {
+      setPhotoError(true);
+    } finally {
+      setPhotoBusy(false);
+    }
+  };
+
+  const choosePhoto = async () => {
+    if (photoBusy) return;
+    setPhotoError(false);
+    let localUri: string | null;
+    try {
+      localUri = await pickPhoto();
+    } catch {
+      setPhotoError(true);
+      return;
+    }
+    if (localUri) await savePhoto(localUri);
+  };
 
   const signOut = async () => {
     setSigningOut(true);
@@ -91,6 +122,53 @@ export default function ProfileScreen() {
       {profile ? (
         <>
           <DsCard scheme={scheme} style={styles.card}>
+            <ProfilePhoto
+              path={profile.photoPath}
+              name={profile.displayName}
+              shape="arch"
+              scheme={scheme}
+              style={{ width: 160, aspectRatio: 3 / 4, alignSelf: 'center' }}
+              testID="profile-photo"
+            />
+            <DsPillButton
+              disabled={photoBusy}
+              label={profile.photoPath ? t('photo.change') : t('photo.add')}
+              onPress={() => void choosePhoto()}
+              scheme={scheme}
+              testID="profile-photo-change"
+              variant="secondary"
+            />
+            {profile.photoPath ? (
+              <Pressable
+                accessibilityRole="button"
+                disabled={photoBusy}
+                onPress={() => void savePhoto(null)}
+                style={({ pressed }) => [styles.textButton, { opacity: pressed ? 0.7 : 1 }]}
+                testID="profile-photo-remove"
+              >
+                <Text style={[DsTypography.caption, { color: ds.color.danger }]}>
+                  {t('photo.remove')}
+                </Text>
+              </Pressable>
+            ) : null}
+            {photoBusy ? (
+              <Text
+                style={[DsTypography.caption, { color: ds.color.textSecondary }]}
+                testID="profile-photo-saving"
+              >
+                {t('photo.saving')}
+              </Text>
+            ) : null}
+            {photoError ? (
+              <Text
+                accessibilityRole="alert"
+                style={[DsTypography.caption, { color: ds.color.danger }]}
+                testID="profile-photo-error"
+              >
+                {t('photo.error')}
+              </Text>
+            ) : null}
+
             <Text
               style={[DsTypography.title, { color: ds.color.textPrimary }]}
               testID="profile-card-name"
@@ -236,6 +314,10 @@ const styles = StyleSheet.create({
   valueChip: {
     borderRadius: DsRadius.sm,
     paddingHorizontal: DsSpace.sm,
+    paddingVertical: DsSpace.xxs,
+  },
+  textButton: {
+    alignSelf: 'center',
     paddingVertical: DsSpace.xxs,
   },
 });

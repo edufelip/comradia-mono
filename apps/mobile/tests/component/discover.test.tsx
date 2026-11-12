@@ -1,13 +1,14 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-
 import DiscoverScreen from '@/app/(tabs)/discover';
 import { useSessionStore } from '@/features/auth/session-store';
 import { useDiscoveryStore } from '@/features/discovery/discovery-store';
-import type { DiscoveryProfile } from '@/features/profile/profile-schema';
 import { enUS } from '@/localization/en-US';
 import { matchIdFor } from '@/services/backend/shared';
-
 import { TEST_PROFILE, TEST_USER, fakeBackend } from './mocks/backend';
+import type { DiscoveryProfile } from '@/features/profile/profile-schema';
+
+/** The portrait's image and initial are hidden from screen readers; its root carries the name. */
+const HIDDEN = { includeHiddenElements: true };
 
 const mockPush = jest.fn();
 jest.mock('expo-router', () => ({
@@ -26,6 +27,7 @@ const MAYA: DiscoveryProfile = {
   values: ['climate_outdoors', 'public_transit', 'tenant_rights'],
   promptId: 'perfect_sunday',
   promptAnswer: 'Community garden at sunrise, then a long lunch.',
+  photoPath: null,
 };
 
 const LUCAS: DiscoveryProfile = {
@@ -39,6 +41,7 @@ const LUCAS: DiscoveryProfile = {
   values: ['bookshops_coffee', 'indie_film_music', 'cycling'],
   promptId: 'hill_to_die_on',
   promptAnswer: 'Public libraries are the best thing a city does.',
+  photoPath: null,
 };
 
 const VAL: DiscoveryProfile = {
@@ -52,6 +55,7 @@ const VAL: DiscoveryProfile = {
   values: ['volunteering', 'community_gardens', 'pets_parks', 'food_markets'],
   promptId: 'together_we_could',
   promptAnswer: 'Run a bike-to-work convoy.',
+  photoPath: null,
 };
 
 function signIn() {
@@ -244,5 +248,28 @@ describe('DiscoverScreen', () => {
     await fireEvent.press(report);
 
     expect(mockPush).toHaveBeenCalledWith('/safety/p-maya?context=profile');
+  });
+
+  it('shows the portrait of the person on top of the card', async () => {
+    signIn();
+    seedDeck({ ...MAYA, photoPath: 'photos/p-maya/a.jpg' });
+
+    await render(<DiscoverScreen />);
+
+    // expo-image hands its native view the source as a list of uri objects.
+    expect(await screen.findByTestId('discover-photo-image', HIDDEN)).toHaveProp('source', [
+      { uri: 'https://photos.test/photos/p-maya/a.jpg' },
+    ]);
+  });
+
+  it('shows the initial instead of a photo when the person has none', async () => {
+    signIn();
+    seedDeck(MAYA);
+
+    await render(<DiscoverScreen />);
+
+    expect(await screen.findByText('Maya, 28')).toBeOnTheScreen();
+    expect(screen.queryByTestId('discover-photo-image', HIDDEN)).not.toBeOnTheScreen();
+    expect(screen.getByText('M', HIDDEN)).toBeOnTheScreen();
   });
 });

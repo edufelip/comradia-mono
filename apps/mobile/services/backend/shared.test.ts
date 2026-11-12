@@ -12,6 +12,7 @@ const CARD = {
   values: ['bookshops_coffee', 'tenant_rights', 'cycling'],
   promptId: 'perfect_sunday',
   promptAnswer: 'Feira, then a long lunch.',
+  photoPath: null,
 };
 
 describe('toPublicProfile', () => {
@@ -37,6 +38,18 @@ describe('toPublicProfile', () => {
     const stored = { ...CARD, createdAt: 'x' };
     toPublicProfile(stored);
     assert.equal(stored.createdAt, 'x');
+  });
+
+  it('keeps a string photoPath', () => {
+    const path = 'photos/u1/abc.jpg';
+    assert.equal(toPublicProfile({ ...CARD, photoPath: path }).photoPath, path);
+  });
+
+  it('returns photoPath null when it is missing or not a string', () => {
+    const { photoPath: _unused, ...withoutPhoto } = { ...CARD, photoPath: 'x' };
+    assert.equal(toPublicProfile(withoutPhoto).photoPath, null);
+    assert.equal(toPublicProfile({ ...CARD, photoPath: 42 }).photoPath, null);
+    assert.equal(toPublicProfile({ ...CARD, photoPath: undefined }).photoPath, null);
   });
 });
 

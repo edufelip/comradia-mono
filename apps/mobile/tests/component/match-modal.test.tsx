@@ -1,12 +1,13 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
-
+import { fireEvent, render, screen, within } from '@testing-library/react-native';
 import MatchScreen from '@/app/match/[id]';
 import { useSessionStore } from '@/features/auth/session-store';
-import type { DiscoveryProfile } from '@/features/profile/profile-schema';
 import { enUS } from '@/localization/en-US';
 import { matchIdFor } from '@/services/backend/shared';
-
 import { TEST_PROFILE, TEST_USER, fakeBackend } from './mocks/backend';
+import type { DiscoveryProfile } from '@/features/profile/profile-schema';
+
+/** The portrait's image and initial are hidden from screen readers; its root carries the name. */
+const HIDDEN = { includeHiddenElements: true };
 
 const mockReplace = jest.fn();
 const mockBack = jest.fn();
@@ -33,6 +34,7 @@ const MAYA: DiscoveryProfile = {
   values: ['bookshops_coffee', 'tenant_rights', 'cycling'],
   promptId: 'perfect_sunday',
   promptAnswer: 'Community garden at sunrise, then a long lunch.',
+  photoPath: null,
 };
 
 const VAL: DiscoveryProfile = {
@@ -46,6 +48,7 @@ const VAL: DiscoveryProfile = {
   values: ['volunteering', 'community_gardens', 'pets_parks'],
   promptId: 'together_we_could',
   promptAnswer: 'Run a bike-to-work convoy.',
+  photoPath: null,
 };
 
 function signIn() {
@@ -92,6 +95,32 @@ describe('MatchScreen', () => {
     expect(fakeBackend.callsTo('getMatch')).toEqual([
       { method: 'getMatch', args: [TEST_USER.uid, matchId] },
     ]);
+  });
+
+  it('shows the other person portrait beside mine', async () => {
+    signIn();
+    await seedMatch({ ...MAYA, photoPath: 'photos/p-maya/a.jpg' });
+
+    await render(<MatchScreen />);
+
+    expect(await screen.findByTestId('match-photo-other-image', HIDDEN)).toHaveProp('source', [
+      { uri: 'https://photos.test/photos/p-maya/a.jpg' },
+    ]);
+    expect(screen.getByTestId('match-photo-me')).toBeOnTheScreen();
+  });
+
+  it('shows the initial when the other person has no portrait', async () => {
+    signIn();
+    await seedMatch();
+
+    await render(<MatchScreen />);
+
+    expect(await screen.findByTestId('match-photo-other')).toBeOnTheScreen();
+    expect(screen.queryByTestId('match-photo-other-image', HIDDEN)).not.toBeOnTheScreen();
+    expect(
+      within(screen.getByTestId('match-photo-other')).getByText('M', HIDDEN),
+    ).toBeOnTheScreen();
+    expect(within(screen.getByTestId('match-photo-me')).getByText('A', HIDDEN)).toBeOnTheScreen();
   });
 
   it('says so when the pair shares no value', async () => {

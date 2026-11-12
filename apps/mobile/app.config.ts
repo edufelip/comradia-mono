@@ -43,6 +43,15 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       // Adds the Crashlytics Gradle plugin; without it the Android app crashes at startup
       // ("The Crashlytics build ID is missing") because the package is linked natively.
       '@react-native-firebase/crashlytics',
+      // Photo library only: the camera and microphone keys and Android permissions stay out.
+      [
+        'expo-image-picker',
+        {
+          photosPermission: 'Comradia opens your photo library so you can pick a profile photo.',
+          cameraPermission: false,
+          microphonePermission: false,
+        },
+      ],
       // Reads the iOS URL scheme from GoogleService-Info.plist.
       '@react-native-google-signin/google-signin',
       // @react-native-firebase needs static frameworks on iOS. Its pods import React-Core
@@ -53,7 +62,13 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         {
           ios: {
             useFrameworks: 'static',
-            forceStaticLinking: ['RNFBApp', 'RNFBAuth', 'RNFBCrashlytics', 'RNFBFirestore'],
+            forceStaticLinking: [
+              'RNFBApp',
+              'RNFBAuth',
+              'RNFBCrashlytics',
+              'RNFBFirestore',
+              'RNFBStorage',
+            ],
           },
         },
       ],

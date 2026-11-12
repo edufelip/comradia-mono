@@ -3,9 +3,9 @@
  * Tests drive it through `fakeBackend`: sign a user in, seed profiles, make the next
  * call fail, and inspect what the screen wrote.
  */
-import type { DiscoveryProfile, PublicProfile } from '@/features/profile/profile-schema';
 import { BackendError, type BackendErrorCode } from '@/services/backend/errors';
 import { matchIdFor, otherUid } from '@/services/backend/shared';
+import type { DiscoveryProfile, PublicProfile } from '@/features/profile/profile-schema';
 import type {
   AuthUser,
   Backend,
@@ -37,6 +37,7 @@ export const TEST_PROFILE: PublicProfile = {
   values: ['bookshops_coffee', 'tenant_rights', 'cycling'],
   promptId: 'perfect_sunday',
   promptAnswer: 'Feira, then a long lunch.',
+  photoPath: null,
 };
 
 function createFakeBackend() {
@@ -56,6 +57,8 @@ function createFakeBackend() {
     blocked: new Set<string>(),
     /** Every report written, in order. */
     reports: [] as ReportInput[],
+    /** Uploaded portraits: Storage path -> the local uri it came from. */
+    photos: new Map<string, string>(),
     pendingPhone: null as string | null,
     /** Accepted by confirmPhoneCode. */
     validCode: '123456',
@@ -77,6 +80,12 @@ function createFakeBackend() {
   const messagesListeners = new Set<MessagesListener>();
   let clock = 1_700_000_000_000;
   let messageSeq = 0;
+  let photoSeq = 0;
+  const upload = (uid: string, localUri: string) => {
+    const path = `photos/${uid}/p${(photoSeq += 1)}.jpg`;
+    state.photos.set(path, localUri);
+    return path;
+  };
 
   const matchesOf = (uid: string): Match[] => {
     const out: Match[] = [];
@@ -147,10 +156,25 @@ function createFakeBackend() {
       record('getProfile', [uid]);
       return state.profiles.get(uid) ?? null;
     },
-    async saveOnboarding(uid, docs) {
-      record('saveOnboarding', [uid, docs]);
-      state.profiles.set(uid, docs.profile);
+    async saveOnboarding(uid, docs, photoUri) {
+      record('saveOnboarding', [uid, docs, photoUri]);
+      const profile = { ...docs.profile, photoPath: photoUri ? upload(uid, photoUri) : null };
+      state.profiles.set(uid, profile);
       state.accounts.set(uid, docs.account);
+      return profile;
+    },
+    async setProfilePhoto(uid, localUri) {
+      record('setProfilePhoto', [uid, localUri]);
+      const profile = state.profiles.get(uid);
+      if (!profile) throw new BackendError('unknown');
+      const photoPath = localUri ? upload(uid, localUri) : null;
+      if (profile.photoPath) state.photos.delete(profile.photoPath);
+      state.profiles.set(uid, { ...profile, photoPath });
+      return photoPath;
+    },
+    async photoUrl(path) {
+      record('photoUrl', [path]);
+      return `https://photos.test/${path}`;
     },
     async listDiscovery(uid) {
       record('listDiscovery', [uid]);
@@ -239,6 +263,9 @@ function createFakeBackend() {
       record('deleteAccount', [uid]);
       state.profiles.delete(uid);
       state.accounts.delete(uid);
+      state.photos.forEach((_, path) => {
+        if (path.startsWith(`photos/${uid}/`)) state.photos.delete(path);
+      });
       state.swipes = state.swipes.filter((swipe) => swipe.uid !== uid);
       emit(null);
     },
@@ -274,6 +301,7 @@ function createFakeBackend() {
       state.appleAvailable = false;
       state.profiles.clear();
       state.accounts.clear();
+      state.photos.clear();
       state.swipes = [];
       state.pendingPhone = null;
       state.validCode = '123456';
