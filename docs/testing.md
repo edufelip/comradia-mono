@@ -170,11 +170,11 @@ Every job runs on our own self-hosted runner, `comradia-ci-ubuntu-1` on the home
 
 ## Known gaps
 
-From `docs/architecture.md` "Deferred", all of these wait on the Blaze plan or a later task:
+From `docs/architecture.md` "Deferred" and "Costs":
 
-- **Real SMS** to any number: Spark only allows Firebase test numbers, so phone sign-in is emulator- or test-number-only.
+- **Real SMS:** `comradia-dev` is on Blaze, so real numbers would get real (paid) texts. Tests use the emulator or the Firebase test numbers only.
 - **Match and message notifications.** Matches and chat work without a server, but push notifications need Cloud Functions.
-- **Voice intros, and photos on real Firebase:** Cloud Storage on new projects needs Blaze. Photos are tested on the emulator only.
+- **Voice intros.** Photos run on the emulator in tests; `comradia-dev` has a real bucket since 2026-11-12.
 - **Age recompute, ranking by shared passions and distance:** a Cloud Function.
 - **App Check.** Account deletion, blocking and reporting are implemented in `apps/mobile` (S12 and S11).
 

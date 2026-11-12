@@ -42,7 +42,7 @@ import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
 import { Platform } from 'react-native';
-import { newPhotoId, photoPathFor } from '@/features/profile/profile-schema';
+import { newPhotoId, PHOTO_METADATA, photoPathFor } from '@/features/profile/profile-schema';
 import { chunk, DELETE_BATCH_SIZE } from './batches';
 import {
   AUTH_EMULATOR_PORT,
@@ -98,7 +98,7 @@ const photoUrls = new Map<string, Promise<string>>();
 /** Uploads a picked JPEG under a fresh id and returns its storage path. */
 async function uploadPhoto(uid: string, localUri: string): Promise<string> {
   const path = photoPathFor(uid, newPhotoId());
-  await putFile(ref(storage, path), localUri, { contentType: 'image/jpeg' });
+  await putFile(ref(storage, path), localUri, PHOTO_METADATA);
   return path;
 }
 

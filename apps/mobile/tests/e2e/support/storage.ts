@@ -14,6 +14,15 @@ export async function objectStatus(path: string): Promise<number> {
   return res.status;
 }
 
+/** The stored metadata of one object (content type, cache header, size). */
+export async function objectMetadata(
+  path: string,
+): Promise<{ contentType?: string; cacheControl?: string }> {
+  const res = await fetch(`${OBJECTS}/${encodeURIComponent(path)}`, { headers: ADMIN });
+  expect(res.ok).toBeTruthy();
+  return (await res.json()) as { contentType?: string; cacheControl?: string };
+}
+
 /** Every object name under `prefix`. The emulator omits `items` when nothing matches. */
 export async function listObjects(prefix: string): Promise<string[]> {
   const res = await fetch(`${OBJECTS}?prefix=${encodeURIComponent(prefix)}`, { headers: ADMIN });

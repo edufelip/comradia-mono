@@ -41,7 +41,7 @@ import {
   ref,
   uploadBytes,
 } from 'firebase/storage';
-import { newPhotoId, photoPathFor } from '@/features/profile/profile-schema';
+import { newPhotoId, PHOTO_METADATA, photoPathFor } from '@/features/profile/profile-schema';
 import { chunk, DELETE_BATCH_SIZE } from './batches';
 import {
   AUTH_EMULATOR_PORT,
@@ -136,7 +136,7 @@ const photoUrls = new Map<string, Promise<string>>();
 async function uploadPhoto(uid: string, localUri: string): Promise<string> {
   const path = photoPathFor(uid, newPhotoId());
   const blob = await (await fetch(localUri)).blob();
-  await uploadBytes(ref(storage, path), blob, { contentType: 'image/jpeg' });
+  await uploadBytes(ref(storage, path), blob, PHOTO_METADATA);
   return path;
 }
 

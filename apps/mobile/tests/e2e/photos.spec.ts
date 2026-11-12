@@ -3,7 +3,7 @@ import { expect, type Locator, type Page, test } from '@playwright/test';
 import { expectPathname } from './support/app';
 import { signUpWithPhone, uidForPhone } from './support/firebase';
 import { completeOnboarding, onboardingStep } from './support/onboarding';
-import { listObjects, objectStatus, uploadJpeg } from './support/storage';
+import { listObjects, objectMetadata, objectStatus, uploadJpeg } from './support/storage';
 
 // Must match apps/firebase/firebase.json and services/backend/config.ts.
 const PROJECT = 'demo-comradia';
@@ -246,6 +246,11 @@ test.describe('photos', () => {
     const path = await savedPhotoPath(uid);
     expect(path).toMatch(photoPathRegex(uid));
     await expect.poll(() => objectStatus(path)).toBe(200);
+    // A path never changes content, so clients may cache it for a year.
+    expect(await objectMetadata(path)).toMatchObject({
+      contentType: 'image/jpeg',
+      cacheControl: 'public, max-age=31536000, immutable',
+    });
 
     await openProfile(page);
     await expectPortraitLoaded(page.getByTestId('profile-photo-image'));

@@ -7,7 +7,7 @@ Comradia is one Expo app (`apps/mobile`) on top of Firebase (`apps/firebase`). T
 | # | Decision | Why | Revisit when |
 | --- | --- | --- | --- |
 | 1 | **Firebase for everything** (Auth + Firestore). The Bun/Elysia server and its Postgres were removed. | One vendor for sign-in, SMS codes and data. Fewer moving parts for a solo project, and every Firebase piece has a local emulator for tests. | We need SQL-style queries (ranking by distance, reporting); then consider Data Connect or a Cloud Function backed by Postgres. |
-| 2 | **Spark (free) plan.** | No card attached while the product is unproven. | Before launch: real SMS, Cloud Functions and Storage all need Blaze (see Deferred). |
+| 2 | **Blaze (pay as you go) on `comradia-dev`, kept inside the free allowances** (see Costs). Turned on 2026-11-12 for Cloud Storage. | New projects need Blaze for Storage. A budget alert catches any real spend. | Spend shows up in a budget email: find the cause before adding anything paid. |
 | 3 | **Sign-in: Apple (iPhone only), Google, phone + SMS code.** | The flow chart asks for Google and phone; App Store rule 4.8 requires Sign in with Apple when Google is offered. | — |
 | 4 | **Native uses `@react-native-firebase`, web uses the `firebase` JS SDK**, both behind `services/backend`. | Phone sign-in on iOS / Android only works through the native SDK; the JS SDK's phone flow needs a browser reCAPTCHA. Screens never import Firebase directly. | — |
 | 5 | **Profile is written once, complete, at the end of onboarding.** The draft lives in memory until then. | The security rules can then require a full, valid profile on every write. A half-finished signup leaves no public card. | We want to resume onboarding across app restarts; then persist the draft locally (not in Firestore). |
@@ -15,7 +15,7 @@ Comradia is one Expo app (`apps/mobile`) on top of Firebase (`apps/firebase`). T
 | 7 | **Age is stored, birth date stays private.** The client computes age at signup; rules allow 18–99. | Without Cloud Functions there is no trusted place to recompute it. | Blaze: a scheduled Function recomputes ages from the private birth date. |
 | 8 | **Matches without a server.** A like is also written to `likes/{target}/from/{me}`, which the liked person can read. When I like someone who already liked me, the same batch creates `matches/{a_b}`; the rules allow that create only when both likes exist (`existsAfter`). Two likes at the same moment are fixed by `reconcileMatches` when Matches opens. | Works on the free plan. Revised 2026-11-11: the earlier plan said mutual matching needed a Cloud Function. | A person can see who liked them (needed for the check). Hide that if it becomes a paid feature; then move the check to a Cloud Function. |
 | 9 | **Firebase config files are committed** (`apps/mobile/firebase/<variant>/`). | They hold public client ids, not secrets. Abuse is limited by Auth, rules and (later) App Check. | Before launch: turn on App Check. |
-| 10 | **One optional portrait per profile, in Cloud Storage.** `profiles/{uid}.photoPath` points at `photos/{uid}/{id}.jpg`; every upload gets a new file id and the old file is deleted afterwards, best effort. Android crops to 3:4 (iOS's crop is square; the frame covers either). The phone resizes to 1080 px and JPEG 0.8 before upload. | Storage rules can't read Firestore cheaply, so each file is owner-only and immutable, and Firestore only accepts a path inside the owner's folder. No permission prompt: the system photo picker needs none. | Multiple photos, or moderation (needs a Cloud Function). Real Storage on `comradia-dev` needs Blaze; everything runs on the emulator today. |
+| 10 | **One optional portrait per profile, in Cloud Storage.** `profiles/{uid}.photoPath` points at `photos/{uid}/{id}.jpg`; every upload gets a new file id and the old file is deleted afterwards, best effort. Android crops to 3:4 (iOS's crop is square; the frame covers either). The phone resizes to 1080 px and JPEG 0.8 before upload. | Storage rules can't read Firestore cheaply, so each file is owner-only and immutable, and Firestore only accepts a path inside the owner's folder. No permission prompt: the system photo picker needs none. | Multiple photos, or moderation (needs a Cloud Function). |
 
 ## Layout
 
@@ -105,6 +105,16 @@ Everything else is denied. Option ids are listed once in `features/profile/profi
 
 Web reads its Firebase config from `EXPO_PUBLIC_FIREBASE_API_KEY`, `_AUTH_DOMAIN`, `_PROJECT_ID` and `_APP_ID`; without them it uses the demo project, which only works with the emulators. Native Google sign-in also needs `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` (in `.env.example`). Android Google sign-in only works for builds signed with a key whose SHA-1 is registered on the Firebase Android app (today: the React Native debug key).
 
+## Costs
+
+`comradia-dev` is on Blaze since 2026-11-12, on the shared billing account (BRL). Rule of thumb: stay inside the free allowances, and get a yes before adding anything that bills by the hour or per message.
+
+- **Budget alert:** "comradia-dev monthly", R$ 25, emails at 10%, 50%, 90% and 100% of actual spend and at 100% of forecast. An alert only warns; it does not stop charges.
+- **Storage bucket in `us-east1`:** one of the three regions (`us-east1`, `us-west1`, `us-central1`) where Storage has a free allowance (5 GB stored, 100 GB downloaded per month). Firestore stays in `southamerica-east1`.
+- **Photos are small and cached:** resized to 1080 px, JPEG 0.8 (about 100–200 KB), never overwritten, uploaded with `Cache-Control: public, max-age=31536000, immutable`. Old files are deleted on change and on account deletion, so nothing piles up.
+- **Real SMS now bills per message.** Phone sign-in can text any number on Blaze. Keep test numbers for testing. Before any public build, limit SMS to Brazil (SMS region policy) and turn on App Check, so bots can't run up SMS charges.
+- **Billing account limit:** the account allows 5 linked projects. `mapfriends-92e3c` was unlinked on 2026-11-12 to make room.
+
 ## Security
 
 - Firestore rules are the trust boundary: every write is validated (allowed keys, types, sizes, enums, owner, server timestamps). The rules tests in `apps/firebase/tests` cover each allow and deny.
@@ -114,11 +124,9 @@ Web reads its Firebase config from `EXPO_PUBLIC_FIREBASE_API_KEY`, `_AUTH_DOMAIN
 - Error messages shown to users come from `BackendErrorCode`, never raw Firebase text.
 - Not done yet: App Check, rate limits beyond Firebase's defaults.
 
-## Deferred (needs the Blaze plan or a later task)
+## Deferred (needs a Cloud Function or a later task)
 
-- Real SMS to any number (Spark only allows test numbers).
 - Match and message notifications (needs Cloud Functions + push). Unmatch; block and report exist without one.
-- Cloud Storage on `comradia-dev` (new projects need Blaze); photos work on the emulator only until then.
 - Voice intros, more than one photo, photo moderation.
 - Age recompute, ranking by shared passions and distance (Cloud Function).
 - Unblock (there is no UI yet).

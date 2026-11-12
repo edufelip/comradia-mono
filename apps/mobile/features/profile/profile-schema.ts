@@ -50,6 +50,15 @@ export const PHOTO_MAX_SIDE = 1080;
 /** Same cap as apps/firebase/storage.rules. */
 export const PHOTO_MAX_BYTES = 5 * 1024 * 1024;
 
+/**
+ * Upload metadata for every photo. A path is never overwritten (each change is a new file), so
+ * browsers and phones may keep it for a year; repeat views then cost no Storage download.
+ */
+export const PHOTO_METADATA = {
+  contentType: 'image/jpeg',
+  cacheControl: 'public, max-age=31536000, immutable',
+} as const;
+
 /** Storage path of a portrait. Mirrors storage.rules and the `photoPath` check in firestore.rules. */
 export function photoPathFor(uid: string, photoId: string): string {
   return `photos/${uid}/${photoId}.jpg`;
