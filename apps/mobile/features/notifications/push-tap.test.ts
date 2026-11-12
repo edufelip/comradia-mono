@@ -4,7 +4,6 @@ import { matchIdFor } from '@/services/backend/shared';
 import { createPushTapRouter, type PushTapRouterDependencies } from './push-tap';
 import type { Match } from '@/services/backend/types';
 
-
 function createHarness(options: { blocked?: string[]; returnedMatch?: Match | null } = {}) {
   const calls: string[] = [];
   let session: { status: string; uid: string | null } = { status: 'loading', uid: null };

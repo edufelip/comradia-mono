@@ -1,5 +1,5 @@
 import { useIsFocused, type ParamListBase } from '@react-navigation/native';
-import { useLocalSearchParams, useRouter , useNavigation } from 'expo-router';
+import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
