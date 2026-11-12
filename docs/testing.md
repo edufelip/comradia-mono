@@ -7,7 +7,7 @@ Five test layers, fastest first. Run the cheapest layer that proves your change,
 | Unit | Pure logic: stores, theme tokens and contrast, translations, locale resolution, backend helpers (`services/backend`) | `node:test` via `tsx` | next to the source: `constants/`, `features/`, `localization/`, `services/` `**/*.test.ts` | `yarn test` | ~1 s |
 | Component | Screens and components render and react to taps; routing redirects | Jest + `jest-expo` + React Native Testing Library + `expo-router/testing-library` | `apps/mobile/tests/component/*.test.tsx` | `yarn test:component` (`:coverage` to enforce thresholds) | ~2 s warm, ~10 s cold |
 | E2E web | Real user journeys in real browsers (Chromium + WebKit, 390×844 and 320×568, dark mode, pt-BR / es-ES, accessibility tree) | Playwright, against `expo start --web` and the Firebase emulators | `apps/mobile/tests/e2e/*.spec.ts` | `yarn test:e2e` (`:ui` to debug) | ~16 s |
-| E2E native | The same journeys on iOS / Android | Maestro | `apps/mobile/.maestro/*.yaml` | `maestro --device <simulator or emulator id> test .maestro` from `apps/mobile`, against a dev build (see "E2E native on iOS" below) | ~4 min |
+| E2E native | The same journeys on iOS / Android | Maestro | `apps/mobile/.maestro/*.yaml` | `maestro --device <simulator or emulator id> test .maestro` from `apps/mobile`, against a dev build (see "E2E native on iOS" and "E2E native on Android" below) | ~4 min iOS, ~6 min Android |
 | Firestore rules | Every allow and deny in `firestore.rules`, plus parity between the rules' option lists and `features/profile/profile-schema.ts` | `node:test` via `tsx` + `@firebase/rules-unit-testing` against the Firestore emulator | `apps/firebase/tests/*.test.ts` | `yarn test` (starts its own emulator; with one already on `:8089`, run `FIRESTORE_EMULATOR_HOST=127.0.0.1:8089 node --import tsx --test tests/*.test.ts`) | ~1 s |
 
 `yarn test:all` in `apps/mobile` runs typecheck, lint, unit, component (with coverage) and E2E web in that order.
@@ -69,6 +69,64 @@ Native gotchas:
   the system "Sign in to your Apple Account" prompt and the request fails, so the app shows its
   generic error — the cancel path can only be checked on a device.
 
+## E2E native on Android
+
+Same flows, same order, one set of YAML files. Build the dev APK once and reuse it. The app has
+no `expo-dev-client`: it is a plain debug build that loads its bundle from Metro.
+
+```bash
+cd apps/mobile
+export ANDROID_HOME=$HOME/Library/Android/sdk
+npx expo prebuild -p android               # once, and after any native config change
+EXPO_PUBLIC_FIREBASE_EMULATOR_HOST=10.0.2.2 \
+  ~/.claude/bin/mobile-lock run -- npx expo run:android --no-bundler
+```
+
+Metro uses 8086 (8085 is the iOS one) and the emulator host `10.0.2.2` (the emulator's name for
+this Mac). The debug build asks for `10.0.2.2:8081` unless told otherwise, so point it at 8086
+once, then relaunch:
+
+```bash
+EXPO_PUBLIC_FIREBASE_EMULATOR_HOST=10.0.2.2 npx expo start --port 8086
+adb reverse tcp:8086 tcp:8086
+adb shell am force-stop com.edufelip.comradia.dev
+adb shell "run-as com.edufelip.comradia.dev sh -c 'mkdir -p shared_prefs; echo \"<map><string name=\\\"debug_http_host\\\">localhost:8086</string></map>\" > shared_prefs/com.edufelip.comradia.dev_preferences.xml'"
+adb shell monkey -p com.edufelip.comradia.dev 1     # or agent-device: open com.edufelip.comradia.dev --relaunch
+```
+
+Then reset the data and run (same reset commands as iOS):
+
+```bash
+adb shell cmd locale set-app-locales com.edufelip.comradia.dev --locales en-US
+GCLOUD_PROJECT=comradia-dev node ../firebase/scripts/seed.mjs --clear
+curl -X DELETE -H 'Authorization: Bearer owner' \
+  http://127.0.0.1:9099/emulator/v1/projects/demo-comradia/accounts
+~/.claude/bin/mobile-lock run -- maestro --device emulator-5554 test .maestro
+```
+
+Check the data landed: `GET /v1/projects/comradia-dev/databases/(default)/documents/profiles`
+(header `Authorization: Bearer owner`) lists the seed plus one new profile per sign-up.
+
+Gotchas:
+
+- **The Crashlytics config plugin is required.** `@react-native-firebase/crashlytics` is linked
+  natively, and without its plugin in `app.config.ts` the APK dies at startup with "The
+  Crashlytics build ID is missing".
+- **The app locale must be English.** The flows assert English copy and the emulator is set to
+  Portuguese (Brazil); the `set-app-locales` line above changes this app only.
+- **Leave the emulator animations on.** With the animation scales at 0 (a common test setting)
+  Reanimated logs a reduced-motion warning, and the LogBox toast it raises covers "I already have
+  an account" at the bottom of Welcome, so the tap lands on the toast. Reset with
+  `adb shell settings put global animator_duration_scale 1` (and `transition_animation_scale`,
+  `window_animation_scale`).
+- **Tab names differ.** iOS reads `Profile, tab, 3 of 3`, Android reads the label `Profile`. The
+  flows match `Profile(, tab, 3 of 3)?`.
+- **Back on S2 keeps the scroll offset on Android**, iOS starts at the top, so `onboarding.yaml`
+  scrolls up to `vibe-bookworm` before asserting it.
+- **Same as iOS:** the flows are not independent (a stopped run can leave a session on
+  onboarding, which `welcome.yaml` finishes), and `scripts/sms-code.js` runs on the Mac, so
+  `localhost:9099` is right.
+
 ## CI
 
 **Off for now (since 2026-11-11): tests run locally only.** Both workflows below are disabled on GitHub, so run the layers above before you push: `cd apps/mobile && yarn test:all && yarn format:check`, plus `cd apps/firebase && yarn test` when the rules or the profile schema change.
@@ -118,6 +176,5 @@ From `docs/architecture.md` "Deferred", all of these wait on the Blaze plan or a
 Known flaky test:
 
 - `sign-in.spec.ts` › Google popup (Chromium projects). After "Sign in" in the auth emulator popup, the result sometimes never reaches the app and the popup stays open, more often when many workers run at once. The test retries twice. Cause not found yet (2026-11-11).
-- **Native E2E** runs on the iOS simulator only (4 flows pass, 2026-11-11); Android is not run
-  yet. The flows do not cover Like → match → chat (S8–S10): the seed has no likes back.
+- **Native E2E** passes 4/4 on the iOS simulator and on the Android emulator (2026-11-12). The flows do not cover Like → match → chat (S8–S10): the seed has no likes back.
 - **Placeholder stats** on the welcome screen (weather, "214 first dates", "12.4k people") are fixed strings until there is a data source.
