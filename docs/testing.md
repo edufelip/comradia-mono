@@ -7,10 +7,67 @@ Five test layers, fastest first. Run the cheapest layer that proves your change,
 | Unit | Pure logic: stores, theme tokens and contrast, translations, locale resolution, backend helpers (`services/backend`) | `node:test` via `tsx` | next to the source: `constants/`, `features/`, `localization/`, `services/` `**/*.test.ts` | `yarn test` | ~1 s |
 | Component | Screens and components render and react to taps; routing redirects | Jest + `jest-expo` + React Native Testing Library + `expo-router/testing-library` | `apps/mobile/tests/component/*.test.tsx` | `yarn test:component` (`:coverage` to enforce thresholds) | ~2 s warm, ~10 s cold |
 | E2E web | Real user journeys in real browsers (Chromium + WebKit, 390×844 and 320×568, dark mode, pt-BR / es-ES, accessibility tree) | Playwright, against `expo start --web` and the Firebase emulators | `apps/mobile/tests/e2e/*.spec.ts` | `yarn test:e2e` (`:ui` to debug) | ~16 s |
-| E2E native | The same journeys on iOS / Android | Maestro | `apps/mobile/.maestro/*.yaml` | `yarn test:e2e:native` (needs a dev build installed on a booted simulator or emulator) | not run yet |
+| E2E native | The same journeys on iOS / Android | Maestro | `apps/mobile/.maestro/*.yaml` | `maestro --device <simulator or emulator id> test .maestro` from `apps/mobile`, against a dev build (see "E2E native on iOS" below) | ~4 min |
 | Firestore rules | Every allow and deny in `firestore.rules`, plus parity between the rules' option lists and `features/profile/profile-schema.ts` | `node:test` via `tsx` + `@firebase/rules-unit-testing` against the Firestore emulator | `apps/firebase/tests/*.test.ts` | `yarn test` (starts its own emulator; with one already on `:8089`, run `FIRESTORE_EMULATOR_HOST=127.0.0.1:8089 node --import tsx --test tests/*.test.ts`) | ~1 s |
 
 `yarn test:all` in `apps/mobile` runs typecheck, lint, unit, component (with coverage) and E2E web in that order.
+
+## E2E native on iOS
+
+Maestro drives a dev build on a booted simulator. Continuous Native Generation means `ios/` is
+generated and git-ignored, so build it once and reuse it:
+
+```bash
+cd apps/mobile
+npx expo prebuild --platform ios           # once, and after any native config change
+npx expo run:ios --device <udid> --no-bundler
+```
+
+Metro must run with the emulator host so the bundle talks to `127.0.0.1:9099` / `:8089`. Reset
+the emulators, then run the flows against the same simulator:
+
+```bash
+EXPO_PUBLIC_FIREBASE_EMULATOR_HOST=127.0.0.1 npx expo start --dev-client --port 8085
+GCLOUD_PROJECT=comradia-dev node ../firebase/scripts/seed.mjs --clear
+curl -X DELETE -H 'Authorization: Bearer owner' \
+  http://127.0.0.1:9099/emulator/v1/projects/demo-comradia/accounts
+maestro --device <udid> test .maestro
+```
+
+`config.yaml` runs the flows in a fixed order (welcome, sign-in, onboarding, discover): they
+share one app session, and the last flow ends signed out, ready for the next run.
+
+On the shared Mac, wrap the build and Maestro in `~/.claude/bin/mobile-lock run -- <command>`
+and keep Metro on 8085: 8081 and 8199 belong to other runs.
+
+Native gotchas:
+
+- **Firebase pods stay static libraries.** `forceStaticLinking` in `app.config.ts` keeps
+  `RNFBApp`/`Auth`/`Crashlytics`/`Firestore` out of the static frameworks, otherwise the
+  compile fails with "include of non-modular header inside framework module" (expo/expo#39607).
+- **Native Firestore data lives under `comradia-dev` in the emulator, not `demo-comradia`.**
+  The native SDK takes the project id from `GoogleService-Info.plist`, so the app reads and
+  writes `projects/comradia-dev` on `:8089` (the web build and the Playwright suite use
+  `demo-comradia`). Seed and inspect that project: `GCLOUD_PROJECT=comradia-dev` for
+  `seed.mjs`, and `/v1/projects/comradia-dev/...` for REST reads. Auth codes are still read
+  from `demo-comradia` (`scripts/sms-code.js`).
+- **`clearState` does not reset the session.** It wipes the Metro URL the dev client saved, and
+  it does not clear the iOS Keychain where Firebase Auth keeps the user. Every flow starts with
+  `subflows/launch.yaml` instead: it restarts the app and signs out from Discover. Onboarding has
+  no sign-out, so `welcome.yaml` finishes onboarding first when a stopped run left one open.
+- **The first screen read after a launch can abort the flow.** While the dev client swaps its
+  loading view for the app, iOS fails the snapshot (`kAXErrorInvalidUIElement`), and Maestro
+  stops the flow even inside `retry` or with `optional`. `subflows/launch.yaml` waits 3 s
+  (`scripts/settle.js`) before its first check.
+- **Some fields have no Done key.** The birthday number pad and the multiline answer can't be
+  closed with `hideKeyboard`; the onboarding screens close the keyboard on drag, so the flows
+  swipe a little instead.
+- **The code field is invisible to automation.** `CodeField` puts the real `TextInput` at
+  `opacity: 0`, which iOS drops from the accessibility tree: `id: verify-code-input` cannot be
+  tapped or asserted. The flows type into the auto-focused field and assert the visible copy.
+- **The simulator needs an Apple Account for Apple sign-in.** Without one, tapping Apple shows
+  the system "Sign in to your Apple Account" prompt and the request fails, so the app shows its
+  generic error — the cancel path can only be checked on a device.
 
 ## CI
 
@@ -61,5 +118,6 @@ From `docs/architecture.md` "Deferred", all of these wait on the Blaze plan or a
 Known flaky test:
 
 - `sign-in.spec.ts` › Google popup (Chromium projects). After "Sign in" in the auth emulator popup, the result sometimes never reaches the app and the popup stays open, more often when many workers run at once. The test retries twice. Cause not found yet (2026-11-11).
-- **Native E2E** flows are written and their syntax is checked, but they have not run on a device.
+- **Native E2E** runs on the iOS simulator only (4 flows pass, 2026-11-11); Android is not run
+  yet. The flows do not cover Like → match → chat (S8–S10): the seed has no likes back.
 - **Placeholder stats** on the welcome screen (weather, "214 first dates", "12.4k people") are fixed strings until there is a data source.

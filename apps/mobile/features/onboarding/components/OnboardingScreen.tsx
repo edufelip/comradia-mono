@@ -38,6 +38,8 @@ export function OnboardingScreen({
   return (
     <DsScreen
       keyboardAware
+      // The birthday number pad has no Done key on iOS; a drag closes it.
+      keyboardDismissMode="on-drag"
       contentContainerStyle={[
         styles.content,
         { paddingBottom: insets.bottom + 20, paddingTop: insets.top + 16 },

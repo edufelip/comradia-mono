@@ -3,12 +3,11 @@ name: Sign in with a Brazilian phone number
 tags:
   - smoke
 env:
-  # National digits (area code + number). Dev builds only receive Firebase test numbers.
+  # National digits (area code + number). The auth emulator accepts any number.
   PHONE: '11987654321'
 ---
 # S1: welcome → S1B registration.
-- launchApp:
-    clearState: true
+- runFlow: subflows/launch.yaml
 - assertVisible:
     id: welcome-cta-start
 - tapOn:
@@ -27,13 +26,12 @@ env:
     id: register-send-code
 
 # S1C: the countdown is running and a wrong code is rejected.
-- assertVisible:
-    id: verify-code-input
+# The code field auto-focuses; its TextInput is `opacity: 0`, which iOS drops from the
+# accessibility tree, so `id: verify-code-input` is not queryable on the simulator.
+- assertVisible: '.*Enter the code.*'
 - assertVisible:
     id: verify-edit
 - assertVisible: '.*Resend in .*s.*'
-- tapOn:
-    id: verify-code-input
 - inputText: '000000'
 - assertVisible:
     id: verify-error
@@ -43,8 +41,5 @@ env:
     file: scripts/sms-code.js
     env:
       PHONE_NUMBER: '+5511987654321'
-- tapOn:
-    id: verify-code-input
 - inputText: ${output.code}
-- assertNotVisible:
-    id: verify-code-input
+- assertNotVisible: '.*Enter the code.*'

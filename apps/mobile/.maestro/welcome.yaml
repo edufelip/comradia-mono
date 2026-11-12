@@ -4,8 +4,16 @@ tags:
   - smoke
 ---
 # Cold start: the tab layout redirects to /welcome while the session flag is in-memory.
-- launchApp:
-    clearState: true
+- runFlow: subflows/launch.yaml
+# Onboarding has no sign-out: when a stopped run left the session there, finish it,
+# then restart signed out.
+- runFlow:
+    when:
+      visible:
+        id: onboarding-progress
+    commands:
+      - runFlow: onboarding.yaml
+      - runFlow: subflows/launch.yaml
 - assertVisible: '.*Meet someone who gives a damn.*'
 - assertVisible: '.*214 first dates this week.*'
 - assertVisible: '.*nearby are already here.*'

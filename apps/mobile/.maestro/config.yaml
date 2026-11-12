@@ -10,3 +10,13 @@ flows:
   - sign-in.yaml
   - onboarding.yaml
   - discover.yaml
+# Flows share one app session (see the sign-out note in each flow), so run them in order:
+# sign-in.yaml leaves a session on S2 that onboarding.yaml picks up, and discover.yaml ends
+# signed out, ready for the next run.
+executionOrder:
+  continueOnFailure: false
+  flowsOrder:
+    - Welcome screen
+    - Sign in with a Brazilian phone number
+    - Onboarding S2–S4
+    - Discover deck

@@ -5,21 +5,31 @@ tags:
 ---
 # Journey 2 — a new account fills S2, S3 and S4 and lands on the deck.
 #
-# Sign-in uses a Firebase test phone number: the dev project only accepts those, and
-# 123456 is the code they always get. Replace the number in `register-phone-input` if
-# the test number configured for the project changes.
-- launchApp:
-    clearState: true
-- tapOn:
-    id: welcome-cta-start
-- tapOn:
-    id: register-phone-input
-- inputText: '11987654321'
-- tapOn:
-    id: register-send-code
-- tapOn:
-    id: verify-code-input
-- inputText: '123456' # the sixth digit submits the code
+# The dev build talks to the emulators (EXPO_PUBLIC_FIREBASE_EMULATOR_HOST), which accept
+# any number and send a random code that `scripts/sms-code.js` reads back.
+- runFlow: subflows/launch.yaml
+# Sign up, unless an earlier flow (sign-in.yaml) already left a session on onboarding.
+- runFlow:
+    when:
+      visible:
+        id: welcome-cta-start
+    commands:
+      - tapOn:
+          id: welcome-cta-start
+      - tapOn:
+          id: register-phone-input
+      - inputText: '11987654321'
+      - tapOn:
+          id: register-send-code
+      - assertVisible: '.*Enter the code.*'
+      # The emulators send a random code; read it back from the auth emulator.
+      - runScript:
+          file: scripts/sms-code.js
+          env:
+            PHONE_NUMBER: '+5511987654321'
+      # The code field auto-focuses; `opacity: 0` keeps it out of the iOS accessibility
+      # tree, so the flow types into the focused field. The sixth digit submits the code.
+      - inputText: ${output.code}
 
 # S2 — step 1 of 3, no back button on the first signed-in screen.
 - assertVisible:
@@ -31,17 +41,30 @@ tags:
 - tapOn:
     id: onboarding-birthday
 - inputText: '14/03/1994'
-- hideKeyboard
+# The number pad has no Done key; a short drag closes it (keyboardDismissMode on-drag).
+- swipe:
+    start: 50%, 55%
+    end: 50%, 45%
 - tapOn:
     id: vibe-bookworm
+- scrollUntilVisible:
+    element:
+      id: looking-for-everyone
 - tapOn:
     id: looking-for-everyone
+- scrollUntilVisible:
+    element:
+      id: union-toggle
 - tapOn:
     id: union-toggle
-- assertVisible:
-    id: union-apeoesp
+- scrollUntilVisible:
+    element:
+      id: union-apeoesp
 - tapOn:
     id: union-apeoesp
+- scrollUntilVisible:
+    element:
+      id: onboarding-continue
 - tapOn:
     id: onboarding-continue
 
@@ -51,6 +74,9 @@ tags:
     id: onboarding-back
 - assertVisible:
     id: vibe-bookworm
+- scrollUntilVisible:
+    element:
+      id: onboarding-continue
 - tapOn:
     id: onboarding-continue
 - tapOn:
@@ -66,19 +92,38 @@ tags:
 - tapOn:
     id: weight-decrease
 - assertVisible: '60%'
+- scrollUntilVisible:
+    element:
+      id: onboarding-continue
 - tapOn:
     id: onboarding-continue
 
 # S4 — step 3 of 3. Finishing writes both documents and routing opens Discover.
 - assertVisible: 'Step 3 of 3'
+# The prompt chips scroll sideways; swipe the row until "green flag" shows.
+# shortcut: the row's height (31%) is measured on an iPhone 16-size screen; use a
+# testID on the row's ScrollView if the layout changes.
+- repeat:
+    times: 4
+    while:
+      notVisible:
+        id: prompt-green_flag
+    commands:
+      - swipe:
+          start: 80%, 31%
+          end: 20%, 31%
 - tapOn:
     id: prompt-green_flag
 - tapOn:
     id: starter-answer
 - inputText: You know your neighbours by name.
-- hideKeyboard
-- assertVisible:
-    id: starter-finish
+# The multiline answer has no Done key either; a short drag closes it (keyboardDismissMode on-drag).
+- swipe:
+    start: 50%, 55%
+    end: 50%, 45%
+- scrollUntilVisible:
+    element:
+      id: starter-finish
 - tapOn:
     id: starter-finish
 - assertVisible:
