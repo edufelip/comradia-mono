@@ -133,6 +133,7 @@ Every job runs on our own self-hosted runner, `comradia-ci-ubuntu-1` on the home
 
 - Service: `systemctl --user status actions.runner.edufelip-comradia-mono.comradia-ci-ubuntu-1` on the PC; files in `~/actions-runners/comradia-ci-ubuntu-1`. Its `.env` sets `PLAYWRIGHT_BROWSERS_PATH=~/.cache/ms-playwright-comradia` and `TMPDIR=~/ci-tmp/comradia`.
 - The runner has no sudo, so never use `playwright install --with-deps` or `apt-get` in a job.
+- Playwright WebKit is built for Ubuntu 24.04 and needs ICU 74 and `libxml2.so.2`, which the PC (Ubuntu 26.04) lacks. Private copies live in `~/ci-libs/playwright-webkit-noble` (the runner `.env` adds them to `LD_LIBRARY_PATH`), and `~/ci-libs/playwright-webkit-noble/link.sh` links them into WebKit's own `sys/lib`. After a Playwright upgrade, WebKit fails with "libicudata.so.74: cannot open shared object file": run `link.sh` once on the PC.
 - No `setup-node` yarn cache: the runner shares one ~4 GB yarn cache with other repos, and uploading it to GitHub takes longer than the job. Yarn reuses that local cache by itself.
 - **iOS jobs are the exception.** They need a Mac, so they run on GitHub-hosted `macos-15`, and every one is gated by the repo variable `IOS_CI_ENABLED` (starts `false`): add `if: vars.IOS_CI_ENABLED == 'true'` to each iOS job. Turn them on with `gh variable set IOS_CI_ENABLED --body true -R edufelip/comradia-mono`. Hosted macOS minutes cost money on a private repo. No iOS job exists yet.
 
