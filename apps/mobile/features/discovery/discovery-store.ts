@@ -3,11 +3,14 @@ import type { DiscoveryProfile } from '@/features/profile/profile-schema';
 import type { Backend, LikeResult } from '@/services/backend/types';
 
 /**
- * The three backend calls Discover needs. Screens pass the real backend in, which keeps this
+ * The backend calls Discover needs. Screens pass the real backend in, which keeps this
  * module free of Firebase at runtime (the `tsx` unit runner cannot load React Native code
  * and the backend module pulls in `react-native`).
  */
-export type DiscoveryBackend = Pick<Backend, 'listDiscovery' | 'recordSwipe' | 'like'>;
+export type DiscoveryBackend = Pick<
+  Backend,
+  'listDiscovery' | 'recordSwipe' | 'like' | 'listBlockedUids'
+>;
 
 export type DiscoveryStatus = 'idle' | 'loading' | 'ready' | 'error';
 
@@ -15,8 +18,13 @@ type DiscoveryState = {
   status: DiscoveryStatus;
   /** The deck, top card first. */
   candidates: DiscoveryProfile[];
-  /** Replaces the deck with the people the backend says are still available. */
+  /**
+   * Replaces the deck with the people the backend says are still available, minus everyone
+   * in `listBlockedUids` (people I blocked and people who blocked me).
+   */
   load: (backend: DiscoveryBackend, uid: string) => Promise<void>;
+  /** Drops one person from the deck, e.g. right after I blocked or reported them. */
+  removeCandidate: (id: string) => void;
   /**
    * Saves the like and removes the card at once. Resolves with the backend's answer (a
    * match when the other person liked first), or null when the card is unknown or the
@@ -41,13 +49,23 @@ export const useDiscoveryStore = create<DiscoveryState>((set, get) => ({
     const ticket = ++latestLoad;
     set({ status: 'loading' });
     try {
-      const candidates = await backend.listDiscovery(uid);
+      // Both reads decide the deck, so a failure in either fails closed: showing someone
+      // I blocked is worse than asking me to retry.
+      const [people, blocked] = await Promise.all([
+        backend.listDiscovery(uid),
+        backend.listBlockedUids(uid),
+      ]);
       if (ticket !== latestLoad) return;
-      set({ status: 'ready', candidates });
+      const hidden = new Set(blocked);
+      set({ status: 'ready', candidates: people.filter((person) => !hidden.has(person.id)) });
     } catch {
       if (ticket !== latestLoad) return;
       set({ status: 'error' });
     }
+  },
+
+  removeCandidate: (id) => {
+    set((state) => ({ candidates: state.candidates.filter((person) => person.id !== id) }));
   },
 
   like: async (backend, uid, id) => {

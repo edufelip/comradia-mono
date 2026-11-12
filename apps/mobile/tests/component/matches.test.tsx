@@ -11,14 +11,25 @@ import { TEST_PROFILE, TEST_USER, fakeBackend } from './mocks/backend';
 
 const mockPush = jest.fn();
 const mockNavigate = jest.fn();
-jest.mock('expo-router', () => ({
-  useRouter: () => ({
-    back: jest.fn(),
-    navigate: mockNavigate,
-    push: mockPush,
-    replace: jest.fn(),
-  }),
-}));
+/** Every focus callback the screen registered, so a test can simulate regaining focus. */
+let mockFocusEffects: (() => void)[] = [];
+jest.mock('expo-router', () => {
+  const { useEffect } = jest.requireActual<typeof import('react')>('react');
+  return {
+    // Stand-in for `useFocusEffect`: runs on mount and whenever the callback changes,
+    // which is what the real hook does when the screen regains focus.
+    useFocusEffect: (callback: () => void) => {
+      mockFocusEffects.push(callback);
+      useEffect(callback, [callback]);
+    },
+    useRouter: () => ({
+      back: jest.fn(),
+      navigate: mockNavigate,
+      push: mockPush,
+      replace: jest.fn(),
+    }),
+  };
+});
 jest.mock('@/localization/get-device-locale', () => ({ getDeviceLocale: () => 'en-US' }));
 
 const MAYA: DiscoveryProfile = {
@@ -54,6 +65,10 @@ function signIn() {
 function seedProfiles(...people: DiscoveryProfile[]) {
   for (const person of people) fakeBackend.state.profiles.set(person.id, person);
 }
+
+beforeEach(() => {
+  mockFocusEffects = [];
+});
 
 describe('MatchesScreen', () => {
   it('explains how a first match happens when there is none', async () => {
@@ -188,5 +203,59 @@ describe('MatchesScreen', () => {
     await view.unmount();
 
     await act(() => spill?.([]));
+  });
+
+  it('hides the matches of people I blocked or who blocked me', async () => {
+    signIn();
+    seedProfiles(MAYA, VAL);
+    fakeBackend.likeFrom(MAYA.id, TEST_USER.uid);
+    fakeBackend.likeFrom(TEST_USER.uid, MAYA.id);
+    fakeBackend.likeFrom(VAL.id, TEST_USER.uid);
+    fakeBackend.likeFrom(TEST_USER.uid, VAL.id);
+    fakeBackend.state.blocked.add(MAYA.id);
+
+    await render(<MatchesScreen />);
+
+    expect(
+      await screen.findByTestId(`match-row-${matchIdFor(TEST_USER.uid, VAL.id)}`),
+    ).toBeOnTheScreen();
+    expect(
+      screen.queryByTestId(`match-row-${matchIdFor(TEST_USER.uid, MAYA.id)}`),
+    ).not.toBeOnTheScreen();
+    expect(fakeBackend.callsTo('listBlockedUids')).toEqual([
+      { method: 'listBlockedUids', args: [TEST_USER.uid] },
+    ]);
+  });
+
+  it('shows the empty state when my only match is blocked', async () => {
+    signIn();
+    seedProfiles(MAYA);
+    fakeBackend.likeFrom(MAYA.id, TEST_USER.uid);
+    fakeBackend.likeFrom(TEST_USER.uid, MAYA.id);
+    fakeBackend.state.blocked.add(MAYA.id);
+
+    await render(<MatchesScreen />);
+
+    expect(await screen.findByTestId('matches-empty')).toBeOnTheScreen();
+  });
+
+  it('reads the blocked list again when the tab regains focus', async () => {
+    signIn();
+    seedProfiles(MAYA);
+    fakeBackend.likeFrom(MAYA.id, TEST_USER.uid);
+    fakeBackend.likeFrom(TEST_USER.uid, MAYA.id);
+    const maya = matchIdFor(TEST_USER.uid, MAYA.id);
+
+    await render(<MatchesScreen />);
+    expect(await screen.findByTestId(`match-row-${maya}`)).toBeOnTheScreen();
+
+    // Blocked while the screen was in the background (e.g. from the safety sheet).
+    fakeBackend.state.blocked.add(MAYA.id);
+    await act(async () => {
+      mockFocusEffects.forEach((effect) => effect());
+    });
+
+    expect(screen.queryByTestId(`match-row-${maya}`)).not.toBeOnTheScreen();
+    expect(fakeBackend.callsTo('listBlockedUids')).toHaveLength(2);
   });
 });

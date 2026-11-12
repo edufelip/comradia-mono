@@ -217,4 +217,32 @@ describe('DiscoverScreen', () => {
     expect(await screen.findByText('Maya, 28')).toBeOnTheScreen();
     expect(screen.queryByText('Ana, 29')).not.toBeOnTheScreen();
   });
+
+  it('leaves out everyone I blocked or who blocked me', async () => {
+    signIn();
+    seedDeck(MAYA, LUCAS);
+    fakeBackend.state.blocked.add(MAYA.id);
+
+    await render(<DiscoverScreen />);
+
+    expect(await screen.findByText('Lucas, 31')).toBeOnTheScreen();
+    expect(screen.queryByText('Maya, 28')).not.toBeOnTheScreen();
+    expect(fakeBackend.callsTo('listBlockedUids')).toEqual([
+      { method: 'listBlockedUids', args: [TEST_USER.uid] },
+    ]);
+  });
+
+  it('opens the safety sheet to report the person on the card', async () => {
+    signIn();
+    seedDeck(MAYA);
+
+    await render(<DiscoverScreen />);
+
+    const report = await screen.findByTestId('discover-report');
+    expect(report).toHaveAccessibleName('Report Maya');
+
+    await fireEvent.press(report);
+
+    expect(mockPush).toHaveBeenCalledWith('/safety/p-maya?context=profile');
+  });
 });

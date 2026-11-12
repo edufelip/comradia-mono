@@ -8,13 +8,15 @@ import { DsRadius, DsSpace, DsTypography, getDsTheme } from '@/constants/design-
 import { useSessionStore } from '@/features/auth/session-store';
 import { sharedValues } from '@/features/matches/shared-values';
 import { useMatches } from '@/features/matches/use-matches';
+import { useBlockedUids } from '@/features/safety/use-blocked-uids';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTranslation } from '@/localization';
 import { backend } from '@/services/backend';
 
 /**
  * S9. Every mutual like, newest first, straight from Firestore. Opening the tab first
- * reconciles matches both people created at the same moment (decision #8).
+ * reconciles matches both people created at the same moment (decision #8). Matches of
+ * people I blocked (or who blocked me) stay hidden.
  */
 export default function MatchesScreen() {
   const colorScheme = useColorScheme();
@@ -25,8 +27,10 @@ export default function MatchesScreen() {
   const uid = useSessionStore((state) => state.user?.uid);
   const myValues = useSessionStore((state) => state.profile?.values);
   const { status, matches, retry } = useMatches(backend, uid);
+  const { blockedUids } = useBlockedUids(backend, uid);
 
   const isLoading = status === 'idle' || status === 'loading';
+  const visibleMatches = matches.filter((match) => !blockedUids.includes(match.other.id));
 
   return (
     <DsScreen contentContainerStyle={styles.container} scheme={scheme} testID="matches-screen">
@@ -65,7 +69,7 @@ export default function MatchesScreen() {
             variant="primary"
           />
         </DsCard>
-      ) : matches.length === 0 ? (
+      ) : visibleMatches.length === 0 ? (
         <DsCard scheme={scheme} style={styles.card} testID="matches-empty">
           <Text style={[DsTypography.cardTitle, { color: ds.color.textPrimary }]}>
             {t('matches.empty.title')}
@@ -82,7 +86,7 @@ export default function MatchesScreen() {
           />
         </DsCard>
       ) : (
-        matches.map((match) => {
+        visibleMatches.map((match) => {
           const shared = sharedValues(myValues, match.other.values)[0];
           return (
             <Pressable

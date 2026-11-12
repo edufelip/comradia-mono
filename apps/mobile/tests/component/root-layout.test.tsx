@@ -205,4 +205,25 @@ describe('RootLayout session routing', () => {
 
     await expectPathname(router, '/welcome');
   });
+
+  it('opens the safety sheet for a ready user', async () => {
+    fakeBackend.state.profiles.set('p-maya', MAYA);
+    restoreUser(TEST_PROFILE);
+
+    const router = renderRoot('/safety/p-maya?context=profile');
+    await router;
+
+    expect(await screen.findByTestId('safety-screen')).toBeOnTheScreen();
+    expect(await screen.findByTestId('safety-name')).toHaveTextContent('Maya');
+    expect(screen.getByTestId('report-reason-harassment')).toBeOnTheScreen();
+  });
+
+  it('sends a signed-out visitor deep-linking to the safety sheet back to /welcome', async () => {
+    useSessionStore.setState({ status: 'signedOut', user: null, profile: null });
+
+    const router = renderRoot('/safety/p-maya?context=profile');
+    await router;
+
+    await expectPathname(router, '/welcome');
+  });
 });

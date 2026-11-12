@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { DsCard } from '@/components/ds/primitives/DsCard';
 import { DsPillButton } from '@/components/ds/primitives/DsPillButton';
@@ -165,6 +165,18 @@ export default function DiscoverScreen() {
               />
             </View>
           </View>
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('discover.report', { name: activeCandidate.displayName })}
+            onPress={() => router.push(`/safety/${activeCandidate.id}?context=profile`)}
+            style={({ pressed }) => [styles.reportLink, { opacity: pressed ? 0.7 : 1 }]}
+            testID="discover-report"
+          >
+            <Text style={[DsTypography.caption, { color: ds.color.textTertiary }]}>
+              {t('discover.report', { name: activeCandidate.displayName })}
+            </Text>
+          </Pressable>
         </DsCard>
       ) : (
         <DsCard scheme={scheme} style={styles.card}>
@@ -237,5 +249,9 @@ const styles = StyleSheet.create({
   },
   actionItem: {
     flex: 1,
+  },
+  reportLink: {
+    alignSelf: 'center',
+    paddingVertical: DsSpace.xxs,
   },
 });
