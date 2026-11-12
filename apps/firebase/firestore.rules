@@ -42,11 +42,11 @@ service cloud.firestore {
 
     // Public card other signed-in people see in Discover. Written once, complete,
     // at the end of onboarding; nothing private (birth date, phone, email) lives here.
-    function validProfile(data) {
+    function validProfile(uid, data) {
       return data.keys().hasOnly(['displayName', 'age', 'vibe', 'lookingFor', 'unionMember',
-          'union', 'values', 'promptId', 'promptAnswer', 'createdAt', 'updatedAt'])
+          'union', 'values', 'promptId', 'promptAnswer', 'photoPath', 'createdAt', 'updatedAt'])
         && data.keys().hasAll(['displayName', 'age', 'vibe', 'lookingFor', 'unionMember',
-          'union', 'values', 'promptId', 'promptAnswer', 'createdAt', 'updatedAt'])
+          'union', 'values', 'promptId', 'promptAnswer', 'photoPath', 'createdAt', 'updatedAt'])
         && isString(data.displayName, 1, 40)
         && data.age is int && data.age >= 18 && data.age <= 99
         && data.vibe in vibes()
@@ -60,6 +60,10 @@ service cloud.firestore {
         && data.values.toSet().hasOnly(valueIds())
         && data.promptId in promptIds()
         && isString(data.promptAnswer, 1, 280)
+        // Points at one of the owner's own portraits, or null.
+        && (data.photoPath == null
+          || (data.photoPath is string
+            && data.photoPath.matches('^photos/' + uid + '/[A-Za-z0-9_-]{1,64}[.]jpg$')))
         && data.updatedAt == request.time
         && data.createdAt is timestamp;
     }
@@ -77,9 +81,9 @@ service cloud.firestore {
 
     match /profiles/{uid} {
       allow read: if signedIn();
-      allow create: if isOwner(uid) && validProfile(request.resource.data)
+      allow create: if isOwner(uid) && validProfile(uid, request.resource.data)
         && request.resource.data.createdAt == request.time;
-      allow update: if isOwner(uid) && validProfile(request.resource.data)
+      allow update: if isOwner(uid) && validProfile(uid, request.resource.data)
         && request.resource.data.createdAt == resource.data.createdAt;
       allow delete: if isOwner(uid);
     }
