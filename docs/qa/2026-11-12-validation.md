@@ -17,3 +17,12 @@
 - Functions/rules deployment and FCM/APNs provider receipt are not claimed. New token rules and Functions must be rolled out before the new client is shipped.
 
 The native runtime was frozen at app source `0f540ca`, with signed executable SHA-256 `fb8b47a66f8b4375d67e41bc2583d4dc9ea61cf527a4daa52e2fe6daf5be8191`. Subsequent changes are the scoped browser readiness test and QA documentation. The match clip, still image and reduced-motion recording are also saved in the task workspace's `artifacts/comradia-motion-2026-11-12/`; the shareable match clip trims preceding idle time and converts to H.264, while the original recording was used for timing review.
+
+
+## Browser CI follow-up at `1c43f6e`
+
+The browser job failed with 135 direct passes, three retry passes, two terminal failures and seven skips. Both terminal failures were the Discover persistence case. The complete artifact's SHA-256 matches the API digest `c75523c34b5896ea6fb08a76723cec7b143785993cafe7e937e6effb82cc5003`; archive integrity passed. In the Chromium retry trace, the final Pass click completes, `queryCount` returns one card, then a separate `getAttribute` waits for that card after it disappears. The final failure snapshot already shows the correct empty-deck state. The helper's count/read race can therefore block the polling callback; an immediately pending network response was not proof of a stalled write.
+
+`currentPerson` now reads the first card ID or absence in one `evaluateAll` DOM task, matching the existing safety helper. Persistence and deck assertions remain unchanged, as do CI workers, retries and timeouts. Typecheck and formatting pass; scoped ESLint exits with zero errors and one import-order warning.
+
+A task-only harness ran on separate emulator ports 19099/18089/19199 and web 8209, with 30 extra synthetic profiles. Both the unchanged baseline and the corrected helper passed nine executions (three repeats per browser configuration), with zero retries. The local baseline did not reproduce the intermittent race; the captured CI method sequence is the defect evidence. Setup attempts that failed before reaching Discover are preserved separately: the shared emulator's Auth project differed, Firebase CLI required rules inside its config directory, and a leftover task-owned Java process initially held the isolated port. These are not product-test failures. Task-owned services were stopped after the completed runs; prior native services were preserved. Full CI on the new delivery head remains pending.
