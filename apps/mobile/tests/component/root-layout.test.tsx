@@ -339,4 +339,55 @@ describe('RootLayout session routing', () => {
     await expectPathname(router, '/welcome');
     expect(screen.queryByTestId('notifications-foreground')).toBeNull();
   });
+
+  it('dismisses a foreground notice and validates access again when opening the next one', async () => {
+    const matchId = await seedMatch();
+    restoreUser(TEST_PROFILE);
+    const router = renderRoot();
+    await router;
+    await expectPathname(router, '/discover');
+    await waitFor(() => expect(notificationApi.subscribeToPushEvents).toHaveBeenCalled());
+    const emitNotice = () =>
+      notificationApi.emitPushEvent({
+        kind: 'foreground',
+        data: { type: 'message', matchId, recipientUid: TEST_USER.uid },
+      });
+
+    await act(async () => emitNotice());
+    await fireEvent.press(await screen.findByTestId('notifications-foreground-dismiss'));
+    expect(screen.queryByTestId('notifications-foreground')).toBeNull();
+    expect(router.getPathname()).toBe('/discover');
+
+    await act(async () => emitNotice());
+    await fireEvent.press(await screen.findByTestId('notifications-foreground-view'));
+    await expectPathname(router, `/chat/${matchId}`);
+    expect(screen.queryByTestId('notifications-foreground')).toBeNull();
+    expect(fakeBackend.state.calls).toContainEqual({
+      method: 'listBlockedUids',
+      args: [TEST_USER.uid],
+    });
+  });
+
+  it('discards a notification when match verification fails', async () => {
+    const matchId = await seedMatch();
+    restoreUser(TEST_PROFILE);
+    const router = renderRoot();
+    await router;
+    await expectPathname(router, '/discover');
+    await waitFor(() => expect(notificationApi.subscribeToPushEvents).toHaveBeenCalled());
+    fakeBackend.state.failNext.set('getMatch', 'network');
+
+    await act(async () => {
+      notificationApi.emitPushEvent({
+        kind: 'tap',
+        data: { type: 'message', matchId, recipientUid: TEST_USER.uid },
+      });
+    });
+
+    expect(fakeBackend.state.calls).toContainEqual({
+      method: 'getMatch',
+      args: [TEST_USER.uid, matchId],
+    });
+    expect(router.getPathname()).toBe('/discover');
+  });
 });

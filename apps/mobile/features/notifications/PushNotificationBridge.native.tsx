@@ -1,13 +1,8 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
 import { useSessionStore } from '@/features/auth/session-store';
-import { backend } from '@/services/backend';
-
-import { ForegroundNotification } from './ForegroundNotification';
-import { createPushTapRouter } from './push-tap';
 import {
   initializePushNotifications,
   onNotificationSessionReady,
@@ -16,14 +11,30 @@ import {
   startPushTokenRefreshListener,
   subscribeToPushEvents,
 } from '@/features/notifications/notifications';
+import { backend } from '@/services/backend';
+import { ForegroundNotification } from './ForegroundNotification';
+import { createPushTapRouter } from './push-tap';
 
-type ForegroundNotice = { type: 'match' | 'message'; matchId: string; recipientUid: string };
+type ForegroundNotice = {
+  id: number;
+  type: 'match' | 'message';
+  matchId: string;
+  recipientUid: string;
+};
 
 export function PushNotificationBridge() {
   const router = useRouter();
   const status = useSessionStore((state) => state.status);
   const uid = useSessionStore((state) => state.user?.uid);
   const [notice, setNotice] = useState<ForegroundNotice | null>(null);
+  const [closingId, setClosingId] = useState<number | null>(null);
+  const nextNoticeId = useRef(0);
+  const closingNoticeId = useRef<number | null>(null);
+  const finishExit = useCallback((id: number) => {
+    setNotice((current) => (current?.id === id ? null : current));
+    setClosingId((current) => (current === id ? null : current));
+    if (closingNoticeId.current === id) closingNoticeId.current = null;
+  }, []);
 
   const tapRouter = useMemo(
     () =>
@@ -52,6 +63,8 @@ export function PushNotificationBridge() {
       void pauseNotificationSession().catch(() => undefined);
     }
     setNotice(null);
+    setClosingId(null);
+    closingNoticeId.current = null;
     void tapRouter.onSessionReady();
   }, [status, uid, tapRouter]);
 
@@ -92,7 +105,9 @@ export function PushNotificationBridge() {
             (type === 'match' || type === 'message') &&
             typeof matchId === 'string'
           ) {
-            setNotice({ type, matchId, recipientUid });
+            closingNoticeId.current = null;
+            setClosingId(null);
+            setNotice({ id: ++nextNoticeId.current, type, matchId, recipientUid });
           }
         });
       })
@@ -111,12 +126,21 @@ export function PushNotificationBridge() {
     <SafeAreaView pointerEvents="box-none" style={styles.overlay}>
       <View style={styles.banner}>
         <ForegroundNotification
+          key={notice.id}
           type={notice.type}
+          noticeId={notice.id}
+          closing={closingId === notice.id}
+          onExitComplete={finishExit}
           onView={() => {
-            setNotice(null);
+            if (closingNoticeId.current === notice.id) return;
+            closingNoticeId.current = notice.id;
+            setClosingId(notice.id);
             void tapRouter.handle(notice);
           }}
-          onDismiss={() => setNotice(null)}
+          onDismiss={() => {
+            closingNoticeId.current = notice.id;
+            setClosingId(notice.id);
+          }}
         />
       </View>
     </SafeAreaView>

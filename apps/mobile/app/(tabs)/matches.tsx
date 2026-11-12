@@ -1,7 +1,8 @@
 import { useIsFocused } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useLayoutEffect, useRef, useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+import { DsMotionPressable } from '@/components/ds/motion/DsMotionPressable';
 import { DsMotionView } from '@/components/ds/motion/DsMotionView';
 import { DsCard } from '@/components/ds/primitives/DsCard';
 import { DsPillButton } from '@/components/ds/primitives/DsPillButton';
@@ -44,7 +45,7 @@ export default function MatchesScreen() {
   const isLoading = status === 'idle' || status === 'loading';
   const visibleMatches = matches.filter((match) => !blockedUids.includes(match.other.id));
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const key = uid ?? '';
     if (matchSnapshot.current.key !== key) {
       matchSnapshot.current = { key, initialized: false, ids: new Set() };
@@ -178,11 +179,10 @@ function MatchRow({ animate, match, onPress, scheme, shared }: MatchRowProps) {
   const { t } = useTranslation();
 
   const row = (
-    <Pressable
+    <DsMotionPressable
       accessibilityLabel={t('matches.open_chat', { name: match.other.displayName })}
       accessibilityRole="button"
       onPress={onPress}
-      style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
       testID={`match-row-${match.id}`}
     >
       <DsCard scheme={scheme} style={styles.card}>
@@ -212,7 +212,7 @@ function MatchRow({ animate, match, onPress, scheme, shared }: MatchRowProps) {
           </View>
         ) : null}
       </DsCard>
-    </Pressable>
+    </DsMotionPressable>
   );
 
   return animate ? (

@@ -1,6 +1,6 @@
 import { useIsFocused } from '@react-navigation/native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DsMotionView } from '@/components/ds/motion/DsMotionView';
@@ -58,7 +58,7 @@ export default function ChatScreen() {
   // composer goes away.
   const closed = match ? blockedUids.includes(match.other.id) : false;
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!isFocused || status !== 'ready') {
       setAnimatedMessageIds((current) => (current.size === 0 ? current : new Set()));
     }

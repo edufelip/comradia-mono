@@ -20,6 +20,8 @@ type DsMotionViewProps = {
   /** Optional per-item offset for a short, intentional list stagger. */
   delay?: number;
   variant?: DsMotionVariant;
+  /** Hidden screens update at their final pose without replaying on focus. */
+  active?: boolean;
 };
 
 const easeOut = Easing.bezier(...DS_MOTION.easing.easeOut);
@@ -34,9 +36,10 @@ export function DsMotionView({
   testID,
   delay = 0,
   variant = 'reveal',
+  active = true,
 }: DsMotionViewProps) {
   const reduceMotion = useReducedMotion();
-  const progress = useSharedValue(reduceMotion ? 1 : 0);
+  const progress = useSharedValue(reduceMotion || !active ? 1 : 0);
 
   const motionStyle = useAnimatedStyle(() => {
     const value = progress.value;
@@ -62,11 +65,13 @@ export function DsMotionView({
   });
 
   useEffect(() => {
-    if (reduceMotion) {
+    if (reduceMotion || !active) {
       cancelAnimation(progress);
       progress.value = 1;
       return () => cancelAnimation(progress);
     }
+
+    if (progress.value === 1) return () => cancelAnimation(progress);
 
     const entrance = withTiming(1, {
       duration: DS_MOTION.duration.standard,
@@ -75,7 +80,7 @@ export function DsMotionView({
     progress.value = delay > 0 ? withDelay(Math.max(0, delay), entrance) : entrance;
 
     return () => cancelAnimation(progress);
-  }, [delay, progress, reduceMotion]);
+  }, [active, delay, progress, reduceMotion]);
 
   return (
     <Animated.View style={[style, motionStyle]} testID={testID}>

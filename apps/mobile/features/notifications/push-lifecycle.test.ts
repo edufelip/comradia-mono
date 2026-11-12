@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-
 import { createPushLifecycle, type PushLifecycleDependencies } from './push-lifecycle';
 
 function createHarness(overrides: Partial<PushLifecycleDependencies> = {}) {

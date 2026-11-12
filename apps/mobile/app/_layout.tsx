@@ -7,15 +7,14 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
-
 import { getDsTheme } from '@/constants/design-system';
 import { DS_MOTION } from '@/constants/motion';
 import { SessionErrorView } from '@/features/auth/session-error-view';
 import { useSessionStore } from '@/features/auth/session-store';
 import { useSessionSync } from '@/features/auth/use-session-sync';
+import { PushNotificationBridge } from '@/features/notifications/PushNotificationBridge';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { LocaleProvider } from '@/localization/locale-context';
-import { PushNotificationBridge } from '@/features/notifications/PushNotificationBridge';
 
 export default function RootLayout() {
   return (

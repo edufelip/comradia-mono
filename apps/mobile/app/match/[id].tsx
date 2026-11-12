@@ -1,9 +1,7 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useIsFocused, type ParamListBase } from '@react-navigation/native';
+import { useLocalSearchParams, useRouter , useNavigation } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
-import { useIsFocused, type ParamListBase } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useNavigation } from 'expo-router';
 import { useReducedMotion } from 'react-native-reanimated';
 import { DsCard } from '@/components/ds/primitives/DsCard';
 import { DsPillButton } from '@/components/ds/primitives/DsPillButton';
@@ -17,6 +15,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTranslation } from '@/localization';
 import { backend } from '@/services/backend';
 import type { Match } from '@/services/backend/types';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 type MatchStatus = 'loading' | 'ready' | 'not_found' | 'error';
 

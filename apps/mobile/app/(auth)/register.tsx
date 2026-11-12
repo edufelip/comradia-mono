@@ -4,7 +4,7 @@ import {
   AppleAuthenticationButtonType,
 } from 'expo-apple-authentication';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DsMotionPressable } from '@/components/ds/motion/DsMotionPressable';
@@ -62,7 +62,7 @@ export default function RegisterScreen() {
     };
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (previousMode.current === isLogin) return;
     previousMode.current = isLogin;
     setModeChanged(true);

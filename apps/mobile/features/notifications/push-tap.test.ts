@@ -1,10 +1,9 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-
 import { matchIdFor } from '@/services/backend/shared';
+import { createPushTapRouter, type PushTapRouterDependencies } from './push-tap';
 import type { Match } from '@/services/backend/types';
 
-import { createPushTapRouter, type PushTapRouterDependencies } from './push-tap';
 
 function createHarness(options: { blocked?: string[]; returnedMatch?: Match | null } = {}) {
   const calls: string[] = [];

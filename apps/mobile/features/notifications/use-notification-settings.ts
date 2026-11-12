@@ -1,18 +1,17 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AppState } from 'react-native';
-
-import type { NotificationSettingsStatus } from './NotificationSettings';
 import {
   disableNotifications,
   enableNotifications,
   getNotificationSettings,
   openNotificationSettings,
 } from './notifications';
+import type { NotificationSettingsStatus } from './NotificationSettings';
 
 export function useNotificationSettings(uid: string | undefined) {
   const [status, setStatus] = useState<NotificationSettingsStatus>('loading');
   const [busy, setBusy] = useState(false);
-  const [errorAction, setErrorAction] = useState<'enable' | 'disable'>('enable');
+  const [errorAction, setErrorAction] = useState<'enable' | 'disable' | 'settings'>('enable');
 
   const refresh = useCallback(async () => {
     if (!uid) {
@@ -65,6 +64,7 @@ export function useNotificationSettings(uid: string | undefined) {
   }, [busy, refresh, uid]);
 
   const openSettings = useCallback(async () => {
+    setErrorAction('settings');
     try {
       await openNotificationSettings();
     } catch {

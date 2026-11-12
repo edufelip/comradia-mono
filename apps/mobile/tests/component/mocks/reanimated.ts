@@ -21,7 +21,10 @@ const mock = {
   useSharedValue: useMockSharedValue,
   useAnimatedStyle: (factory: () => object) => factory(),
   useAnimatedProps: (factory: () => object) => factory(),
-  withTiming: identity,
+  withTiming: (value: unknown, _config?: unknown, callback?: (finished: boolean) => void) => {
+    callback?.(true);
+    return value;
+  },
   withRepeat: identity,
   withSpring: identity,
   withSequence: identity,

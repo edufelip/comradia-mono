@@ -1,7 +1,7 @@
+import { useIsFocused } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import { useIsFocused } from '@react-navigation/native';
+import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, {
   cancelAnimation,
   Easing,
@@ -10,17 +10,18 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
+import { DsMotionPressable } from '@/components/ds/motion/DsMotionPressable';
 import { DsCard } from '@/components/ds/primitives/DsCard';
 import { DsPillButton } from '@/components/ds/primitives/DsPillButton';
 import { DsScreen } from '@/components/ds/primitives/DsScreen';
 import { DsRadius, DsSpace, DsTypography, getDsTheme } from '@/constants/design-system';
 import { useSessionStore } from '@/features/auth/session-store';
 import { useDiscoveryStore } from '@/features/discovery/discovery-store';
-import type { DiscoveryProfile } from '@/features/profile/profile-schema';
 import { ProfilePhoto } from '@/features/profile/ProfilePhoto';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTranslation } from '@/localization';
 import { backend } from '@/services/backend';
+import type { DiscoveryProfile } from '@/features/profile/profile-schema';
 
 /**
  * S5. The deck comes from Firestore; Like / Pass are written as swipes and the card leaves
@@ -290,17 +291,17 @@ export default function DiscoverScreen() {
               </View>
             </View>
 
-            <Pressable
+            <DsMotionPressable
               accessibilityRole="button"
               accessibilityLabel={t('discover.report', { name: displayedCandidate.displayName })}
               onPress={() => router.push(`/safety/${displayedCandidate.id}?context=profile`)}
-              style={({ pressed }) => [styles.reportLink, { opacity: pressed ? 0.7 : 1 }]}
+              style={styles.reportLink}
               testID="discover-report"
             >
               <Text style={[DsTypography.caption, { color: ds.color.textTertiary }]}>
                 {t('discover.report', { name: displayedCandidate.displayName })}
               </Text>
-            </Pressable>
+            </DsMotionPressable>
           </DsCard>
         </Animated.View>
       ) : (

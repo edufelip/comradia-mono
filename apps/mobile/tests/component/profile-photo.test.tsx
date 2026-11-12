@@ -99,7 +99,13 @@ describe('ProfilePhoto', () => {
   it('ignores a delayed image error after the portrait has been replaced', async () => {
     const timing = jest.spyOn(Reanimated, 'withTiming');
     const view = await render(
-      <ProfilePhoto name="Rosa" path="file:///tmp/old.jpg" scheme="light" shape="arch" testID="p" />,
+      <ProfilePhoto
+        name="Rosa"
+        path="file:///tmp/old.jpg"
+        scheme="light"
+        shape="arch"
+        testID="p"
+      />,
     );
     const oldImage = screen.getByTestId('p-image', HIDDEN);
 

@@ -1,6 +1,7 @@
 import { useIsFocused } from '@react-navigation/native';
 import { useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { DsMotionPressable } from '@/components/ds/motion/DsMotionPressable';
 import { DsMotionView } from '@/components/ds/motion/DsMotionView';
 import { DsCard } from '@/components/ds/primitives/DsCard';
 import { DsPillButton } from '@/components/ds/primitives/DsPillButton';
@@ -161,17 +162,17 @@ export default function ProfileScreen() {
               variant="secondary"
             />
             {profile.photoPath ? (
-              <Pressable
+              <DsMotionPressable
                 accessibilityRole="button"
                 disabled={photoBusy}
                 onPress={() => void savePhoto(null)}
-                style={({ pressed }) => [styles.textButton, { opacity: pressed ? 0.7 : 1 }]}
+                style={styles.textButton}
                 testID="profile-photo-remove"
               >
                 <Text style={[DsTypography.caption, { color: ds.color.danger }]}>
                   {t('photo.remove')}
                 </Text>
-              </Pressable>
+              </DsMotionPressable>
             ) : null}
             {photoBusy ? (
               <Text
@@ -257,7 +258,7 @@ export default function ProfileScreen() {
         </>
       ) : null}
 
-      <NotificationSettings {...notificationSettings} />
+      <NotificationSettings {...notificationSettings} motionActive={isFocused} />
 
       {confirmingDelete ? (
         <DsMotionView testID="profile-delete-motion" variant="scale">

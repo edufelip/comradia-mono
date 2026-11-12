@@ -1,5 +1,5 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { useEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { DsMotionPressable } from '@/components/ds/motion/DsMotionPressable';
 import { DsMotionView } from '@/components/ds/motion/DsMotionView';
@@ -52,7 +52,7 @@ export function OnboardingStepper({
   const previousValue = useRef(value);
   const [valueHasChanged, setValueHasChanged] = useState(false);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (previousValue.current === value) return;
     previousValue.current = value;
     setValueHasChanged(true);

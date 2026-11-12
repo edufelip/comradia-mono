@@ -3,9 +3,7 @@ import { getAuth } from '@react-native-firebase/auth';
 import messaging, { type FirebaseMessagingTypes } from '@react-native-firebase/messaging';
 import * as Notifications from 'expo-notifications';
 import { Linking, Platform } from 'react-native';
-
 import { getDeviceLocale, resolveLocale, t } from '@/localization';
-
 import { createPushLifecycle, type PushPermission } from './push-lifecycle';
 import { createPushSessionController } from './push-session';
 import {

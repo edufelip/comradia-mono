@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { DsMotionView } from '@/components/ds/motion/DsMotionView';
 import { DsCard } from '@/components/ds/primitives/DsCard';
@@ -38,7 +38,7 @@ export default function StarterScreen() {
   const previousPromptId = useRef(draft.promptId);
   const [promptHasChanged, setPromptHasChanged] = useState(false);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (previousPromptId.current === draft.promptId) return;
     previousPromptId.current = draft.promptId;
     setPromptHasChanged(true);

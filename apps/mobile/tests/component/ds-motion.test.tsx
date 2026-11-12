@@ -6,6 +6,23 @@ import { DsMotionView } from '@/components/ds/motion/DsMotionView';
 describe('DsMotionView', () => {
   afterEach(() => jest.restoreAllMocks());
 
+  it('renders hidden-screen updates static and does not replay them on focus', async () => {
+    const timing = jest.spyOn(Reanimated, 'withTiming');
+    const view = await render(
+      <DsMotionView active={false} testID="hidden-motion">
+        <Text>Current setting</Text>
+      </DsMotionView>,
+    );
+    expect(screen.getByTestId('hidden-motion')).toHaveStyle({ opacity: 1 });
+    expect(timing).not.toHaveBeenCalled();
+    await view.rerender(
+      <DsMotionView active testID="hidden-motion">
+        <Text>Current setting</Text>
+      </DsMotionView>,
+    );
+    expect(timing).not.toHaveBeenCalled();
+  });
+
   it('renders its children immediately and delays the requested entrance', async () => {
     const withDelay = jest.spyOn(Reanimated, 'withDelay');
 

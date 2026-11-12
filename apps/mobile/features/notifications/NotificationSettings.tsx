@@ -1,7 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
-
-import { DsCard } from '@/components/ds/primitives/DsCard';
 import { DsMotionView } from '@/components/ds/motion/DsMotionView';
+import { DsCard } from '@/components/ds/primitives/DsCard';
 import { DsPillButton } from '@/components/ds/primitives/DsPillButton';
 import { DsSpace, DsTypography, getDsTheme } from '@/constants/design-system';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -13,7 +12,8 @@ export type NotificationSettingsStatus =
 type NotificationSettingsProps = {
   status: NotificationSettingsStatus;
   busy?: boolean;
-  errorAction?: 'enable' | 'disable';
+  errorAction?: 'enable' | 'disable' | 'settings';
+  motionActive?: boolean;
   onEnable: () => void;
   onDisable: () => void;
   onOpenSettings: () => void;
@@ -24,6 +24,7 @@ export function NotificationSettings({
   status,
   busy = false,
   errorAction = 'enable',
+  motionActive = true,
   onEnable,
   onDisable,
   onOpenSettings,
@@ -47,7 +48,12 @@ export function NotificationSettings({
               : 'notifications.unavailable';
 
   return (
-    <DsMotionView key={status} testID="notifications-settings-motion" variant="scale">
+    <DsMotionView
+      active={motionActive}
+      key={status}
+      testID="notifications-settings-motion"
+      variant="scale"
+    >
       <DsCard scheme={scheme} style={styles.card} testID="notifications-settings">
         <View style={styles.copy}>
           <Text
@@ -93,7 +99,7 @@ export function NotificationSettings({
             variant="secondary"
           />
         ) : null}
-        {status === 'denied' ? (
+        {status === 'denied' || (status === 'error' && errorAction === 'settings') ? (
           <View style={styles.actions}>
             <DsPillButton
               disabled={busy}

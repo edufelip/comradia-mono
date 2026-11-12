@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { StyleSheet, Text } from 'react-native';
 import { DsMotionPressable } from '@/components/ds/motion/DsMotionPressable';
 import { DsMotionView } from '@/components/ds/motion/DsMotionView';
@@ -36,7 +36,7 @@ export function OnboardingOptionCard({
   const previousSelected = useRef(selected);
   const [selectionMotion, setSelectionMotion] = useState(false);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (previousSelected.current === selected) return;
     previousSelected.current = selected;
     setSelectionMotion(selected);

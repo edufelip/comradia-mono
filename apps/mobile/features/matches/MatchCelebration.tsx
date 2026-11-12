@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import { useEffect, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, {
@@ -13,6 +12,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { getDsTheme, type DsColorScheme } from '@/constants/design-system';
+import type { ReactNode } from 'react';
 
 type Props = {
   active: boolean;
