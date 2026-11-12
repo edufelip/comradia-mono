@@ -34,8 +34,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: yarn
-          cache-dependency-path: apps/firebase/yarn.lock
       - run: yarn install --frozen-lockfile
       # `yarn test` starts its own Firestore emulator via `firebase emulators:exec`
       # and runs every file in tests/ against it.

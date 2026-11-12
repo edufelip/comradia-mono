@@ -133,6 +133,7 @@ Every job runs on our own self-hosted runner, `comradia-ci-ubuntu-1` on the home
 
 - Service: `systemctl --user status actions.runner.edufelip-comradia-mono.comradia-ci-ubuntu-1` on the PC; files in `~/actions-runners/comradia-ci-ubuntu-1`. Its `.env` sets `PLAYWRIGHT_BROWSERS_PATH=~/.cache/ms-playwright-comradia` and `TMPDIR=~/ci-tmp/comradia`.
 - The runner has no sudo, so never use `playwright install --with-deps` or `apt-get` in a job.
+- No `setup-node` yarn cache: the runner shares one ~4 GB yarn cache with other repos, and uploading it to GitHub takes longer than the job. Yarn reuses that local cache by itself.
 - **iOS jobs are the exception.** They need a Mac, so they run on GitHub-hosted `macos-15`, and every one is gated by the repo variable `IOS_CI_ENABLED` (starts `false`): add `if: vars.IOS_CI_ENABLED == 'true'` to each iOS job. Turn them on with `gh variable set IOS_CI_ENABLED --body true -R edufelip/comradia-mono`. Hosted macOS minutes cost money on a private repo. No iOS job exists yet.
 
 | Workflow | Runs when | Jobs |
