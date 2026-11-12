@@ -39,7 +39,9 @@ function decodeFields(document: FirestoreDocument): Record<string, unknown> {
 
 async function listProfiles(): Promise<{ id: string; data: Record<string, unknown> }[]> {
   const response = await fetch(
-    `${FIRESTORE}/v1/projects/${PROJECT}/databases/(default)/documents/profiles`,
+    // The emulator pages lists at 30; a full run creates more profiles than that.
+    // shortcut: one 1000-doc page, switch to a runQuery on displayName if a run ever creates more.
+    `${FIRESTORE}/v1/projects/${PROJECT}/databases/(default)/documents/profiles?pageSize=1000`,
     { headers: ADMIN_HEADERS },
   );
   expect(response.ok).toBeTruthy();
