@@ -18,7 +18,7 @@ import {
   Timestamp,
   updateDoc,
 } from 'firebase/firestore';
-import { db, message, match, testEnvironment, without } from './helpers';
+import { block, db, message, match, testEnvironment, without } from './helpers';
 
 let env: RulesTestEnvironment;
 let alice: ReturnType<RulesTestEnvironment['authenticatedContext']>;
@@ -105,7 +105,24 @@ describe('messages create', () => {
     );
   });
 
-  it('denies update and delete', async () => {
+  it('denies a message when one of them blocked the other', async () => {
+    await seed('blocks/bob/by/alice', block());
+    await assertFails(setDoc(messageRef(alice, 'alice_bob'), message()));
+  });
+
+  it('denies a message when the other person blocked me', async () => {
+    await seed('blocks/alice/by/bob', block());
+    await assertFails(setDoc(messageRef(alice, 'alice_bob'), message()));
+  });
+
+  it('allows the message again once the block is gone', async () => {
+    await seed('blocks/bob/by/alice', block());
+    await assertFails(setDoc(messageRef(alice, 'alice_bob'), message()));
+    await assertSucceeds(deleteDoc(doc(db(alice), 'blocks/bob/by/alice')));
+    await assertSucceeds(setDoc(messageRef(alice, 'alice_bob'), message()));
+  });
+
+  it('denies update, and allows the sender to delete only their own message', async () => {
     await seed('matches/alice_bob/messages/m1', message());
     await assertFails(
       updateDoc(messageRef(alice, 'alice_bob'), {
@@ -113,8 +130,13 @@ describe('messages create', () => {
         createdAt: serverTimestamp(),
       }),
     );
-    await assertFails(deleteDoc(messageRef(alice, 'alice_bob')));
     await assertFails(deleteDoc(messageRef(bob, 'alice_bob')));
+    await assertFails(deleteDoc(messageRef(carol, 'alice_bob')));
+    await assertFails(deleteDoc(messageRef(signedOut, 'alice_bob')));
+    await assertSucceeds(deleteDoc(messageRef(alice, 'alice_bob')));
+    await seed('matches/alice_bob/messages/m1', message({ from: 'bob' }));
+    await assertFails(deleteDoc(messageRef(alice, 'alice_bob')));
+    await assertSucceeds(deleteDoc(messageRef(bob, 'alice_bob')));
   });
 });
 
