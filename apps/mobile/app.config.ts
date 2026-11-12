@@ -40,6 +40,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       ...(config.plugins ?? []),
       '@react-native-firebase/app',
       '@react-native-firebase/auth',
+      // Adds the Crashlytics Gradle plugin; without it the Android app crashes at startup
+      // ("The Crashlytics build ID is missing") because the package is linked natively.
+      '@react-native-firebase/crashlytics',
       // Reads the iOS URL scheme from GoogleService-Info.plist.
       '@react-native-google-signin/google-signin',
       // @react-native-firebase needs static frameworks on iOS. Its pods import React-Core
