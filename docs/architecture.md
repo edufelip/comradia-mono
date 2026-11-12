@@ -15,6 +15,7 @@ Comradia is one Expo app (`apps/mobile`) on top of Firebase (`apps/firebase`). T
 | 7 | **Age is stored, birth date stays private.** The client computes age at signup; rules allow 18–99. | Without Cloud Functions there is no trusted place to recompute it. | Blaze: a scheduled Function recomputes ages from the private birth date. |
 | 8 | **Matches without a server.** A like is also written to `likes/{target}/from/{me}`, which the liked person can read. When I like someone who already liked me, the same batch creates `matches/{a_b}`; the rules allow that create only when both likes exist (`existsAfter`). Two likes at the same moment are fixed by `reconcileMatches` when Matches opens. | Works on the free plan. Revised 2026-11-11: the earlier plan said mutual matching needed a Cloud Function. | A person can see who liked them (needed for the check). Hide that if it becomes a paid feature; then move the check to a Cloud Function. |
 | 9 | **Firebase config files are committed** (`apps/mobile/firebase/<variant>/`). | They hold public client ids, not secrets. Abuse is limited by Auth, rules and (later) App Check. | Before launch: turn on App Check. |
+| 10 | **One optional portrait per profile, in Cloud Storage.** `profiles/{uid}.photoPath` points at `photos/{uid}/{id}.jpg`; every upload gets a new file id and the old file is deleted afterwards, best effort. The phone resizes to 1080 px and JPEG 0.8 before upload. | Storage rules can't read Firestore cheaply, so each file is owner-only and immutable, and Firestore only accepts a path inside the owner's folder. No permission prompt: the system photo picker needs none. | Multiple photos, or moderation (needs a Cloud Function). Real Storage on `comradia-dev` needs Blaze; everything runs on the emulator today. |
 
 ## Layout
 
@@ -39,9 +40,10 @@ apps/mobile
   firebase/<dev|prod>/       GoogleService-Info.plist, google-services.json
 apps/firebase
   firestore.rules            security rules (the trust boundary)
-  firebase.json              emulator ports: auth 9099, Firestore 8089
+  storage.rules              photo upload rules
+  firebase.json              emulator ports: auth 9099, Firestore 8089, Storage 9199
   scripts/seed.mjs           Discover profiles for the emulators
-  tests/                     rules tests against the Firestore emulator
+  tests/                     rules tests against the Firestore and Storage emulators
 ```
 
 ## Routing
@@ -62,7 +64,7 @@ When the status changes, the user lands on `app/index.tsx`, which redirects to t
 
 | Path | Who can read | Who can write | Fields |
 | --- | --- | --- | --- |
-| `profiles/{uid}` | any signed-in user | owner only; must be a complete, valid card | `displayName` (1–40), `age` (18–99), `vibe`, `lookingFor`, `unionMember`, `union` (null unless member), `values` (3–5 unique ids), `promptId`, `promptAnswer` (1–280), `createdAt`, `updatedAt` (server time) |
+| `profiles/{uid}` | any signed-in user | owner only; must be a complete, valid card | `displayName` (1–40), `age` (18–99), `vibe`, `lookingFor`, `unionMember`, `union` (null unless member), `values` (3–5 unique ids), `promptId`, `promptAnswer` (1–280), `photoPath` (null or `photos/{uid}/<id>.jpg`), `createdAt`, `updatedAt` (server time) |
 | `users/{uid}` | owner | owner | `birthDate` (YYYY-MM-DD), `sharedPassionWeight` (0–100), `createdAt`, `updatedAt` |
 | `users/{uid}/swipes/{targetUid}` | owner | owner, not on self | `direction` (`like` / `pass`), `createdAt` |
 | `likes/{targetUid}/from/{likerUid}` | the liked person and the liker | the liker, not on self | `createdAt` |
@@ -71,6 +73,8 @@ When the status changes, the user lands on `app/index.tsx`, which redirects to t
 | `users/{uid}/blocks/{targetUid}` | owner | owner, not on self | `createdAt` |
 | `blocks/{uid}/by/{blockerUid}` | the blocked person and the blocker | the blocker, not on self | `createdAt` |
 | `reports/{id}` | nobody (write-only) | any signed-in user, about someone else | `reporter`, `target`, `reason`, `details` (≤500), `context` (`profile` / `chat`), `createdAt` |
+
+| Storage `photos/{uid}/{id}.jpg` | any signed-in user | create only, by the owner: `image/jpeg`, 1 byte–5 MB, never overwritten; delete by the owner | the portrait file |
 
 Everything else is denied. Option ids are listed once in `features/profile/profile-schema.ts` and mirrored in `firestore.rules`; a rules test fails when they drift. Labels come from localization (`onboarding.*`).
 
@@ -81,14 +85,14 @@ Everything else is denied. Option ids are listed once in `features/profile/profi
 | S1 | `/welcome` | Pitch; "Find your person" → `/register`, "I already have an account" → `/register?mode=login` | `welcome-cta-start`, `welcome-cta-login` |
 | S1B | `/register` | Apple (iPhone), Google, or a Brazilian phone number (+55) → sends the SMS code and pushes `/verify-phone`. `mode=login` only changes the copy. | `register-apple`, `register-google`, `register-phone-input`, `register-send-code`, `register-error`, `register-switch-mode` |
 | S1C | `/verify-phone` | 6-digit code, resend after 30 s, edit number (back). A correct code signs in; routing takes over. | `verify-code-input`, `verify-submit`, `verify-resend`, `verify-edit`, `verify-error` |
-| S2 | `/vibe` | First name, birthday (18+), vibe (5 cards), looking for (3), optional union badge | `onboarding-name`, `onboarding-birthday`, `vibe-<id>`, `looking-for-<id>`, `union-toggle`, `union-<id>`, `onboarding-continue` |
+| S2 | `/vibe` | Optional portrait (pick from the library, crop 3:4), first name, birthday (18+), vibe (5 cards), looking for (3), optional union badge | `onboarding-name`, `onboarding-birthday`, `onboarding-photo`, `onboarding-photo-pick`, `onboarding-photo-remove`, `vibe-<id>`, `looking-for-<id>`, `union-toggle`, `union-<id>`, `onboarding-continue` |
 | S3 | `/values` | 3–5 values, shared-passion weight (0–100, step 10) | `value-<id>`, `weight-decrease`, `weight-increase`, `onboarding-continue` |
 | S4 | `/starter` | Prompt picker + text answer (voice: "coming soon"); "Start swiping" writes the profile | `prompt-<id>`, `starter-answer`, `starter-finish`, `onboarding-error` |
-| S5 | `/discover` | Deck from Firestore (oldest profiles first, 50 per load); Like / Pass are saved as swipes | `discover-screen`, `discover-person-<id>`, `discover-card-name`, `discover-like`, `discover-pass`, `discover-retry`, `discover-refresh` |
-| S8 | `/match/[id]` (modal) | Shown right after a like that matched: both names, shared values, "Send a message" / "Keep swiping" | `match-screen`, `match-send-message`, `match-keep-swiping` |
-| S9 | `/matches` | Live list of matches, newest first; tap opens the chat | `matches-screen`, `match-row-<matchId>`, `matches-empty` |
-| S10 | `/chat/[id]` | Live chat with one match; text only for now. A block on either side closes it: the messages stay, the composer goes | `chat-screen`, `chat-input`, `chat-send`, `chat-message-<id>`, `chat-error`, `chat-safety`, `chat-closed` |
-| S11 | `/profile` | Own card from the session; sign out; delete the account behind an inline confirm panel (needs a sign-in newer than five minutes) | `profile-screen`, `profile-card-name`, `profile-sign-out`, `profile-delete-account`, `profile-delete-confirm`, `profile-delete-cancel`, `profile-delete-error`, `profile-delete-reauth` |
+| S5 | `/discover` | Deck from Firestore (oldest profiles first, 50 per load), each card with its portrait or the name's initial; Like / Pass are saved as swipes | `discover-screen`, `discover-person-<id>`, `discover-card-name`, `discover-photo`, `discover-like`, `discover-pass`, `discover-retry`, `discover-refresh` |
+| S8 | `/match/[id]` (modal) | Shown right after a like that matched: both portraits and names, shared values, "Send a message" / "Keep swiping" | `match-screen`, `match-photo-me`, `match-photo-other`, `match-send-message`, `match-keep-swiping` |
+| S9 | `/matches` | Live list of matches, newest first; tap opens the chat | `matches-screen`, `match-row-<matchId>`, `match-row-photo-<matchId>`, `matches-empty` |
+| S10 | `/chat/[id]` | Live chat with one match; text only for now. A block on either side closes it: the messages stay, the composer goes | `chat-screen`, `chat-photo`, `chat-input`, `chat-send`, `chat-message-<id>`, `chat-error`, `chat-safety`, `chat-closed` |
+| S11 | `/profile` | Own card from the session; add, change or remove the portrait; sign out; delete the account behind an inline confirm panel (needs a sign-in newer than five minutes) | `profile-screen`, `profile-card-name`, `profile-photo`, `profile-photo-change`, `profile-photo-remove`, `profile-photo-error`, `profile-sign-out`, `profile-delete-account`, `profile-delete-confirm`, `profile-delete-cancel`, `profile-delete-error`, `profile-delete-reauth` |
 | S12 | `/safety/[uid]` (modal) | Block or report one person, from Discover (`context=profile`) or a chat (`context=chat`); a report also blocks. A block drops them from the deck and hides the match | `safety-screen`, `safety-error`, `safety-block`, `safety-block-confirm`, `report-reason-<id>`, `report-details`, `report-submit` |
 
 ## Environments
@@ -104,6 +108,7 @@ Web reads its Firebase config from `EXPO_PUBLIC_FIREBASE_API_KEY`, `_AUTH_DOMAIN
 ## Security
 
 - Firestore rules are the trust boundary: every write is validated (allowed keys, types, sizes, enums, owner, server timestamps). The rules tests in `apps/firebase/tests` cover each allow and deny.
+- Storage rules guard photos: owner-only, JPEG, 5 MB, no overwrite. Account deletion removes every file under `photos/{uid}/` first and stops if one fails, so it can be retried.
 - No private data in public documents. Phone and email stay in Firebase Auth; birth date stays in `users/{uid}`.
 - Apple sign-in uses a SHA-256 nonce; the raw nonce never leaves the device except to Firebase.
 - Error messages shown to users come from `BackendErrorCode`, never raw Firebase text.
@@ -113,7 +118,8 @@ Web reads its Firebase config from `EXPO_PUBLIC_FIREBASE_API_KEY`, `_AUTH_DOMAIN
 
 - Real SMS to any number (Spark only allows test numbers).
 - Match and message notifications (needs Cloud Functions + push). Unmatch; block and report exist without one.
-- Voice intros and photos (Cloud Storage on new projects needs Blaze).
+- Cloud Storage on `comradia-dev` (new projects need Blaze); photos work on the emulator only until then.
+- Voice intros, more than one photo, photo moderation.
 - Age recompute, ranking by shared passions and distance (Cloud Function).
 - Unblock (there is no UI yet).
 - Cleaning up the messages the other person sent after an account deletion (the match document is deleted, their messages stay orphaned; needs a Cloud Function).
