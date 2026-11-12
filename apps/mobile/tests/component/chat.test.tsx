@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 
 import ChatScreen from '@/app/chat/[id]';
 import { useSessionStore } from '@/features/auth/session-store';
@@ -105,6 +105,21 @@ describe('ChatScreen', () => {
     expect(await screen.findByText('Thursday sounds good')).toBeOnTheScreen();
     const message = fakeBackend.state.messages.get(matchId)?.[0];
     expect(screen.getByTestId(`chat-message-${message?.id}`)).toBeOnTheScreen();
+  });
+
+  it('keeps the composer outside the scrolling messages so it stays at the bottom', async () => {
+    signIn();
+    const matchId = await seedMatch();
+
+    await render(<ChatScreen />);
+    await screen.findByTestId('chat-input');
+    await act(() => fakeBackend.receiveMessage(matchId, MAYA.id, 'Hello'));
+    await screen.findByText('Hello');
+
+    const messages = within(screen.getByTestId('chat-messages'));
+    expect(messages.getByText('Hello')).toBeOnTheScreen();
+    expect(messages.queryByTestId('chat-input')).not.toBeOnTheScreen();
+    expect(messages.queryByTestId('chat-send')).not.toBeOnTheScreen();
   });
 
   it('sends a message and clears the composer', async () => {
