@@ -1,7 +1,15 @@
 import { render, screen } from '@testing-library/react-native';
-import { Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import * as Reanimated from 'react-native-reanimated';
 import { MatchCelebration } from '@/features/matches/MatchCelebration';
+
+function mockMotionInterpolation() {
+  return jest
+    .spyOn(Reanimated, 'interpolate')
+    .mockImplementation((value, _inputRange, outputRange) =>
+      value <= 0 ? outputRange[0]! : outputRange[outputRange.length - 1]!,
+    );
+}
 
 describe('MatchCelebration', () => {
   afterEach(() => jest.restoreAllMocks());
@@ -88,6 +96,7 @@ describe('MatchCelebration', () => {
 
   it('keeps the static celebration when reduced motion is enabled', async () => {
     const timing = jest.spyOn(Reanimated, 'withTiming');
+    const interpolate = mockMotionInterpolation();
     jest.spyOn(Reanimated, 'useReducedMotion').mockReturnValue(true);
 
     await render(
@@ -105,6 +114,15 @@ describe('MatchCelebration', () => {
     expect(screen.getByText('Ana')).toBeOnTheScreen();
     expect(screen.getByText('Maya')).toBeOnTheScreen();
     expect(timing).not.toHaveBeenCalled();
+    expect(
+      StyleSheet.flatten(
+        screen.getByTestId('match-celebration-emblem', { includeHiddenElements: true }).props.style,
+      ),
+    ).toMatchObject({
+      opacity: 1,
+      transform: [{ translateY: 0 }, { scale: 1 }],
+    });
+    interpolate.mockRestore();
   });
 
   it('cancels its running motion when the screen unmounts', async () => {

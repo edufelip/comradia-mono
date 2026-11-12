@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import * as Reanimated from 'react-native-reanimated';
+import { StyleSheet } from 'react-native';
 import MatchScreen from '@/app/match/[id]';
 import { useSessionStore } from '@/features/auth/session-store';
 import { enUS } from '@/localization/en-US';
@@ -9,6 +10,14 @@ import type { DiscoveryProfile } from '@/features/profile/profile-schema';
 
 /** The portrait's image and initial are hidden from screen readers; its root carries the name. */
 const HIDDEN = { includeHiddenElements: true };
+
+function mockMotionInterpolation() {
+  return jest
+    .spyOn(Reanimated, 'interpolate')
+    .mockImplementation((value, _inputRange, outputRange) =>
+      value <= 0 ? outputRange[0]! : outputRange[outputRange.length - 1]!,
+    );
+}
 
 const mockReplace = jest.fn();
 const mockBack = jest.fn();
@@ -126,12 +135,61 @@ describe('MatchScreen', () => {
     signIn();
     await seedMatch();
     const timing = jest.spyOn(Reanimated, 'withTiming');
+    const interpolate = mockMotionInterpolation();
 
     await render(<MatchScreen />);
     expect(await screen.findByTestId('match-names')).toBeOnTheScreen();
 
     expect(timing).not.toHaveBeenCalled();
     expect(mockSetParams).not.toHaveBeenCalled();
+    expect(
+      StyleSheet.flatten(screen.getByTestId('match-celebration-emblem', HIDDEN).props.style),
+    ).toMatchObject({
+      opacity: 1,
+      transform: [{ translateY: 0 }, { scale: 1 }],
+    });
+    interpolate.mockRestore();
+  });
+
+  it('keeps the eligible hero in its opening pose through the first frame after transitionEnd', async () => {
+    signIn();
+    const matchId = await seedMatch();
+    mockParams = { id: matchId, celebrate: '1' };
+    const timing = jest.spyOn(Reanimated, 'withTiming');
+    const interpolate = mockMotionInterpolation();
+
+    await render(<MatchScreen />);
+    expect(await screen.findByTestId('match-names')).toBeOnTheScreen();
+    expect(timing).not.toHaveBeenCalled();
+    expect(
+      StyleSheet.flatten(screen.getByTestId('match-celebration-emblem', HIDDEN).props.style),
+    ).toMatchObject({
+      opacity: 0,
+      transform: [{ translateY: -10 }, { scale: 0.62 }],
+    });
+
+    const react = jest.requireActual<typeof import('react')>('react');
+    const registerNoopEffect = react.useEffect;
+    const passiveEffects = jest.spyOn(react, 'useEffect').mockImplementation((_effect, deps) => {
+      registerNoopEffect(() => undefined, deps);
+    });
+    try {
+      await act(async () => {
+        mockTransitionEndListeners.forEach((listener) => listener({ data: { closing: false } }));
+      });
+
+      // Hold passive effects for this commit and inspect the actual first visible pose.
+      expect(
+        StyleSheet.flatten(screen.getByTestId('match-celebration-emblem', HIDDEN).props.style),
+      ).toMatchObject({
+        opacity: 0,
+        transform: [{ translateY: -10 }, { scale: 0.62 }],
+      });
+      expect(timing).not.toHaveBeenCalled();
+    } finally {
+      passiveEffects.mockRestore();
+      interpolate.mockRestore();
+    }
   });
 
   it('consumes the one-shot flag before playing the user-triggered match hero', async () => {
