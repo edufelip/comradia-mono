@@ -77,6 +77,7 @@ describe('VerifyPhoneScreen', () => {
     expect(screen.getByText(enUS['verify.step'])).toBeOnTheScreen();
     expect(screen.getByText('Sent by SMS to (11) 98765-4321')).toBeOnTheScreen();
     expect(screen.getByTestId('verify-code-input')).toHaveAccessibleName(enUS['verify.code_label']);
+    expect(screen.getByTestId('verify-code-input')).toBeVisible();
     expect(screen.getByTestId('verify-submit')).toBeDisabled();
   });
 

@@ -139,7 +139,6 @@ const styles = StyleSheet.create({
     color: 'transparent',
     fontSize: 24,
     left: 0,
-    opacity: 0,
     position: 'absolute',
     right: 0,
     textAlign: 'center',

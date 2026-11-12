@@ -49,7 +49,6 @@ import {
 } from '@/features/notifications/notifications';
 import { newPhotoId, PHOTO_METADATA, photoPathFor } from '@/features/profile/profile-schema';
 import { chunk, DELETE_BATCH_SIZE } from './batches';
-import { phoneFailureSummary } from './phone-diagnostics';
 import {
   AUTH_EMULATOR_PORT,
   DISCOVERY_PAGE_SIZE,
@@ -58,6 +57,7 @@ import {
   STORAGE_EMULATOR_PORT,
 } from './config';
 import { BackendError, toBackendError } from './errors';
+import { phoneFailureSummary } from './phone-diagnostics';
 import { filterDiscovery, matchIdFor, MESSAGE_MAX, otherUid, toPublicProfile } from './shared';
 import type { AuthUser, Backend, LikeResult, Match } from './types';
 
