@@ -85,6 +85,8 @@ export const enUS = {
   'auth.error.too_many_requests': 'Too many tries. Wait a few minutes and try again.',
   'auth.error.network': 'No connection. Check your internet and try again.',
   'auth.error.unknown': 'Something went wrong. Please try again.',
+  'auth.error.requires_recent_login':
+    'For your security, sign in again before deleting your account.',
   'verify.step': 'VERIFICATION · 6-DIGIT CODE',
   'verify.title': 'Enter the code.',
   'verify.sent_to': 'Sent by SMS to {phone}',

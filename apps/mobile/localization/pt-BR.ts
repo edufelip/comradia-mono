@@ -88,6 +88,8 @@ export const ptBR: Record<TranslationKey, string> = {
   'auth.error.too_many_requests': 'Muitas tentativas. Espere alguns minutos e tente de novo.',
   'auth.error.network': 'Sem conexão. Verifique sua internet e tente de novo.',
   'auth.error.unknown': 'Algo deu errado. Tente de novo.',
+  'auth.error.requires_recent_login':
+    'Por segurança, entre de novo antes de apagar sua conta.',
   'verify.step': 'VERIFICAÇÃO · CÓDIGO DE 6 DÍGITOS',
   'verify.title': 'Digite o código.',
   'verify.sent_to': 'Enviado por SMS para {phone}',

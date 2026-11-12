@@ -29,9 +29,11 @@ import {
   setDoc,
   where,
   writeBatch,
+  type FirebaseFirestoreTypes,
 } from '@react-native-firebase/firestore';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
+import { chunk, DELETE_BATCH_SIZE } from './batches';
 import {
   AUTH_EMULATOR_PORT,
   DISCOVERY_PAGE_SIZE,
@@ -76,6 +78,17 @@ async function run<T>(task: () => Promise<T>): Promise<T> {
 }
 
 const MESSAGE_PAGE_SIZE = 200;
+
+type DocRef = FirebaseFirestoreTypes.DocumentReference;
+
+/** Deletes every `ref` in batches that stay under Firestore's 500-write limit. */
+async function deleteInBatches(refs: DocRef[]): Promise<void> {
+  for (const group of chunk(refs, DELETE_BATCH_SIZE)) {
+    const batch = writeBatch(db);
+    for (const ref of group) batch.delete(ref);
+    await batch.commit();
+  }
+}
 
 /** A Firestore timestamp as epoch ms; a pending server timestamp reads as null → now. */
 function epochMs(value: unknown): number {
@@ -326,5 +339,107 @@ export const backend: Backend = {
         text: trimmed,
         createdAt: serverTimestamp(),
       });
+    }),
+
+  blockUser: (uid, targetId) =>
+    run(async () => {
+      if (uid === targetId) throw new BackendError('unknown');
+      // Both docs in one batch: the rules see each side of the block appear together.
+      const batch = writeBatch(db);
+      batch.set(doc(db, 'users', uid, 'blocks', targetId), { createdAt: serverTimestamp() });
+      batch.set(doc(db, 'blocks', targetId, 'by', uid), { createdAt: serverTimestamp() });
+      await batch.commit();
+    }),
+
+  reportUser: (uid, { targetId, reason, details, context }) =>
+    run(async () => {
+      if (uid === targetId) throw new BackendError('unknown');
+      const batch = writeBatch(db);
+      // A report always blocks, so the report and the two block docs share one batch.
+      batch.set(doc(collection(db, 'reports')), {
+        reporter: uid,
+        target: targetId,
+        reason,
+        details: details.trim(),
+        context,
+        createdAt: serverTimestamp(),
+      });
+      batch.set(doc(db, 'users', uid, 'blocks', targetId), { createdAt: serverTimestamp() });
+      batch.set(doc(db, 'blocks', targetId, 'by', uid), { createdAt: serverTimestamp() });
+      await batch.commit();
+    }),
+
+  listBlockedUids: (uid) =>
+    run(async () => {
+      // I wrote users/{uid}/blocks; other people wrote blocks/{uid}/by.
+      const [mine, theirs] = await Promise.all([
+        getDocs(collection(db, 'users', uid, 'blocks')),
+        getDocs(collection(db, 'blocks', uid, 'by')),
+      ]);
+      return [
+        ...new Set([
+          ...mine.docs.map((d: Snapshot) => d.id),
+          ...theirs.docs.map((d: Snapshot) => d.id),
+        ]),
+      ];
+    }),
+
+  lastSignInAt() {
+    // Sync by contract: the screen decides, before deleting, whether to re-authenticate.
+    const time = auth.currentUser?.metadata.lastSignInTime;
+    const ms = time ? Date.parse(time) : NaN;
+    // Unknown counts as "not recent": the screen then asks for a fresh sign-in.
+    return Number.isFinite(ms) ? ms : null;
+  },
+
+  deleteAccount: (uid) =>
+    run(async () => {
+      // Reads first: later steps are queries, and a batch cannot see its own writes.
+      const [swipes, receivedLikes, myBlocks, matches] = await Promise.all([
+        getDocs(collection(db, 'users', uid, 'swipes')),
+        getDocs(collection(db, 'likes', uid, 'from')),
+        getDocs(collection(db, 'users', uid, 'blocks')),
+        getDocs(query(collection(db, 'matches'), where('users', 'array-contains', uid))),
+      ]);
+
+      // 1. My swipes, and the public like that each 'like' swipe wrote.
+      await deleteInBatches([
+        ...swipes.docs.map((d: Snapshot) => doc(db, 'users', uid, 'swipes', d.id)),
+        ...swipes.docs
+          .filter((d: Snapshot) => d.data().direction === 'like')
+          .map((d: Snapshot) => doc(db, 'likes', d.id, 'from', uid)),
+      ]);
+
+      // 2. Likes I received: only I can still read them, so only I can clear them.
+      await deleteInBatches(
+        receivedLikes.docs.map((d: Snapshot) => doc(db, 'likes', uid, 'from', d.id)),
+      );
+
+      // 3. Blocks I wrote: both mirror docs.
+      await deleteInBatches(
+        myBlocks.docs.flatMap((d: Snapshot) => [
+          doc(db, 'blocks', d.id, 'by', uid),
+          doc(db, 'users', uid, 'blocks', d.id),
+        ]),
+      );
+
+      // 4. My messages in each match, then the match itself.
+      for (const match of matches.docs) {
+        const sent = await getDocs(
+          query(collection(db, 'matches', match.id, 'messages'), where('from', '==', uid)),
+        );
+        await deleteInBatches(
+          sent.docs.map((d: Snapshot) => doc(db, 'matches', match.id, 'messages', d.id)),
+        );
+      }
+      await deleteInBatches(matches.docs.map((d: Snapshot) => doc(db, 'matches', d.id)));
+
+      // 5. My public card, then my private account.
+      await deleteInBatches([doc(db, 'profiles', uid), doc(db, 'users', uid)]);
+
+      // 6. The sign-in itself, last: without it no step above can be retried.
+      const user = auth.currentUser;
+      if (!user) throw new BackendError('unknown');
+      await user.delete();
     }),
 };

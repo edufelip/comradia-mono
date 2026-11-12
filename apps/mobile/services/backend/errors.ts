@@ -5,6 +5,7 @@ export type BackendErrorCode =
   | 'code_expired'
   | 'no_pending_code'
   | 'too_many_requests'
+  | 'requires_recent_login'
   | 'network'
   | 'unknown';
 
@@ -29,6 +30,8 @@ const FIREBASE_CODES: Record<string, BackendErrorCode> = {
   'auth/too-many-requests': 'too_many_requests',
   'auth/quota-exceeded': 'too_many_requests',
   'auth/network-request-failed': 'network',
+  // Deleting the account needs a sign-in newer than a few minutes.
+  'auth/requires-recent-login': 'requires_recent_login',
   'auth/popup-closed-by-user': 'cancelled',
   'auth/cancelled-popup-request': 'cancelled',
   'auth/user-cancelled': 'cancelled',

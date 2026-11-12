@@ -88,6 +88,8 @@ export const esES: Record<TranslationKey, string> = {
   'auth.error.too_many_requests': 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.',
   'auth.error.network': 'Sin conexión. Revisa tu internet e inténtalo de nuevo.',
   'auth.error.unknown': 'Algo salió mal. Inténtalo de nuevo.',
+  'auth.error.requires_recent_login':
+    'Por seguridad, vuelve a iniciar sesión antes de eliminar tu cuenta.',
   'verify.step': 'VERIFICACIÓN · CÓDIGO DE 6 DÍGITOS',
   'verify.title': 'Escribe el código.',
   'verify.sent_to': 'Enviado por SMS a {phone}',

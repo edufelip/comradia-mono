@@ -13,6 +13,7 @@ const MAPPINGS: [string, BackendErrorCode][] = [
   ['auth/too-many-requests', 'too_many_requests'],
   ['auth/quota-exceeded', 'too_many_requests'],
   ['auth/network-request-failed', 'network'],
+  ['auth/requires-recent-login', 'requires_recent_login'],
   ['auth/popup-closed-by-user', 'cancelled'],
   ['auth/cancelled-popup-request', 'cancelled'],
   ['auth/user-cancelled', 'cancelled'],
