@@ -4,8 +4,8 @@ import { PHOTO_MAX_SIDE } from './profile-schema';
 
 /**
  * Opens the system photo picker (no permission prompt: it runs out of process) and returns
- * a local JPEG cropped to 3:4 with its longest side at most PHOTO_MAX_SIDE, or null when
- * the person cancels. Web ignores the crop; `ProfilePhoto` covers whatever shape comes back.
+ * a local JPEG with its longest side at most PHOTO_MAX_SIDE, or null when the person cancels.
+ * Android crops to 3:4; iOS's crop screen is always square. Web ignores the crop; `ProfilePhoto` covers whatever shape comes back.
  */
 export async function pickPhoto(): Promise<string | null> {
   const result = await launchImageLibraryAsync({

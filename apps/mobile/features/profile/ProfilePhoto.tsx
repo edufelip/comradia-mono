@@ -38,7 +38,8 @@ export function ProfilePhoto({ path, name, shape, scheme, style, testID }: Props
 
   return (
     <View
-      accessibilityLabel={t('photo.of', { name })}
+      // Onboarding shows the photo before a name is typed.
+      accessibilityLabel={name.trim() ? t('photo.of', { name }) : t('photo.mine')}
       accessibilityRole="image"
       onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
       style={[

@@ -173,6 +173,7 @@ export const ptBR: Record<TranslationKey, string> = {
   'session.error.retry': 'Tentar de novo',
   'session.error.sign_out': 'Sair',
   'photo.of': 'Foto de {name}',
+  'photo.mine': 'Sua foto',
   'photo.add': 'Adicionar foto',
   'photo.change': 'Trocar foto',
   'photo.remove': 'Remover foto',

@@ -169,6 +169,7 @@ export const enUS = {
   'session.error.retry': 'Try again',
   'session.error.sign_out': 'Sign out',
   'photo.of': 'Photo of {name}',
+  'photo.mine': 'Your photo',
   'photo.add': 'Add a photo',
   'photo.change': 'Change photo',
   'photo.remove': 'Remove photo',

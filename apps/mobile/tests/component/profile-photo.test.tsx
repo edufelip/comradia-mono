@@ -66,6 +66,13 @@ describe('pickPhoto', () => {
 });
 
 describe('ProfilePhoto', () => {
+  it('names the photo after the person, or "Your photo" before a name is typed', async () => {
+    await render(<ProfilePhoto name="Rosa" path={null} scheme="light" shape="arch" testID="p" />);
+    expect(screen.getByLabelText('Photo of Rosa')).toBeOnTheScreen();
+    await render(<ProfilePhoto name="  " path={null} scheme="light" shape="arch" testID="p" />);
+    expect(screen.getByLabelText('Your photo')).toBeOnTheScreen();
+  });
+
   it('shows a local file directly, without asking the backend', async () => {
     await render(
       <ProfilePhoto name="Rosa" path="file:///tmp/me.jpg" scheme="light" shape="arch" testID="p" />,

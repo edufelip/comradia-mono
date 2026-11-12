@@ -172,6 +172,7 @@ export const esES: Record<TranslationKey, string> = {
   'session.error.retry': 'Reintentar',
   'session.error.sign_out': 'Cerrar sesión',
   'photo.of': 'Foto de {name}',
+  'photo.mine': 'Tu foto',
   'photo.add': 'Añadir foto',
   'photo.change': 'Cambiar foto',
   'photo.remove': 'Quitar foto',
