@@ -71,7 +71,12 @@ export default function MatchesScreen() {
       matches.filter((match) => !blockedUids.includes(match.other.id)).map((match) => match.id),
     );
 
-    if (!isFocused || incoming.length === 0) {
+    if (!isFocused) {
+      setAnimatedMatchIds((current) => (current.size === 0 ? current : new Set()));
+      return;
+    }
+
+    if (incoming.length === 0) {
       setAnimatedMatchIds((current) => {
         const next = new Set([...current].filter((id) => visibleIds.has(id)));
         if (next.size === current.size && [...current].every((id) => next.has(id))) return current;

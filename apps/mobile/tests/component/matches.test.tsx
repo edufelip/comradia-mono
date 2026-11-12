@@ -157,6 +157,27 @@ describe('MatchesScreen', () => {
     expect(screen.queryByTestId(`match-row-motion-${matchId}`)).not.toBeOnTheScreen();
   });
 
+  it('does not replay a live match entrance after leaving and returning to Matches', async () => {
+    signIn();
+    seedProfiles(MAYA);
+    const view = await render(<MatchesScreen />);
+    await screen.findByTestId('matches-empty');
+
+    fakeBackend.likeFrom(MAYA.id, TEST_USER.uid);
+    await act(async () => fakeBackend.backend.like(TEST_USER.uid, MAYA.id));
+    const matchId = matchIdFor(TEST_USER.uid, MAYA.id);
+    expect(screen.getByTestId(`match-row-motion-${matchId}`)).toBeOnTheScreen();
+
+    mockIsFocused = false;
+    await view.rerender(<MatchesScreen />);
+    expect(screen.queryByTestId(`match-row-motion-${matchId}`)).not.toBeOnTheScreen();
+
+    mockIsFocused = true;
+    await view.rerender(<MatchesScreen />);
+    expect(screen.getByTestId(`match-row-${matchId}`)).toBeOnTheScreen();
+    expect(screen.queryByTestId(`match-row-motion-${matchId}`)).not.toBeOnTheScreen();
+  });
+
   it('lists matches newest first and opens the chat of the tapped row', async () => {
     signIn();
     seedProfiles(MAYA, VAL);
