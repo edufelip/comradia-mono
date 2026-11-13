@@ -1,3 +1,4 @@
+import assert from 'node:assert/strict';
 import { after, before, beforeEach, describe, it } from 'node:test';
 import {
   assertFails,
@@ -179,5 +180,26 @@ describe('blocks/{targetUid}/by/{blockerUid} read and delete', () => {
     await assertFails(deleteDoc(reverseRef(bob, 'bob', 'alice')));
     await assertFails(deleteDoc(reverseRef(carol, 'bob', 'alice')));
     await assertSucceeds(deleteDoc(reverseRef(alice, 'bob', 'alice')));
+  });
+
+  it('lets the blocker unblock in one batch that removes both sides', async () => {
+    await seed('users/alice/blocks/bob', block());
+    const batch = writeBatch(db(alice));
+    batch.delete(blockRef(alice, 'alice', 'bob'));
+    batch.delete(reverseRef(alice, 'bob', 'alice'));
+    await assertSucceeds(batch.commit());
+    assert.equal((await getDoc(reverseRef(bob, 'bob', 'alice'))).exists(), false);
+    assert.equal((await getDoc(blockRef(alice, 'alice', 'bob'))).exists(), false);
+  });
+
+  it('keeps the other direction when the target blocked the blocker too', async () => {
+    await seed('users/alice/blocks/bob', block());
+    await seed('users/bob/blocks/alice', block());
+    await seed('blocks/alice/by/bob', block());
+    const batch = writeBatch(db(alice));
+    batch.delete(blockRef(alice, 'alice', 'bob'));
+    batch.delete(reverseRef(alice, 'bob', 'alice'));
+    await assertSucceeds(batch.commit());
+    assert.equal((await getDoc(reverseRef(bob, 'alice', 'bob'))).exists(), true);
   });
 });

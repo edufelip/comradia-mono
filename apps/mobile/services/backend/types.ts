@@ -25,6 +25,13 @@ export const REPORT_REASONS: readonly ReportReason[] = [
 
 export type ReportContext = 'profile' | 'chat';
 
+/** Someone I blocked. `displayName` and `photoPath` are null when their profile is gone. */
+export type BlockedPerson = {
+  id: string;
+  displayName: string | null;
+  photoPath: string | null;
+};
+
 export type ReportInput = {
   targetId: string;
   reason: ReportReason;
@@ -121,6 +128,10 @@ export type Backend = {
   reportUser(uid: string, input: ReportInput): Promise<void>;
   /** Uids to hide from me: people I blocked plus people who blocked me (no duplicates). */
   listBlockedUids(uid: string): Promise<string[]>;
+  /** Deletes users/{uid}/blocks/{targetId} and blocks/{targetId}/by/{uid} in one batch. Reports stay. */
+  unblockUser(uid: string, targetId: string): Promise<void>;
+  /** People I blocked (not people who blocked me). */
+  listBlocked(uid: string): Promise<BlockedPerson[]>;
   /** Epoch ms of the signed-in user's last sign-in (Auth metadata), or null when signed out. */
   lastSignInAt(): number | null;
   /**

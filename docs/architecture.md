@@ -28,6 +28,7 @@ apps/mobile
     (tabs)/                  discover (S5), matches (S9), profile (S11)
     match/[id].tsx           "It's a match!" modal (S8)
     chat/[id].tsx            chat with one match (S10)
+    blocked.tsx              blocked people, with Unblock (S11B)
   features/
     auth/                    session store, Firebase → store sync, phone number helpers
     profile/profile-schema.ts  option ids, validation, Firestore document builder (pure TS)
@@ -56,7 +57,7 @@ apps/firebase
 | `loading` | Firebase is restoring the session | spinner only |
 | `signedOut` | no user | `(auth)`: `/welcome`, `/register`, `/verify-phone` |
 | `needsOnboarding` | signed in, no `profiles/{uid}` | `(onboarding)`: `/vibe`, `/values`, `/starter` |
-| `ready` | signed in with a profile | `(tabs)`: `/discover`, `/matches`, `/profile`; `/match/[id]`, `/chat/[id]`, `/safety/[uid]` |
+| `ready` | signed in with a profile | `(tabs)`: `/discover`, `/matches`, `/profile`; `/match/[id]`, `/chat/[id]`, `/safety/[uid]`, `/blocked` |
 | `error` | signed in, profile read failed | retry / sign-out view |
 
 When the status changes, the user lands on `app/index.tsx`, which redirects to the right first screen. Screens never navigate across groups themselves: signing in, finishing onboarding or signing out changes the status, and routing follows.
@@ -94,6 +95,7 @@ Everything else is denied. Option ids are listed once in `features/profile/profi
 | S9 | `/matches` | Live list of matches, newest first; tap opens the chat | `matches-screen`, `match-row-<matchId>`, `match-row-photo-<matchId>`, `matches-empty` |
 | S10 | `/chat/[id]` | Live chat with one match; text only for now. A block on either side closes it: the messages stay, the composer goes | `chat-screen`, `chat-photo`, `chat-input`, `chat-send`, `chat-message-<id>`, `chat-error`, `chat-safety`, `chat-closed` |
 | S11 | `/profile` | Own card from the session; add, change or remove the portrait; sign out; delete the account behind an inline confirm panel (needs a sign-in newer than five minutes) | `profile-screen`, `profile-card-name`, `profile-photo`, `profile-photo-change`, `profile-photo-remove`, `profile-photo-error`, `profile-sign-out`, `profile-delete-account`, `profile-delete-confirm`, `profile-delete-cancel`, `profile-delete-error`, `profile-delete-reauth` |
+| S11B | `/blocked` | Blocked people, opened from Profile: each one with Unblock behind an inline confirm. Unblocking removes only my two block docs; reports stay and a block they made on me stays | `blocked-screen`, `blocked-row-<uid>`, `blocked-unblock-<uid>`, `blocked-unblock-confirm-<uid>`, `blocked-empty`, `profile-blocked` |
 | S12 | `/safety/[uid]` (modal) | Block or report one person, from Discover (`context=profile`) or a chat (`context=chat`); a report also blocks. A block drops them from the deck and hides the match | `safety-screen`, `safety-error`, `safety-block`, `safety-block-confirm`, `report-reason-<id>`, `report-details`, `report-submit` |
 
 ## Environments
@@ -132,7 +134,6 @@ Web reads its Firebase config from `EXPO_PUBLIC_FIREBASE_API_KEY`, `_AUTH_DOMAIN
 - Native notification delivery verification and dev rollout (Functions and client implementation: see [notifications](notifications.md)). Unmatch; block and report exist without one.
 - Voice intros, more than one photo, photo moderation.
 - Age recompute, ranking by shared passions and distance (Cloud Function).
-- Unblock (there is no UI yet).
 - Cleaning up the messages the other person sent after an account deletion (the match document is deleted, their messages stay orphaned; needs a Cloud Function).
 - Moderation tooling for `reports` (reviewed in the Firebase console for now).
 - App Check enforcement (needs store builds).
