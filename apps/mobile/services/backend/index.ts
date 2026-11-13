@@ -50,6 +50,7 @@ import {
   revokeNotificationsBeforeAccountDeletion,
   revokeNotificationsBeforeSignOut,
 } from '@/features/notifications/notifications';
+import { buildProfileEdits } from '@/features/profile/profile-edits';
 import { newPhotoId, PHOTO_METADATA, photoPathFor } from '@/features/profile/profile-schema';
 import { appCheckProviderOptions } from './app-check';
 import { chunk, DELETE_BATCH_SIZE } from './batches';
@@ -279,6 +280,14 @@ export const backend: Backend = {
         throw error;
       }
       return profile;
+    }),
+
+  updateProfile: (uid, edits) =>
+    run(async () => {
+      await updateDoc(doc(db, 'profiles', uid), {
+        ...buildProfileEdits(edits),
+        updatedAt: serverTimestamp(),
+      });
     }),
 
   setProfilePhoto: (uid, localUri) =>

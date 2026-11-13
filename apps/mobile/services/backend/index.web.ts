@@ -41,6 +41,7 @@ import {
   ref,
   uploadBytes,
 } from 'firebase/storage';
+import { buildProfileEdits } from '@/features/profile/profile-edits';
 import { newPhotoId, PHOTO_METADATA, photoPathFor } from '@/features/profile/profile-schema';
 import { chunk, DELETE_BATCH_SIZE } from './batches';
 import {
@@ -248,6 +249,14 @@ export const backend: Backend = {
         throw error;
       }
       return profile;
+    }),
+
+  updateProfile: (uid, edits) =>
+    run(async () => {
+      await updateDoc(doc(db, 'profiles', uid), {
+        ...buildProfileEdits(edits),
+        updatedAt: serverTimestamp(),
+      });
     }),
 
   setProfilePhoto: (uid, localUri) =>

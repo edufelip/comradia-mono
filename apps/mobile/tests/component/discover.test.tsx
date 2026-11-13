@@ -78,6 +78,79 @@ function seedDeck(...people: DiscoveryProfile[]) {
 }
 
 describe('DiscoverScreen', () => {
+  it('resets another account’s filters without applying the previous account’s draft', async () => {
+    signIn();
+    seedDeck(MAYA, LUCAS);
+    await render(<DiscoverScreen />);
+    await screen.findByText('Maya, 28');
+    await fireEvent.press(screen.getByTestId('discover-filters-open'));
+    await fireEvent.press(screen.getByTestId('discover-filter-vibe-bookworm'));
+    await fireEvent.press(screen.getByTestId('discover-filters-apply'));
+    expect(screen.getByText('Lucas, 31')).toBeOnTheScreen();
+    await act(() => useSessionStore.setState({ user: { ...TEST_USER, uid: 'another-qa-user' } }));
+    expect(await screen.findByText('Maya, 28')).toBeOnTheScreen();
+    await act(() => useSessionStore.setState({ user: TEST_USER }));
+    expect(await screen.findByText('Maya, 28')).toBeOnTheScreen();
+    await fireEvent.press(screen.getByTestId('discover-filters-open'));
+    expect(screen.getByTestId('discover-filter-min-age')).toHaveProp('value', '18');
+    expect(screen.getByTestId('discover-filter-vibe-any')).toHaveProp(
+      'accessibilityState',
+      expect.objectContaining({ selected: true }),
+    );
+  });
+
+  it('filters visible people without passing hidden candidates and resets the page', async () => {
+    signIn();
+    seedDeck(MAYA, LUCAS);
+    await render(<DiscoverScreen />);
+    await screen.findByText('Maya, 28');
+    await fireEvent.press(screen.getByTestId('discover-filters-open'));
+    await fireEvent.press(screen.getByTestId('discover-filter-vibe-bookworm'));
+    await fireEvent.press(screen.getByTestId('discover-filters-apply'));
+    expect(screen.getByText('Lucas, 31')).toBeOnTheScreen();
+    expect(fakeBackend.callsTo('recordSwipe')).toHaveLength(0);
+    await fireEvent.press(screen.getByTestId('discover-pass'));
+    expect(await screen.findByText(enUS['discover.filters.empty_title'])).toBeOnTheScreen();
+    expect(screen.queryByText(enUS['discover.empty.title'])).not.toBeOnTheScreen();
+    expect(fakeBackend.callsTo('recordSwipe').map((call) => call.args[1])).toEqual([LUCAS.id]);
+    await fireEvent.press(screen.getByTestId('discover-refresh'));
+    expect(await screen.findByText('Maya, 28')).toBeOnTheScreen();
+  });
+
+  it('validates age bounds and cancels unapplied filter edits', async () => {
+    signIn();
+    seedDeck(MAYA, LUCAS);
+    await render(<DiscoverScreen />);
+    await screen.findByText('Maya, 28');
+    await fireEvent.press(screen.getByTestId('discover-filters-open'));
+    await fireEvent.changeText(screen.getByTestId('discover-filter-min-age'), '40');
+    await fireEvent.changeText(screen.getByTestId('discover-filter-max-age'), '20');
+    await fireEvent.press(screen.getByTestId('discover-filters-apply'));
+    expect(screen.getByTestId('discover-filters-error')).toBeOnTheScreen();
+    await fireEvent.press(screen.getByTestId('discover-filters-cancel'));
+    expect(screen.getByText('Maya, 28')).toBeOnTheScreen();
+    await fireEvent.press(screen.getByTestId('discover-filters-open'));
+    expect(screen.getByTestId('discover-filter-min-age')).toHaveProp('value', '18');
+    await fireEvent.changeText(screen.getByTestId('discover-filter-min-age'), '30');
+    await fireEvent.press(screen.getByTestId('discover-filters-apply'));
+    expect(screen.getByText('Lucas, 31')).toBeOnTheScreen();
+  });
+
+  it('keeps a filtered-out candidate when a visible swipe write fails', async () => {
+    signIn();
+    seedDeck(MAYA, LUCAS);
+    await render(<DiscoverScreen />);
+    await screen.findByText('Maya, 28');
+    await fireEvent.press(screen.getByTestId('discover-filters-open'));
+    await fireEvent.press(screen.getByTestId('discover-filter-vibe-bookworm'));
+    await fireEvent.press(screen.getByTestId('discover-filters-apply'));
+    fakeBackend.state.failNext.set('recordSwipe', 'network');
+    await fireEvent.press(screen.getByTestId('discover-pass'));
+    expect(await screen.findByText('Lucas, 31')).toBeOnTheScreen();
+    expect(useDiscoveryStore.getState().candidates.map((person) => person.id)).toContain(MAYA.id);
+    expect(useDiscoveryStore.getState().candidates.map((person) => person.id)).toContain(LUCAS.id);
+  });
+
   it('shows a loading line while the deck is on its way', async () => {
     signIn();
     jest.spyOn(fakeBackend.backend, 'listDiscovery').mockReturnValue(new Promise(() => undefined));

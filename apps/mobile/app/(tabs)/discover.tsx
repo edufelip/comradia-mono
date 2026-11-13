@@ -16,6 +16,12 @@ import { DsPillButton } from '@/components/ds/primitives/DsPillButton';
 import { DsScreen } from '@/components/ds/primitives/DsScreen';
 import { DsRadius, DsSpace, DsTypography, getDsTheme } from '@/constants/design-system';
 import { useSessionStore } from '@/features/auth/session-store';
+import { DiscoveryFilterPanel } from '@/features/discovery/DiscoveryFilterPanel';
+import {
+  DEFAULT_DISCOVERY_FILTERS,
+  matchesDiscoveryFilters,
+  type DiscoveryFilters,
+} from '@/features/discovery/discovery-filters';
 import { useDiscoveryStore } from '@/features/discovery/discovery-store';
 import { ProfilePhoto } from '@/features/profile/ProfilePhoto';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -37,6 +43,12 @@ export default function DiscoverScreen() {
   const isFocused = useIsFocused();
   const reduceMotion = useReducedMotion();
   const uid = useSessionStore((state) => state.user?.uid);
+  const [filterState, setFilterState] = useState<{
+    uid: string | undefined;
+    filters: DiscoveryFilters;
+  }>({ uid, filters: { ...DEFAULT_DISCOVERY_FILTERS } });
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const filters = filterState.uid === uid ? filterState.filters : DEFAULT_DISCOVERY_FILTERS;
   const status = useDiscoveryStore((state) => state.status);
   const candidates = useDiscoveryStore((state) => state.candidates);
   const load = useDiscoveryStore((state) => state.load);
@@ -80,6 +92,8 @@ export default function DiscoverScreen() {
     setActionPending(false);
     cancelAnimation(cardProgress);
     cardProgress.value = 1;
+    setFilterState({ uid, filters: { ...DEFAULT_DISCOVERY_FILTERS } });
+    setFiltersOpen(false);
   }, [cardProgress, uid]);
 
   useEffect(() => {
@@ -154,12 +168,29 @@ export default function DiscoverScreen() {
     finishConfirmedSwipe();
   };
 
-  const activeCandidate = status === 'ready' ? candidates[0] : undefined;
+  const filteredCandidates = candidates.filter((person) =>
+    matchesDiscoveryFilters(person, filters),
+  );
+  const applyFilters = (next: DiscoveryFilters) => {
+    if (actionInFlight.current) return;
+    cancelAnimation(cardProgress);
+    cardProgress.value = 1;
+    setFilterState({ uid, filters: next });
+    setFiltersOpen(false);
+  };
+  const activeCandidate = status === 'ready' ? filteredCandidates[0] : undefined;
+  const hasFilteredEmpty = candidates.length > 0 && filteredCandidates.length === 0;
   const displayedCandidate = heldCandidate ?? activeCandidate;
   const isLoading = status === 'idle' || status === 'loading';
 
   return (
-    <DsScreen contentContainerStyle={styles.container} scheme={scheme} testID="discover-screen">
+    <DsScreen
+      keyboardAware={filtersOpen}
+      keyboardDismissMode="on-drag"
+      contentContainerStyle={styles.container}
+      scheme={scheme}
+      testID="discover-screen"
+    >
       <View style={styles.header}>
         <Text
           accessibilityRole="header"
@@ -171,6 +202,26 @@ export default function DiscoverScreen() {
           {t('discover.subtitle')}
         </Text>
       </View>
+
+      <DsPillButton
+        disabled={actionPending}
+        label={t('discover.filters.title')}
+        onPress={() => setFiltersOpen((open) => !open)}
+        scheme={scheme}
+        testID="discover-filters-open"
+        variant="outline"
+      />
+      {filtersOpen ? (
+        <DiscoveryFilterPanel
+          key={uid}
+          active={isFocused}
+          busy={actionPending}
+          filters={filters}
+          onApply={applyFilters}
+          onCancel={() => setFiltersOpen(false)}
+          scheme={scheme}
+        />
+      ) : null}
 
       {isLoading ? (
         <DsCard scheme={scheme} style={styles.card}>
@@ -307,14 +358,16 @@ export default function DiscoverScreen() {
       ) : (
         <DsCard scheme={scheme} style={styles.card}>
           <Text style={[DsTypography.cardTitle, { color: ds.color.textPrimary }]}>
-            {t('discover.empty.title')}
+            {t(hasFilteredEmpty ? 'discover.filters.empty_title' : 'discover.empty.title')}
           </Text>
           <Text style={[DsTypography.body, { color: ds.color.textSecondary }]}>
-            {t('discover.empty.body')}
+            {t(hasFilteredEmpty ? 'discover.filters.empty_body' : 'discover.empty.body')}
           </Text>
           <DsPillButton
-            label={t('discover.empty.refresh')}
-            onPress={reload}
+            label={t(hasFilteredEmpty ? 'discover.filters.reset' : 'discover.empty.refresh')}
+            onPress={
+              hasFilteredEmpty ? () => applyFilters({ ...DEFAULT_DISCOVERY_FILTERS }) : reload
+            }
             scheme={scheme}
             testID="discover-refresh"
             variant="primary"
