@@ -25,3 +25,8 @@ The release APK rebuilt from PR10 bb19a1c succeeded (SHA-256 `ccdc3f4a019ac062de
 
 
 Post-commit mutation checks independently reverted the owning source while keeping new tests: all four profile tests, four Discover tests and one locale-registration test failed without the change, with zero new tests incorrectly passing and zero suite-load errors. Each run restored a clean tree; typecheck passed after restoration. Final source scanner inspected 30 files with no findings. Native screen keyboard avoidance reuses the existing DS opt-in; keyboard and large-font visual replay remains pending.
+
+
+## Native build follow-up
+
+The first beta build exposed an actual release-manifest conflict between Expo's notification tint and Firebase Messaging's library default. A config mod now preserves the Expo resource and adds only the FCM color's `tools:replace="android:resource"` marker, preserving other override attributes. The fix lives in app.config.ts and survives native regeneration. A regression test failed before the helper and passed after it; 196 units, typecheck and format checks pass. Expo prebuild generated the override, and Gradle assembleRelease succeeded. The coordinator is recording the APK receipt separately; no beta-native/provider acceptance is implied by compilation.
