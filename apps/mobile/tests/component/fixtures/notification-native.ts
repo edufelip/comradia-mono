@@ -47,6 +47,7 @@ export function loadNotificationNativeHarness(platform: 'ios' | 'android' | 'web
   let permission: Permission = 'not-determined';
   let requestedPermission: Permission = 'authorized';
   let token = 'fcm-token-1';
+  let deviceLocale = 'en-US';
   let tokenError: Error | null = null;
   let initialNotification: Promise<Message> = Promise.resolve(null);
   let channelGate: Promise<unknown> | null = null;
@@ -178,7 +179,8 @@ export function loadNotificationNativeHarness(platform: 'ios' | 'android' | 'web
     AndroidImportance: { DEFAULT: 3 },
     IosAuthorizationStatus: { NOT_DETERMINED: 0, AUTHORIZED: 2, PROVISIONAL: 3, EPHEMERAL: 4 },
   }));
-  jest.doMock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'en-US' }] }));
+  jest.doMock('expo-localization', () => ({ getLocales: () => [{ languageTag: deviceLocale }] }));
+  jest.doMock('@/localization/get-device-locale', () => ({ getDeviceLocale: () => deviceLocale }));
   jest.doMock('react-native', () => {
     return { Linking: linking, Platform: { OS: platform } };
   });
@@ -193,6 +195,9 @@ export function loadNotificationNativeHarness(platform: 'ios' | 'android' | 'web
   ) as typeof import('@/features/notifications/push-token-store.native');
   return {
     native,
+    setDeviceLocale(value: string) {
+      deviceLocale = value;
+    },
     hashPushToken: tokenStore.hashPushToken,
     registerPushToken: tokenStore.registerPushToken,
     auth,

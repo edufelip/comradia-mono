@@ -1,3 +1,4 @@
+import { NOTIFICATION_LOCALES, notificationCopy, notificationLocale, type NotificationLocale } from './notification-locale';
 import { createHash } from 'node:crypto';
 import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 import type { MulticastMessage } from 'firebase-admin/messaging';
@@ -29,6 +30,7 @@ export interface MatchContext {
 export interface PushTokenRegistration {
   id: string;
   token: string;
+  locale?: NotificationLocale;
 }
 
 export interface FcmSendResult {
@@ -84,6 +86,7 @@ function parseMatchUsers(matchId: string, data: FirebaseFirestore.DocumentData |
 function validTokenData(id: string, data: FirebaseFirestore.DocumentData): data is {
   token: string;
   platform: 'ios' | 'android';
+  locale?: unknown;
 } {
   return (
     PUSH_TOKEN_ID_PATTERN.test(id) &&
@@ -130,7 +133,7 @@ export class FirestoreNotificationStore implements NotificationStore {
     return snapshot.docs.flatMap((document) => {
       const data = document.data();
       return validTokenData(document.id, data)
-        ? [{ id: document.id, token: data.token }]
+        ? [{ id: document.id, token: data.token, locale: notificationLocale(data.locale) }]
         : [];
     });
   }
@@ -208,13 +211,9 @@ function isInvalidTokenError(code: string | undefined): boolean {
   return INVALID_TOKEN_CODES.has(shortCode);
 }
 
-function payload(type: NotificationType, matchId: string, recipientUid: string): Omit<MulticastMessage, 'tokens'> {
-  const isMatch = type === 'match';
+function payload(type: NotificationType, matchId: string, recipientUid: string, locale: NotificationLocale): Omit<MulticastMessage, 'tokens'> {
   return {
-    notification: {
-      title: isMatch ? 'New match' : 'New message',
-      body: isMatch ? 'You have a new match.' : 'You received a new message.',
-    },
+    notification: notificationCopy(locale, type),
     data: { type, matchId, recipientUid },
     android: { notification: { channelId: 'matches-messages' } },
     apns: { payload: { aps: { sound: 'default' } } },
@@ -257,36 +256,43 @@ export function createNotificationDispatcher(
       const tokens = await store.listPushTokens(recipientUid);
       if (tokens.length === 0) continue;
 
-      for (let start = 0; start < tokens.length; start += MAX_TOKENS_PER_FCM_CALL) {
+      const attemptedIds = new Set<string>();
+      chunks: for (let start = 0; start < tokens.length; start += MAX_TOKENS_PER_FCM_CALL) {
         const proposedChunk = tokens.slice(start, start + MAX_TOKENS_PER_FCM_CALL);
-        const currentTokens = await store.listPushTokens(recipientUid);
-        const currentById = new Map(currentTokens.map((token) => [token.id, token.token]));
-        const chunk = proposedChunk.filter(({ id, token }) => currentById.get(id) === token);
-        if (chunk.length === 0) continue;
+        for (const locale of NOTIFICATION_LOCALES) {
+          if (proposedChunk.every(({ id }) => attemptedIds.has(id))) break;
+          // Locale, token ownership and revocation are refreshed for EACH external send.
+          const currentTokens = await store.listPushTokens(recipientUid);
+          const currentById = new Map(currentTokens.map((token) => [token.id, token]));
+          const eligible = proposedChunk.filter(({ id, token }) =>
+            !attemptedIds.has(id) && currentById.get(id)?.token === token,
+          );
+          if (eligible.length === 0) break;
+          const chunk = eligible.filter(({ id }) =>
+            notificationLocale(currentById.get(id)?.locale) === locale,
+          );
+          if (chunk.length === 0) continue;
+          if (!await store.isDispatchAllowed(claimInput)) break chunks;
 
-        // The final safety read cannot be atomic with the external FCM request. A block or
-        // token revocation that lands after this check may race the send already in flight.
-        if (!await store.isDispatchAllowed(claimInput)) break;
-
-        let result: FcmSendResult;
-        try {
-          result = await sender.sendEachForMulticast({
-            ...payload(event.type, event.matchId, recipientUid),
-            tokens: chunk.map(({ token }) => token),
-          });
-        } catch {
-          // A marker is claimed before FCM to make retries at-most-once. This deliberately
-          // accepts notification loss if FCM fails after the claim; do not retry the event.
-          onSendFailure(event.type);
-          continue;
+          for (const { id } of chunk) attemptedIds.add(id);
+          let result: FcmSendResult;
+          try {
+            result = await sender.sendEachForMulticast({
+              ...payload(event.type, event.matchId, recipientUid, locale),
+              tokens: chunk.map(({ token }) => token),
+            });
+          } catch {
+            // Keep the existing at-most-once loss window; no retry after claiming FCM.
+            onSendFailure(event.type);
+            continue;
+          }
+          const invalidTokens = chunk.filter((_, index) =>
+            isInvalidTokenError(result.responses[index]?.error?.code),
+          );
+          await Promise.allSettled(
+            invalidTokens.map(({ id }) => store.deletePushToken(recipientUid, id)),
+          );
         }
-
-        const invalidTokens = chunk.filter((_, index) =>
-          isInvalidTokenError(result.responses[index]?.error?.code),
-        );
-        await Promise.allSettled(
-          invalidTokens.map(({ id }) => store.deletePushToken(recipientUid, id)),
-        );
       }
     }
   };

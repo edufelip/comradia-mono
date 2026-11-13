@@ -62,7 +62,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       // Adds the Crashlytics Gradle plugin; without it the Android app crashes at startup
       // ("The Crashlytics build ID is missing") because the package is linked natively.
       '@react-native-firebase/crashlytics',
-      'expo-notifications',
+      ['expo-notifications', { icon: './assets/images/notification-icon.png', color: '#C94143' }],
       // Photo library only: the camera and microphone keys and Android permissions stay out.
       [
         'expo-image-picker',
