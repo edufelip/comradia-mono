@@ -172,7 +172,7 @@ Every job runs on our own self-hosted runner, `comradia-ci-ubuntu-1` on the home
 
 From `docs/architecture.md` "Deferred" and "Costs":
 
-- **Real SMS:** `comradia-dev` is on Blaze, but real SMS is disabled because the SMS region policy has an empty allowlist, so no paid SMS can go out. Tests use the emulator or the two owner-set Firebase test numbers (code `123456`; listed in the Firebase console, not here). Enabling SMS in all regions, with no Brazil-only limit, needs the owner's yes.
+- **Real SMS:** `comradia-dev` sends real, paid SMS to any number in any region. Tests use the emulator or the two owner-set Firebase test numbers (code `123456`; listed in the Firebase console, not here), which never send an SMS.
 - **Match and message notifications.** Functions tests use the real Admin Firestore adapter with a captured FCM transport; they do not prove provider delivery. Install `apps/firebase/functions` dependencies before running `apps/firebase yarn test`. See [notification validation](notifications.md) for native and provider checks.
 - **Voice intros.** Photos run on the emulator in tests; `comradia-dev` has a real bucket since 2026-11-12.
 - **Age recompute, ranking by shared passions and distance:** a Cloud Function.
