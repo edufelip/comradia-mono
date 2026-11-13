@@ -5,6 +5,7 @@ import * as Notifications from 'expo-notifications';
 import { Linking, Platform } from 'react-native';
 import { getDeviceLocale, resolveLocale, t } from '@/localization';
 import { createPushLifecycle, type PushPermission } from './push-lifecycle';
+import { pushPermissionFrom } from './push-permission';
 import { createPushSessionController } from './push-session';
 import {
   hashPushToken,
@@ -27,30 +28,8 @@ function getStoredValue(prefix: string, uid: string) {
   return AsyncStorage.getItem(storageKey(prefix, uid));
 }
 
-function permissionFromResponse(
-  response: Notifications.NotificationPermissionsStatus,
-): PushPermission {
-  const iosStatus = response.ios?.status;
-  if (response.granted || iosStatus === Notifications.IosAuthorizationStatus.AUTHORIZED) {
-    return 'authorized';
-  }
-  if (
-    iosStatus === Notifications.IosAuthorizationStatus.PROVISIONAL ||
-    iosStatus === Notifications.IosAuthorizationStatus.EPHEMERAL
-  ) {
-    return 'provisional';
-  }
-  if (
-    response.status === 'undetermined' ||
-    iosStatus === Notifications.IosAuthorizationStatus.NOT_DETERMINED
-  ) {
-    return 'not-determined';
-  }
-  return 'denied';
-}
-
 async function getPermission(): Promise<PushPermission> {
-  return permissionFromResponse(await Notifications.getPermissionsAsync());
+  return pushPermissionFrom(await Notifications.getPermissionsAsync());
 }
 
 async function ensureAndroidNotificationChannel(): Promise<void> {
@@ -68,7 +47,7 @@ const lifecycle = createPushLifecycle({
     await ensureAndroidNotificationChannel();
     const existing = await getPermission();
     if (existing === 'authorized' || existing === 'provisional') return existing;
-    return permissionFromResponse(await Notifications.requestPermissionsAsync());
+    return pushPermissionFrom(await Notifications.requestPermissionsAsync());
   },
   getToken: () => messaging().getToken(),
   hashToken: hashPushToken,
