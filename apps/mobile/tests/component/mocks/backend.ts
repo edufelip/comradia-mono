@@ -1,3 +1,4 @@
+import { buildProfileEdits } from '@/features/profile/profile-edits';
 /**
  * In-memory stand-in for `@/services/backend` (wired in tests/component/setup.ts).
  * Tests drive it through `fakeBackend`: sign a user in, seed profiles, make the next
@@ -162,6 +163,12 @@ function createFakeBackend() {
       state.profiles.set(uid, profile);
       state.accounts.set(uid, docs.account);
       return profile;
+    },
+    async updateProfile(uid, edits) {
+      record('updateProfile', [uid, edits]);
+      const current = state.profiles.get(uid);
+      if (!current) throw new BackendError('unknown');
+      state.profiles.set(uid, { ...current, ...buildProfileEdits(edits) });
     },
     async setProfilePhoto(uid, localUri) {
       record('setProfilePhoto', [uid, localUri]);

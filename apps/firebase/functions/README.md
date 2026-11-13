@@ -47,3 +47,20 @@ and fails that install. Drop the pin when the runtime moves to Node 24. If a fir
 half-way, Firebase can leave HTTPS-typed shells that block the retry: delete them with
 `firebase functions:delete <name> --region southamerica-east1` and deploy again. The
 `gcf-artifacts` image repository deletes images older than a day and keeps the newest two.
+
+## Deleted-match message cleanup
+
+`cleanupOnMatchDeleted` removes orphaned messages after a match parent is deleted (including
+account removal). Each transaction reads the parent and deletes at most 100 messages only
+if the parent is still absent. A concurrent recreation changes that read and causes a retry;
+a recreated parent wins, so cleanup never deletes its parent or active conversation. This
+conservative behavior also leaves earlier messages alone if the same match ID is recreated.
+
+Each attempt handles at most 20 pages, then throws so the retry continues from remaining
+messages. Committed pages need no cursor or delivery ledger: duplicate and partial-failure
+retries are safe. Canonical deleted-event membership is required. Client message rules stay
+sender-only; the Admin cleanup does not broaden client permissions.
+
+This export needs a separately reviewed dev deployment. It does not backfill deletions that
+happened before the trigger was installed. Historical live orphan removal requires a bounded,
+reviewed maintenance action; no live backfill was performed by this implementation.

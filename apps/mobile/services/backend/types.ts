@@ -1,3 +1,4 @@
+import type { ProfileEdits } from '@/features/profile/profile-edits';
 import type { DiscoveryProfile, PublicProfile } from '@/features/profile/profile-schema';
 
 export type AuthUser = {
@@ -71,6 +72,8 @@ export type Backend = {
   confirmPhoneCode(code: string): Promise<void>;
   signOut(): Promise<void>;
   getProfile(uid: string): Promise<PublicProfile | null>;
+  /** Updates only editable public fields; preserves immutable and private account data. */
+  updateProfile(uid: string, edits: ProfileEdits): Promise<void>;
   /**
    * Uploads `photoUri` (when given) to `photos/{uid}/{newPhotoId()}.jpg`, sets
    * `docs.profile.photoPath` to it, then writes the public profile and private account

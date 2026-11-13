@@ -24,10 +24,11 @@ service cloud.firestore {
     }
 
     function validPushToken(data) {
-      return data.keys().hasOnly(['token', 'platform', 'updatedAt'])
+      return data.keys().hasOnly(['token', 'platform', 'updatedAt', 'locale'])
         && data.keys().hasAll(['token', 'platform', 'updatedAt'])
         && isString(data.token, 1, 4096)
         && data.platform in ['ios', 'android']
+        && (!('locale' in data) || data.locale in ['en-US', 'pt-BR', 'es-ES'])
         && data.updatedAt == request.time;
     }
 

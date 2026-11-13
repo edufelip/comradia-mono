@@ -404,3 +404,101 @@ describe('ProfileScreen', () => {
     });
   });
 });
+
+describe('profile editing', () => {
+  it('saves edits and preserves age and photo; cancel discards the draft', async () => {
+    signIn();
+    fakeBackend.state.profiles.set(TEST_USER.uid, TEST_PROFILE);
+    await render(<ProfileScreen />);
+    await fireEvent.press(screen.getByTestId('profile-edit'));
+    await fireEvent.changeText(screen.getByTestId('profile-edit-name'), '  Rosa  ');
+    await fireEvent.press(screen.getByTestId('profile-edit-cancel'));
+    expect(fakeBackend.callsTo('updateProfile')).toHaveLength(0);
+    await fireEvent.press(screen.getByTestId('profile-edit'));
+    expect(screen.getByTestId('profile-edit-name')).toHaveProp('value', 'Ana');
+    await fireEvent.changeText(screen.getByTestId('profile-edit-name'), '  Rosa  ');
+    await fireEvent.press(screen.getByTestId('profile-edit-vibe-creative'));
+    await fireEvent.press(screen.getByTestId('profile-edit-looking-men'));
+    await fireEvent.press(screen.getByTestId('profile-edit-union-none'));
+    await fireEvent.changeText(screen.getByTestId('profile-edit-answer'), '  A shared garden.  ');
+    await fireEvent.press(screen.getByTestId('profile-edit-save'));
+    await waitFor(() => expect(screen.queryByTestId('profile-editor')).not.toBeOnTheScreen());
+    expect(useSessionStore.getState().profile).toEqual({
+      ...TEST_PROFILE,
+      displayName: 'Rosa',
+      vibe: 'creative',
+      lookingFor: 'men',
+      unionMember: false,
+      union: null,
+      promptAnswer: 'A shared garden.',
+    });
+    expect(fakeBackend.callsTo('updateProfile')).toHaveLength(1);
+  });
+
+  it('validates before writing and retains the draft after a failed save', async () => {
+    signIn();
+    fakeBackend.state.profiles.set(TEST_USER.uid, TEST_PROFILE);
+    await render(<ProfileScreen />);
+    await fireEvent.press(screen.getByTestId('profile-edit'));
+    await fireEvent.changeText(screen.getByTestId('profile-edit-name'), ' ');
+    await fireEvent.press(screen.getByTestId('profile-edit-save'));
+    expect(screen.getByTestId('profile-edit-error')).toBeOnTheScreen();
+    expect(fakeBackend.callsTo('updateProfile')).toHaveLength(0);
+    await fireEvent.changeText(screen.getByTestId('profile-edit-name'), 'Rosa');
+    fakeBackend.state.failNext.set('updateProfile', 'network');
+    await fireEvent.press(screen.getByTestId('profile-edit-save'));
+    expect(await screen.findByTestId('profile-edit-error')).toBeOnTheScreen();
+    expect(screen.getByTestId('profile-edit-name')).toHaveProp('value', 'Rosa');
+    expect(useSessionStore.getState().profile?.displayName).toBe('Ana');
+    await fireEvent.press(screen.getByTestId('profile-edit-save'));
+    await waitFor(() => expect(useSessionStore.getState().profile?.displayName).toBe('Rosa'));
+  });
+});
+
+it('edits values, prompt and union selection, enforcing 3–5 values', async () => {
+  signIn();
+  fakeBackend.state.profiles.set(TEST_USER.uid, TEST_PROFILE);
+  await render(<ProfileScreen />);
+  await fireEvent.press(screen.getByTestId('profile-edit'));
+  await fireEvent.press(screen.getByTestId('profile-edit-value-cycling'));
+  await fireEvent.press(screen.getByTestId('profile-edit-save'));
+  expect(screen.getByTestId('profile-edit-error')).toBeOnTheScreen();
+  for (const value of ['climate_outdoors', 'public_transit', 'pets_parks', 'food_markets'])
+    await fireEvent.press(screen.getByTestId(`profile-edit-value-${value}`));
+  await fireEvent.press(screen.getByTestId('profile-edit-union-app_workers'));
+  await fireEvent.press(screen.getByTestId('profile-edit-prompt-together_we_could'));
+  await fireEvent.press(screen.getByTestId('profile-edit-save'));
+  await waitFor(() => expect(useSessionStore.getState().profile?.union).toBe('app_workers'));
+  expect(useSessionStore.getState().profile?.values).toHaveLength(5);
+  expect(useSessionStore.getState().profile?.promptId).toBe('together_we_could');
+});
+
+it('fences a pending profile save after the signed-in account changes', async () => {
+  signIn();
+  let finish!: () => void;
+  jest.spyOn(fakeBackend.backend, 'updateProfile').mockImplementation(
+    () =>
+      new Promise<void>((resolve) => {
+        finish = resolve;
+      }),
+  );
+  await render(<ProfileScreen />);
+  await fireEvent.press(screen.getByTestId('profile-edit'));
+  await fireEvent.changeText(screen.getByTestId('profile-edit-name'), 'Rosa');
+  await fireEvent.press(screen.getByTestId('profile-edit-save'));
+  expect(screen.getByTestId('profile-edit-cancel')).toBeDisabled();
+  expect(screen.getByTestId('profile-photo-change')).toBeDisabled();
+  await fireEvent.press(screen.getByTestId('profile-edit-save'));
+  expect(fakeBackend.backend.updateProfile).toHaveBeenCalledTimes(1);
+  await act(() => {
+    useSessionStore.setState({
+      user: { ...TEST_USER, uid: 'other' },
+      profile: { ...TEST_PROFILE, displayName: 'Other' },
+    });
+  });
+  await act(async () => {
+    finish();
+  });
+  expect(useSessionStore.getState().profile?.displayName).toBe('Other');
+  expect(screen.queryByTestId('profile-editor')).not.toBeOnTheScreen();
+});

@@ -2,6 +2,38 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 
 import type { ConfigContext, ExpoConfig } from 'expo/config';
+import { AndroidConfig, withAndroidManifest, type ConfigPlugin } from 'expo/config-plugins';
+
+type AndroidManifest = Parameters<typeof AndroidConfig.Manifest.getMainApplicationOrThrow>[0];
+
+/** Expo owns the tint; explicitly prefer it over Firebase Messaging's library default. */
+export function applyNotificationColorOverride(manifest: AndroidManifest): AndroidManifest {
+  const app = AndroidConfig.Manifest.getMainApplicationOrThrow(manifest);
+  for (const metadata of app['meta-data'] ?? []) {
+    if (
+      metadata.$['android:name'] !== 'com.google.firebase.messaging.default_notification_color' ||
+      !metadata.$['android:resource']
+    )
+      continue;
+    AndroidConfig.Manifest.ensureToolsAvailable(manifest);
+    const attributes: Record<string, string | undefined> = metadata.$;
+    const overrides = new Set(
+      (attributes['tools:replace'] ?? '')
+        .split(',')
+        .map((value) => value.trim())
+        .filter(Boolean),
+    );
+    overrides.add('android:resource');
+    attributes['tools:replace'] = [...overrides].join(',');
+  }
+  return manifest;
+}
+
+const withNotificationColorOverride: ConfigPlugin = (config) =>
+  withAndroidManifest(config, (mod) => {
+    mod.modResults = applyNotificationColorOverride(mod.modResults);
+    return mod;
+  });
 
 // Firebase native config files, one pair per Firebase project (docs/architecture.md, "Environments").
 // They hold public client ids, not secrets; security comes from Auth and Firestore rules.
@@ -20,7 +52,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   const isDev = variant === 'dev';
   const files = firebaseFiles(variant);
 
-  return {
+  return withNotificationColorOverride({
     ...config,
     name: isDev ? 'Comradia (Dev)' : 'Comradia',
     slug: 'comradia',
@@ -62,7 +94,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       // Adds the Crashlytics Gradle plugin; without it the Android app crashes at startup
       // ("The Crashlytics build ID is missing") because the package is linked natively.
       '@react-native-firebase/crashlytics',
-      'expo-notifications',
+      ['expo-notifications', { icon: './assets/images/notification-icon.png', color: '#C94143' }],
       // Photo library only: the camera and microphone keys and Android permissions stay out.
       [
         'expo-image-picker',
@@ -101,5 +133,5 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       // Resolve only in native build configuration, never inline this token into production JS.
       appCheckDebugToken: isDev ? process.env.EXPO_PUBLIC_APP_CHECK_DEBUG_TOKEN : undefined,
     },
-  };
+  });
 };

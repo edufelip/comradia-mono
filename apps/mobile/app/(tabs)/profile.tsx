@@ -1,5 +1,5 @@
 import { useIsFocused } from '@react-navigation/native';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { DsMotionPressable } from '@/components/ds/motion/DsMotionPressable';
 import { DsMotionView } from '@/components/ds/motion/DsMotionView';
@@ -11,6 +11,7 @@ import { useSessionStore } from '@/features/auth/session-store';
 import { NotificationSettings } from '@/features/notifications/NotificationSettings';
 import { useNotificationSettings } from '@/features/notifications/use-notification-settings';
 import { pickPhoto } from '@/features/profile/pick-photo';
+import { ProfileEditor } from '@/features/profile/ProfileEditor';
 import { ProfilePhoto } from '@/features/profile/ProfilePhoto';
 import { needsRecentSignIn } from '@/features/safety/safety';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -34,6 +35,10 @@ export default function ProfileScreen() {
   const isFocused = useIsFocused();
   const isFocusedRef = useRef(isFocused);
   isFocusedRef.current = isFocused;
+  const [editingUid, setEditingUid] = useState<string | null>(null);
+  useEffect(() => {
+    setEditingUid(null);
+  }, [uid]);
   const [signingOut, setSigningOut] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -129,7 +134,13 @@ export default function ProfileScreen() {
   };
 
   return (
-    <DsScreen contentContainerStyle={styles.container} scheme={scheme} testID="profile-screen">
+    <DsScreen
+      keyboardAware={editingUid === uid}
+      keyboardDismissMode="on-drag"
+      contentContainerStyle={styles.container}
+      scheme={scheme}
+      testID="profile-screen"
+    >
       <View style={styles.header}>
         <Text
           accessibilityRole="header"
@@ -144,6 +155,25 @@ export default function ProfileScreen() {
 
       {profile ? (
         <>
+          {uid && editingUid === uid ? (
+            <ProfileEditor
+              key={uid}
+              uid={uid}
+              profile={profile}
+              scheme={scheme}
+              active={isFocused}
+              onClose={() => setEditingUid(null)}
+            />
+          ) : (
+            <DsPillButton
+              label={t('profile.edit.title')}
+              scheme={scheme}
+              testID="profile-edit"
+              variant="secondary"
+              disabled={photoBusy || deleting}
+              onPress={() => setEditingUid(uid ?? null)}
+            />
+          )}
           <DsCard scheme={scheme} style={styles.card}>
             <ProfilePhoto
               path={profile.photoPath}
@@ -154,7 +184,7 @@ export default function ProfileScreen() {
               testID="profile-photo"
             />
             <DsPillButton
-              disabled={photoBusy}
+              disabled={photoBusy || editingUid === uid}
               label={profile.photoPath ? t('photo.change') : t('photo.add')}
               onPress={() => void choosePhoto()}
               scheme={scheme}
@@ -164,7 +194,7 @@ export default function ProfileScreen() {
             {profile.photoPath ? (
               <DsMotionPressable
                 accessibilityRole="button"
-                disabled={photoBusy}
+                disabled={photoBusy || editingUid === uid}
                 onPress={() => void savePhoto(null)}
                 style={styles.textButton}
                 testID="profile-photo-remove"

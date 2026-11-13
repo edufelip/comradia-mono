@@ -52,10 +52,11 @@ describe('native push adapter integration', () => {
     expect(harness.messagingClient.getToken).toHaveBeenCalledTimes(1);
     expect(harness.storage.get(enabledKey)).toBe('true');
     expect(harness.storage.get(tokenHashKey)).toBe(hash);
-    expect(Object.keys(document).sort()).toEqual(['platform', 'token', 'updatedAt']);
+    expect(Object.keys(document).sort()).toEqual(['locale', 'platform', 'token', 'updatedAt']);
     expect(document).toEqual({
       token: 'fcm-token-1',
       platform: 'ios',
+      locale: 'en-US',
       updatedAt: { __serverTimestamp: true },
     });
     await expect(harness.native.getNotificationSettings('alice')).resolves.toBe('enabled');
@@ -562,4 +563,16 @@ describe('native push adapter integration', () => {
     expect(harness.firestore.documents.size).toBe(0);
     expect(harness.firestore.calls).toHaveLength(0);
   });
+});
+
+it('registers the resolved device language and refreshes it on session readiness', async () => {
+  const harness = loadNotificationNativeHarness('android');
+  harness.setDeviceLocale('pt-PT');
+  await harness.native.enableNotifications('alice');
+  let registrations = [...harness.firestore.documents.values()] as Array<{ locale?: string }>;
+  expect(registrations[0].locale).toBe('pt-BR');
+  harness.setDeviceLocale('es-MX');
+  await harness.native.onNotificationSessionReady('alice');
+  registrations = [...harness.firestore.documents.values()] as Array<{ locale?: string }>;
+  expect(registrations[0].locale).toBe('es-ES');
 });

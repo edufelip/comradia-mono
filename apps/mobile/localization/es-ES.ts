@@ -1,10 +1,34 @@
 import type { TranslationKey } from './en-US';
 
 export const esES: Record<TranslationKey, string> = {
+  'profile.edit.title': 'Editar perfil',
+  'profile.edit.hint': 'Los cambios aparecen en tu tarjeta pública.',
+  'profile.edit.vibe': 'Tu estilo',
+  'profile.edit.no_union': 'Sin insignia sindical',
+  'profile.edit.prompt': 'Elige una pregunta',
+  'profile.edit.answer': 'Tu respuesta',
+  'profile.edit.invalid': 'Añade un nombre, de 3 a 5 valores distintos y una respuesta breve.',
+  'profile.edit.failed': 'No se pudo guardar el perfil. Inténtalo de nuevo.',
+  'profile.edit.save': 'Guardar cambios',
+  'profile.edit.cancel': 'Cancelar',
+
   'a11y.brand_logo': 'Logo de Comradia',
   'tabs.discover': 'Descubrir',
   'tabs.matches': 'Matches',
   'tabs.profile': 'Perfil',
+  'discover.filters.title': 'Filtros',
+  'discover.filters.scope': 'Los filtros se aplican a la página actual de hasta 50 personas.',
+  'discover.filters.min_age': 'Edad mínima',
+  'discover.filters.max_age': 'Edad máxima',
+  'discover.filters.any_vibe': 'Cualquier estilo',
+  'discover.filters.apply': 'Aplicar filtros',
+  'discover.filters.reset': 'Borrar filtros',
+  'discover.filters.cancel': 'Cancelar',
+  'discover.filters.invalid':
+    'Elige edades de 18 a 99 años, con la mínima menor o igual a la máxima.',
+  'discover.filters.empty_title': 'Nadie coincide con estos filtros',
+  'discover.filters.empty_body':
+    'Amplía las edades o elige otro estilo. No se ha descartado a las personas ocultas.',
   'discover.title': 'Comradia',
   'discover.subtitle': 'Conoce a alguien que realmente se preocupa.',
   'discover.union_badge': 'Sindicalizado/a',

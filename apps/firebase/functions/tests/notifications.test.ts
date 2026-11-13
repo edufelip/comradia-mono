@@ -340,3 +340,65 @@ describe('match and message notification dispatch', () => {
     assert.deepEqual(sender.messages.map((message) => message.tokens.length), [500, 1]);
   });
 });
+
+it('groups one recipient’s devices by locale, falls back for legacy tokens and prunes the right group', async () => {
+  const { users, matchId } = await fixture();
+  const pt = `bad-pt-${randomUUID()}`;
+  const es = `es-${randomUUID()}`;
+  const legacy = `legacy-${randomUUID()}`;
+  const unsupported = `unsupported-${randomUUID()}`;
+  for (const [token, locale] of [[pt, 'pt-BR'], [es, 'es-ES'], [legacy, null], [unsupported, 'fr-FR']] as const) {
+    const id = await seedToken(users[0], token);
+    if (locale) await firestore.doc(`users/${users[0]}/pushTokens/${id}`).update({ locale });
+  }
+  const sender = new RecordingSender();
+  sender.response = (message) => ({ responses: message.tokens.map((token) => token === pt
+    ? { success: false, error: { code: 'messaging/registration-token-not-registered' } }
+    : { success: true }) });
+  const dispatch = createNotificationDispatcher(new FirestoreNotificationStore(firestore), sender);
+  await dispatch(createdEvent(matchId));
+  assert.equal(sender.messages.length, 3);
+  assert.equal(sender.messages.find((message) => message.tokens.includes(pt))?.notification?.title, 'Novo match');
+  assert.equal(sender.messages.find((message) => message.tokens.includes(es))?.notification?.title, 'Nuevo match');
+  const english = sender.messages.find((message) => message.tokens.includes(legacy));
+  assert.equal(english?.notification?.title, 'New match');
+  assert.ok(english?.tokens.includes(unsupported));
+  assert.equal((await firestore.doc(`users/${users[0]}/pushTokens/${createHash('sha256').update(pt).digest('hex')}`).get()).exists, false);
+  assert.equal((await firestore.doc(`users/${users[0]}/pushTokens/${createHash('sha256').update(es).digest('hex')}`).get()).exists, true);
+  assert.equal(JSON.stringify(sender.messages).includes('Private Name'), false);
+});
+
+it('uses localized generic message copy without including the message body', async () => {
+  const { users, matchId } = await fixture();
+  const token = `pt-message-${randomUUID()}`;
+  const id = await seedToken(users[1], token);
+  await firestore.doc(`users/${users[1]}/pushTokens/${id}`).update({ locale: 'pt-BR' });
+  const sender = new RecordingSender();
+  await createNotificationDispatcher(new FirestoreNotificationStore(firestore), sender)(
+    createdEvent(matchId, { type: 'message', senderUid: users[0], messageText: 'Private message body' }),
+  );
+  assert.equal(sender.messages[0]?.notification?.title, 'Nova mensagem');
+  assert.equal(sender.messages[0]?.notification?.body, 'Você recebeu uma nova mensagem.');
+  assert.equal(JSON.stringify(sender.messages).includes('Private message body'), false);
+});
+
+it('never sends twice to a token whose locale changes between locale groups', async () => {
+  const { users, matchId } = await fixture();
+  const moving = `moving-${randomUUID()}`;
+  const fixed = `fixed-pt-${randomUUID()}`;
+  const movingId = await seedToken(users[0], moving);
+  const fixedId = await seedToken(users[0], fixed);
+  await firestore.doc(`users/${users[0]}/pushTokens/${fixedId}`).update({ locale: 'pt-BR' });
+  const sender = new RecordingSender();
+  const send = sender.sendEachForMulticast.bind(sender);
+  sender.sendEachForMulticast = async (message) => {
+    const result = await send(message);
+    if (message.tokens.includes(moving)) {
+      await firestore.doc(`users/${users[0]}/pushTokens/${movingId}`).update({ locale: 'pt-BR' });
+    }
+    return result;
+  };
+  await createNotificationDispatcher(new FirestoreNotificationStore(firestore), sender)(createdEvent(matchId));
+  assert.equal(sender.messages.flatMap((message) => message.tokens).filter((token) => token === moving).length, 1);
+  assert.equal(sender.messages.flatMap((message) => message.tokens).filter((token) => token === fixed).length, 1);
+});

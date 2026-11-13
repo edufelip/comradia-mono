@@ -10,6 +10,7 @@ import {
 } from '@react-native-firebase/firestore';
 import * as Crypto from 'expo-crypto';
 import { Platform } from 'react-native';
+import { getDeviceLocale, resolveLocale } from '@/localization';
 
 const db = getFirestore();
 const DELETE_BATCH_SIZE = 450;
@@ -27,6 +28,7 @@ export async function registerPushToken(uid: string, token: string, hash: string
   await setDoc(doc(db, 'users', uid, 'pushTokens', hash), {
     token,
     platform: Platform.OS,
+    locale: resolveLocale(getDeviceLocale()),
     updatedAt: serverTimestamp(),
   });
 }
