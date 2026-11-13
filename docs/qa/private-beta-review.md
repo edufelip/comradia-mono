@@ -30,3 +30,10 @@ Post-commit mutation checks independently reverted the owning source while keepi
 ## Native build follow-up
 
 The first beta build exposed an actual release-manifest conflict between Expo's notification tint and Firebase Messaging's library default. A config mod now preserves the Expo resource and adds only the FCM color's `tools:replace="android:resource"` marker, preserving other override attributes. The fix lives in app.config.ts and survives native regeneration. A regression test failed before the helper and passed after it; 196 units, typecheck and format checks pass. Expo prebuild generated the override, and Gradle assembleRelease succeeded. The coordinator is recording the APK receipt separately; no beta-native/provider acceptance is implied by compilation.
+
+
+## Approved dev rollout and bounded native replay
+
+All four PR checks passed on d39f7d0. With the owner’s explicit approval, token rules and the three named notification/cleanup Functions deployed successfully to comradia-dev. The two notification handlers were updated and cleanupOnMatchDeleted was created in southamerica-east1; CLI listing confirmed all three. No historical backfill occurred. Firebase emitted a build-image cleanup warning after deployment; no images were manually deleted.
+
+The d39f7d0 beta APK installed and launched on Samsung Galaxy A16 / Android 16. Existing QA account preserved. Portuguese filters rendered, a vibe was selected and applied, and the profile editor accepted keyboard input, dismissed the keyboard on drag, and completed a save without changing the QA profile’s values. Notification settings displayed enabled. Screenshot captured the focused answer above the keyboard; Save became available after the drag dismissal. This is bounded UI/registration-status evidence, not fresh provider receipt or full native release qualification. iOS/APNs, native two-account notification edge cases, terminated/blocked/signed-out cases and large-font validation remain unverified.
