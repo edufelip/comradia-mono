@@ -210,9 +210,9 @@ export const ptBR: Record<TranslationKey, string> = {
   'onboarding.starter.voice_soon': 'Áudios chegam em breve.',
   'onboarding.starter.finish': 'Começar a explorar',
   'onboarding.consent.body':
-    'A Comradia usa seus valores políticos e suas preferências de relacionamento somente para mostrar pessoas compatíveis com você. Eles aparecem no seu perfil para outros membros. Você pode excluir sua conta e seus dados a qualquer momento, em Perfil.',
+    'A Comradia usa seus valores políticos, sua filiação sindical e suas preferências de relacionamento somente para mostrar pessoas compatíveis com você. Eles aparecem no seu perfil para outros membros. Você pode excluir sua conta e seus dados a qualquer momento, em Perfil.',
   'onboarding.consent.toggle':
-    'Concordo que a Comradia trate meus valores políticos e minhas preferências de relacionamento para fazer a combinação.',
+    'Concordo que a Comradia trate meus valores políticos, minha filiação sindical e minhas preferências de relacionamento para fazer a combinação.',
   'onboarding.consent.privacy_link': 'Ler a política de privacidade',
   'session.error.title': 'Não conseguimos carregar seu perfil.',
   'session.error.body': 'Verifique sua conexão e tente de novo.',

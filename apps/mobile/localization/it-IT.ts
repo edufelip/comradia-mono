@@ -210,9 +210,9 @@ export const itIT: Record<TranslationKey, string> = {
   'onboarding.starter.voice_soon': 'I messaggi vocali arriveranno presto.',
   'onboarding.starter.finish': 'Inizia a scoprire',
   'onboarding.consent.body':
-    'Comradia usa i tuoi valori politici e le tue preferenze di incontro solo per mostrarti persone compatibili. Sono visibili sul tuo profilo agli altri membri. Puoi eliminare il tuo account e i tuoi dati in qualsiasi momento dal Profilo.',
+    'Comradia usa i tuoi valori politici, la tua iscrizione al sindacato e le tue preferenze di incontro solo per mostrarti persone compatibili. Sono visibili sul tuo profilo agli altri membri. Puoi eliminare il tuo account e i tuoi dati in qualsiasi momento dal Profilo.',
   'onboarding.consent.toggle':
-    "Acconsento a che Comradia tratti i miei valori politici e le mie preferenze di incontro per l'abbinamento.",
+    "Acconsento a che Comradia tratti i miei valori politici, l'iscrizione al sindacato e le mie preferenze di incontro per l'abbinamento.",
   'onboarding.consent.privacy_link': "Leggi l'informativa sulla privacy",
   'session.error.title': 'Impossibile caricare il tuo profilo.',
   'session.error.body': 'Controlla la connessione e riprova.',

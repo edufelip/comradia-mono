@@ -210,9 +210,9 @@ export const esES: Record<TranslationKey, string> = {
   'onboarding.starter.voice_soon': 'Las notas de voz llegarán pronto.',
   'onboarding.starter.finish': 'Empezar a explorar',
   'onboarding.consent.body':
-    'Comradia usa tus valores políticos y tus preferencias de citas solo para mostrarte personas compatibles. Se muestran en tu perfil a otros miembros. Puedes eliminar tu cuenta y tus datos en cualquier momento desde Perfil.',
+    'Comradia usa tus valores políticos, tu afiliación sindical y tus preferencias de citas solo para mostrarte personas compatibles. Se muestran en tu perfil a otros miembros. Puedes eliminar tu cuenta y tus datos en cualquier momento desde Perfil.',
   'onboarding.consent.toggle':
-    'Acepto que Comradia trate mis valores políticos y mis preferencias de citas para hacer las combinaciones.',
+    'Acepto que Comradia trate mis valores políticos, mi afiliación sindical y mis preferencias de citas para hacer las combinaciones.',
   'onboarding.consent.privacy_link': 'Leer la política de privacidad',
   'session.error.title': 'No pudimos cargar tu perfil.',
   'session.error.body': 'Revisa tu conexión e inténtalo de nuevo.',

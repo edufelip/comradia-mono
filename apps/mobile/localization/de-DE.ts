@@ -214,9 +214,9 @@ export const deDE: Record<TranslationKey, string> = {
   'onboarding.starter.voice_soon': 'Sprachnachrichten kommen bald.',
   'onboarding.starter.finish': 'Entdecken starten',
   'onboarding.consent.body':
-    'Comradia verwendet deine politischen Werte und Partnerwünsche nur, um dir passende Personen zu zeigen. Sie werden anderen Mitgliedern auf deinem Profil angezeigt. Du kannst dein Konto und deine Daten jederzeit im Profil löschen.',
+    'Comradia verwendet deine politischen Werte, deine Gewerkschaftsmitgliedschaft und deine Partnerwünsche nur, um dir passende Personen zu zeigen. Sie werden anderen Mitgliedern auf deinem Profil angezeigt. Du kannst dein Konto und deine Daten jederzeit im Profil löschen.',
   'onboarding.consent.toggle':
-    'Ich stimme zu, dass Comradia meine politischen Werte und Partnerwünsche für das Matching verarbeitet.',
+    'Ich stimme zu, dass Comradia meine politischen Werte, meine Gewerkschaftsmitgliedschaft und meine Partnerwünsche für das Matching verarbeitet.',
   'onboarding.consent.privacy_link': 'Datenschutzerklärung lesen',
   'session.error.title': 'Dein Profil konnte nicht geladen werden.',
   'session.error.body': 'Prüfe deine Verbindung und versuch es erneut.',
