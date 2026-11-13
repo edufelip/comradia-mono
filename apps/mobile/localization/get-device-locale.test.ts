@@ -25,7 +25,7 @@ describe('localization device locale detection', () => {
     assert.equal(typeof locale, 'string');
     assert.ok(locale.trim().length > 0, `device locale was blank: ${JSON.stringify(locale)}`);
     assert.ok(
-      ['en-US', 'pt-BR', 'es-ES'].includes(resolveLocale(locale)),
+      ['en-US', 'pt-BR', 'es-ES', 'fr-FR', 'de-DE', 'it-IT'].includes(resolveLocale(locale)),
       `device locale ${locale} did not resolve to a supported locale`,
     );
   });

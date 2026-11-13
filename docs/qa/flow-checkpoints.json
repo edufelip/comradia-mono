@@ -1,0 +1,2858 @@
+{
+  "schemaVersion": 1,
+  "product": "Comradia",
+  "scope": "implemented-client-flows",
+  "sourceSha": "982fa3cc56cff181bd28181e82a4de2427b966ec",
+  "status": "definition-only",
+  "captureStatus": "not-run",
+  "viewports": {
+    "mobile": {
+      "width": 390,
+      "height": 844
+    },
+    "tablet": {
+      "width": 820,
+      "height": 1000
+    },
+    "web": {
+      "width": 1440,
+      "height": 1000
+    }
+  },
+  "defaults": {
+    "locale": "en-US",
+    "colorScheme": "light",
+    "reducedMotion": true,
+    "environment": "Isolated synthetic backend or Firebase emulators; never live cloud",
+    "shell": "Bottom tabs on authenticated tab routes at every width; auth/onboarding and stack/modal routes follow their own layout. No rail/sidebar implemented.",
+    "artifactPattern": "{flowId}/{checkpointId}/{viewport}.png",
+    "baseline": "unbaselined"
+  },
+  "routeSources": [
+    "apps/mobile/app/(auth)/register.tsx",
+    "apps/mobile/app/(auth)/verify-phone.tsx",
+    "apps/mobile/app/(auth)/welcome.tsx",
+    "apps/mobile/app/(onboarding)/starter.tsx",
+    "apps/mobile/app/(onboarding)/values.tsx",
+    "apps/mobile/app/(onboarding)/vibe.tsx",
+    "apps/mobile/app/(tabs)/discover.tsx",
+    "apps/mobile/app/(tabs)/matches.tsx",
+    "apps/mobile/app/(tabs)/profile.tsx",
+    "apps/mobile/app/chat/[id].tsx",
+    "apps/mobile/app/index.tsx",
+    "apps/mobile/app/match/[id].tsx",
+    "apps/mobile/app/safety/[uid].tsx"
+  ],
+  "flows": [
+    {
+      "id": "01-entry",
+      "route": "/",
+      "journey": "Cold start → session guard → appropriate destination.",
+      "sources": [
+        "apps/mobile/app/index.tsx",
+        "apps/mobile/app/_layout.tsx"
+      ],
+      "evidenceSources": [
+        "apps/mobile/tests/component/root-layout.test.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "01-entry.signed-out",
+          "setup": "Restore signed-out session",
+          "expect": "Welcome replaces entry route",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "01-entry.onboarding",
+          "setup": "Authenticate user with no public profile",
+          "expect": "Vibe onboarding replaces entry route",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "01-entry.ready",
+          "setup": "Restore authenticated complete profile",
+          "expect": "Discover replaces entry route",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "01-entry.loading",
+          "setup": "Hold initial auth/profile resolution",
+          "expect": "Loading gate; no protected-content flash",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "01-entry.profile-error",
+          "setup": "Reject profile lookup then retry",
+          "expect": "Recovery state then correct destination",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        }
+      ]
+    },
+    {
+      "id": "02-welcome",
+      "route": "/welcome",
+      "journey": "Welcome → sign up or log in.",
+      "sources": [
+        "apps/mobile/app/(auth)/welcome.tsx"
+      ],
+      "evidenceSources": [
+        "apps/mobile/tests/e2e/welcome.spec.ts",
+        "apps/mobile/tests/component/welcome.test.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "02-welcome.default",
+          "setup": "Signed out; fresh launch",
+          "expect": "Headline and both named CTAs usable",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "02-welcome.signup",
+          "setup": "Press start",
+          "expect": "Registration with signup copy",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "02-welcome.login",
+          "setup": "Press existing-account CTA",
+          "expect": "Registration with login copy",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "02-welcome.dark",
+          "setup": "Use dark scheme",
+          "expect": "Readable artwork and CTAs",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "02-welcome.portuguese",
+          "setup": "Use pt-BR locale",
+          "expect": "Translated welcome copy",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "02-welcome.spanish",
+          "setup": "Use es-ES locale",
+          "expect": "Translated welcome copy",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        }
+      ]
+    },
+    {
+      "id": "03-registration",
+      "route": "/register",
+      "journey": "Choose phone or available social provider → authenticate.",
+      "sources": [
+        "apps/mobile/app/(auth)/register.tsx"
+      ],
+      "evidenceSources": [
+        "apps/mobile/tests/e2e/sign-in.spec.ts",
+        "apps/mobile/tests/component/register.test.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "03-registration.default",
+          "setup": "Signup mode with blank phone",
+          "expect": "Provider buttons and disabled send action",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "03-registration.login-mode",
+          "setup": "Set mode=login then switch mode",
+          "expect": "Correct copy and preserved usable controls",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "03-registration.phone-valid",
+          "setup": "Enter emulator Brazilian phone",
+          "expect": "Formatted phone and enabled send",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "03-registration.phone-focus",
+          "setup": "Focus phone field",
+          "expect": "Visible focus and usable form",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "03-registration.sending",
+          "setup": "Hold startPhoneSignIn promise",
+          "expect": "Loading action; repeated actions disabled",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "03-registration.send-error",
+          "setup": "Reject phone request with network error",
+          "expect": "Localized recoverable error",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "03-registration.rate-limit",
+          "setup": "Reject request with too_many_requests",
+          "expect": "Localized rate-limit error",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "03-registration.provider-busy",
+          "setup": "Hold Google sign-in",
+          "expect": "Provider loading; competing actions disabled",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "03-registration.provider-error",
+          "setup": "Reject Google authentication",
+          "expect": "Visible mapped error",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "03-registration.provider-cancel",
+          "setup": "Cancel provider authentication",
+          "expect": "No false error; form usable",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "03-registration.success",
+          "setup": "Authenticate existing emulator account",
+          "expect": "Discover landing",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "emulator",
+          "coverageStatus": "not-captured"
+        }
+      ]
+    },
+    {
+      "id": "04-verification",
+      "route": "/verify-phone",
+      "journey": "Phone request → six-digit verification → session routing; resend/edit recovery.",
+      "sources": [
+        "apps/mobile/app/(auth)/verify-phone.tsx"
+      ],
+      "evidenceSources": [
+        "apps/mobile/tests/e2e/sign-in.spec.ts",
+        "apps/mobile/tests/component/verify-phone.test.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "04-verification.default",
+          "setup": "Open with valid emulator phone and pending verification",
+          "expect": "Empty code and resend countdown",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "04-verification.partial",
+          "setup": "Enter fewer than six digits",
+          "expect": "Submit disabled; digits visible",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "04-verification.submitting",
+          "setup": "Hold confirmation on sixth digit",
+          "expect": "Busy state; no duplicate confirmation",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "04-verification.wrong-code",
+          "setup": "Submit incorrect emulator code",
+          "expect": "Localized error; code cleared",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "04-verification.expired",
+          "setup": "Reject with code_expired",
+          "expect": "Expired-code recovery copy",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "04-verification.no-pending",
+          "setup": "Reject with no_pending_code",
+          "expect": "Missing-session recovery copy",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "04-verification.resend-ready",
+          "setup": "Advance controlled countdown past 30 seconds",
+          "expect": "Resend enabled",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "04-verification.resend-error",
+          "setup": "Reject resend request",
+          "expect": "Error and retry remain available",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "04-verification.resend-success",
+          "setup": "Resend through emulator",
+          "expect": "Countdown restarts",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "04-verification.edit-number",
+          "setup": "Press edit phone",
+          "expect": "Registration landing",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "04-verification.invalid-route",
+          "setup": "Open with missing or invalid phone",
+          "expect": "Safe registration redirect",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "04-verification.success",
+          "setup": "Confirm correct emulator code for new account",
+          "expect": "Vibe onboarding landing",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "emulator",
+          "coverageStatus": "not-captured"
+        }
+      ]
+    },
+    {
+      "id": "05-onboarding-basics",
+      "route": "/vibe",
+      "journey": "New account → basics, optional portrait, vibe, audience and union → values.",
+      "sources": [
+        "apps/mobile/app/(onboarding)/vibe.tsx"
+      ],
+      "evidenceSources": [
+        "apps/mobile/tests/e2e/onboarding.spec.ts",
+        "apps/mobile/tests/component/onboarding-vibe.test.tsx",
+        "apps/mobile/tests/component/profile-photo.test.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "05-onboarding-basics.default",
+          "setup": "New authenticated account; empty draft",
+          "expect": "Step one; Continue unavailable",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "05-onboarding-basics.valid",
+          "setup": "Enter valid name birthday vibe and audience",
+          "expect": "Continue enabled",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "05-onboarding-basics.invalid-birthday",
+          "setup": "Enter invalid calendar date",
+          "expect": "Date validation state",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "05-onboarding-basics.underage",
+          "setup": "Enter birthday younger than 18",
+          "expect": "Age validation; Continue disabled",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "05-onboarding-basics.age-boundaries",
+          "setup": "Use controlled date and valid 18/99 year boundary fixture",
+          "expect": "Boundary age accepted",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "05-onboarding-basics.union",
+          "setup": "Enable union membership and choose union",
+          "expect": "Selected union and badge choice visible",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "05-onboarding-basics.photo",
+          "setup": "Choose deterministic portrait fixture",
+          "expect": "Cropped portrait preview and removal action",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "05-onboarding-basics.photo-error",
+          "setup": "Reject photo picker",
+          "expect": "Recoverable localized photo error",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "05-onboarding-basics.photo-removed",
+          "setup": "Remove selected portrait",
+          "expect": "Initial/fallback preview restored",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "05-onboarding-basics.back-retained",
+          "setup": "Advance to Values then go back",
+          "expect": "Draft fields and selections preserved",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        }
+      ]
+    },
+    {
+      "id": "06-onboarding-values",
+      "route": "/values",
+      "journey": "Select 3–5 values and shared-passion weight → starter.",
+      "sources": [
+        "apps/mobile/app/(onboarding)/values.tsx"
+      ],
+      "evidenceSources": [
+        "apps/mobile/tests/e2e/onboarding.spec.ts",
+        "apps/mobile/tests/component/onboarding-values.test.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "06-onboarding-values.default",
+          "setup": "Open with no values selected",
+          "expect": "Counter and disabled Continue",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "06-onboarding-values.minimum",
+          "setup": "Select three values",
+          "expect": "Continue enabled; selected pills clear",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "06-onboarding-values.maximum",
+          "setup": "Select five then attempt sixth",
+          "expect": "Five selected; limit preserved",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "06-onboarding-values.weight-low",
+          "setup": "Decrease weight to zero",
+          "expect": "Lower bound displayed; control state correct",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "06-onboarding-values.weight-high",
+          "setup": "Increase weight to 100",
+          "expect": "Upper bound displayed; control state correct",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "06-onboarding-values.back-retained",
+          "setup": "Go to starter then return",
+          "expect": "Values and weight preserved",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        }
+      ]
+    },
+    {
+      "id": "07-onboarding-starter",
+      "route": "/starter",
+      "journey": "Choose prompt and answer → atomic profile/account save → Discover.",
+      "sources": [
+        "apps/mobile/app/(onboarding)/starter.tsx"
+      ],
+      "evidenceSources": [
+        "apps/mobile/tests/e2e/onboarding.spec.ts",
+        "apps/mobile/tests/component/onboarding-starter.test.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "07-onboarding-starter.default",
+          "setup": "Valid earlier draft; blank answer",
+          "expect": "Finish disabled; voice coming-soon affordance",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "07-onboarding-starter.prompt",
+          "setup": "Choose a different prompt",
+          "expect": "Question and selected pill update",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "07-onboarding-starter.valid",
+          "setup": "Enter nonblank answer",
+          "expect": "Finish enabled and character counter correct",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "07-onboarding-starter.answer-limit",
+          "setup": "Enter 280-character fixture",
+          "expect": "Limit and wrapping remain usable",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "07-onboarding-starter.saving",
+          "setup": "Hold onboarding save promise",
+          "expect": "Busy state; no duplicate submission",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "07-onboarding-starter.save-error",
+          "setup": "Reject save",
+          "expect": "Draft retained and localized error shown",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "07-onboarding-starter.success",
+          "setup": "Complete emulator onboarding",
+          "expect": "Discover landing; public/private writes checked separately",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "emulator",
+          "coverageStatus": "not-captured"
+        }
+      ]
+    },
+    {
+      "id": "08-discovery",
+      "route": "/discover",
+      "journey": "Load eligible page → inspect card → Pass/Like → next card or match.",
+      "sources": [
+        "apps/mobile/app/(tabs)/discover.tsx"
+      ],
+      "evidenceSources": [
+        "apps/mobile/tests/e2e/discover.spec.ts",
+        "apps/mobile/tests/component/discover.test.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "08-discovery.loading",
+          "setup": "Hold discovery read",
+          "expect": "Loading card; no empty-state flash",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "08-discovery.ready",
+          "setup": "Seed eligible page including portraits and initials",
+          "expect": "Person card and named actions; self excluded",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "08-discovery.empty",
+          "setup": "Seed no remaining eligible people",
+          "expect": "Caught-up state and refresh",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "08-discovery.read-error",
+          "setup": "Reject discovery read",
+          "expect": "Retry state",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "08-discovery.retry",
+          "setup": "Retry read successfully",
+          "expect": "Ready card replaces error",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "08-discovery.pass-pending",
+          "setup": "Hold swipe write",
+          "expect": "Current card retained; actions disabled",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "08-discovery.pass-success",
+          "setup": "Resolve pass",
+          "expect": "Next candidate; no match",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "08-discovery.like-success",
+          "setup": "Resolve non-mutual like",
+          "expect": "Next candidate; no match",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "08-discovery.write-error",
+          "setup": "Reject swipe write",
+          "expect": "Original card restored; no explicit swipe-write error message is currently implemented.",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "08-discovery.refresh",
+          "setup": "Refresh empty page after adding eligible fixture",
+          "expect": "New eligible card",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "08-discovery.hidden-return",
+          "setup": "Resolve swipe while tab hidden then return",
+          "expect": "Final state without replay or stale navigation",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "08-discovery.account-change",
+          "setup": "Change session while swipe pending",
+          "expect": "Prior account completion cannot affect new account",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        }
+      ]
+    },
+    {
+      "id": "09-discovery-filters",
+      "route": "/discover",
+      "journey": "Open filters → change age/vibe → apply/cancel/reset without passing hidden people.",
+      "sources": [
+        "apps/mobile/features/discovery/DiscoveryFilterPanel.tsx",
+        "apps/mobile/features/discovery/discovery-filters.ts",
+        "apps/mobile/app/(tabs)/discover.tsx"
+      ],
+      "evidenceSources": [
+        "apps/mobile/tests/e2e/private-beta.spec.ts",
+        "apps/mobile/tests/component/discover.test.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "09-discovery-filters.default",
+          "setup": "Open filters with defaults",
+          "expect": "18–99 and any-vibe selection; page-limit disclosure",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "09-discovery-filters.selected",
+          "setup": "Select vibe and valid age interval",
+          "expect": "Selection visible; input readable",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "09-discovery-filters.invalid",
+          "setup": "Set minimum greater than maximum or invalid bounds then apply",
+          "expect": "Inline validation; panel retained",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "09-discovery-filters.filtered",
+          "setup": "Apply to fixture containing both matching and hidden people",
+          "expect": "Only matching card displayed; no hidden swipe writes",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "09-discovery-filters.filtered-empty",
+          "setup": "Apply interval/vibe excluding all loaded candidates",
+          "expect": "Filter-specific empty state and reset",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "09-discovery-filters.reset",
+          "setup": "Clear filters",
+          "expect": "Original loaded candidates restored",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "09-discovery-filters.cancel",
+          "setup": "Modify draft then cancel and reopen",
+          "expect": "Applied filters retained; draft discarded",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "09-discovery-filters.account-reset",
+          "setup": "Switch accounts and back after applying filter",
+          "expect": "Defaults restored; no other-account draft",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "09-discovery-filters.localized-dark",
+          "setup": "Capture pt-BR in dark reduced-motion context",
+          "expect": "Translated labels; no overflow",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "09-discovery-filters.localized-dark-es",
+          "setup": "Capture es-ES in dark reduced-motion context",
+          "expect": "Translated labels; no overflow",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        }
+      ]
+    },
+    {
+      "id": "10-match",
+      "route": "/match/[id]",
+      "journey": "Mutual like → celebration → chat or keep swiping.",
+      "sources": [
+        "apps/mobile/app/match/[id].tsx"
+      ],
+      "evidenceSources": [
+        "apps/mobile/tests/e2e/match-chat.spec.ts",
+        "apps/mobile/tests/component/match-modal.test.tsx",
+        "apps/mobile/tests/component/match-celebration.test.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "10-match.loading",
+          "setup": "Hold match/profile lookup",
+          "expect": "Loading state",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "10-match.ready",
+          "setup": "Create mutual likes with shared values",
+          "expect": "Both names/portraits, shared values and actions",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "10-match.fallbacks",
+          "setup": "Use missing portraits and no shared values",
+          "expect": "Initials and honest absence of shared-values chips",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "10-match.missing",
+          "setup": "Open nonexistent match ID",
+          "expect": "Not-found state and safe exit",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "10-match.error",
+          "setup": "Reject match read",
+          "expect": "Recoverable error and retry",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "10-match.chat",
+          "setup": "Press send message",
+          "expect": "Correct chat landing",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "10-match.keep-swiping",
+          "setup": "Press keep swiping",
+          "expect": "Discover landing",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "10-match.reduced-motion",
+          "setup": "Open valid match with OS/browser reduced motion",
+          "expect": "Settled readable celebration without forced motion",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        }
+      ]
+    },
+    {
+      "id": "11-matches",
+      "route": "/matches",
+      "journey": "Matches tab → live ordered list → correct chat.",
+      "sources": [
+        "apps/mobile/app/(tabs)/matches.tsx"
+      ],
+      "evidenceSources": [
+        "apps/mobile/tests/e2e/match-chat.spec.ts",
+        "apps/mobile/tests/component/matches.test.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "11-matches.loading",
+          "setup": "Hold initial match snapshot",
+          "expect": "Loading state",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "11-matches.empty",
+          "setup": "Seed no mutual matches",
+          "expect": "Empty state with discovery action",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "11-matches.ready",
+          "setup": "Seed multiple matches with portraits/fallbacks and shared values",
+          "expect": "Newest first; correct named rows",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "11-matches.error",
+          "setup": "Reject match subscription",
+          "expect": "Error and retry",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "11-matches.live-arrival",
+          "setup": "Deliver second snapshot with a new match",
+          "expect": "New row visible; existing rows stable",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "11-matches.hidden-arrival",
+          "setup": "Deliver match while tab hidden then return",
+          "expect": "No delayed entrance replay",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "11-matches.open-chat",
+          "setup": "Press specific match row",
+          "expect": "Correct peer conversation",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        }
+      ]
+    },
+    {
+      "id": "12-chat",
+      "route": "/chat/[id]",
+      "journey": "Two independent accounts match → exchange live messages → reload → safety.",
+      "sources": [
+        "apps/mobile/app/chat/[id].tsx"
+      ],
+      "evidenceSources": [
+        "apps/mobile/tests/e2e/two-account-smoke.spec.ts",
+        "apps/mobile/tests/e2e/match-chat.spec.ts",
+        "apps/mobile/tests/component/chat.test.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "12-chat.loading",
+          "setup": "Hold match/message reads",
+          "expect": "Loading state",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "12-chat.missing",
+          "setup": "Open missing or inaccessible match",
+          "expect": "Not-found state; no private history leakage",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "12-chat.empty",
+          "setup": "Open valid match without messages",
+          "expect": "Header and empty usable composer",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "12-chat.history",
+          "setup": "Seed both-author history",
+          "expect": "Ordered readable bubbles; initial history not animated",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "12-chat.composing",
+          "setup": "Type multiline message",
+          "expect": "Composer and input remain usable",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "12-chat.sending",
+          "setup": "Hold send promise",
+          "expect": "Pending action; duplicate send guarded",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "12-chat.sent",
+          "setup": "Send through real emulator client",
+          "expect": "Own bubble and cleared composer",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "12-chat.received",
+          "setup": "Deliver peer message through the isolated subscription fixture; real two-account networking stays in E2E.",
+          "expect": "Live incoming bubble",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "12-chat.send-error",
+          "setup": "Reject write",
+          "expect": "Draft retained and localized error",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "12-chat.read-error",
+          "setup": "Reject subscription",
+          "expect": "Recoverable read error",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "12-chat.closed",
+          "setup": "Block one member while chat open",
+          "expect": "Closed state; composer removed",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "12-chat.hidden-return",
+          "setup": "Deliver incoming message while hidden then return",
+          "expect": "Message visible without delayed motion",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "12-chat.reload",
+          "setup": "Reload conversation after both authors send",
+          "expect": "Both messages persist",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        }
+      ]
+    },
+    {
+      "id": "13-profile",
+      "route": "/profile",
+      "journey": "Own card → edit/save/cancel; portrait lifecycle; sign out or account deletion.",
+      "sources": [
+        "apps/mobile/app/(tabs)/profile.tsx",
+        "apps/mobile/features/profile/ProfileEditor.tsx",
+        "apps/mobile/features/profile/ProfilePhoto.tsx"
+      ],
+      "evidenceSources": [
+        "apps/mobile/tests/e2e/private-beta.spec.ts",
+        "apps/mobile/tests/e2e/photos.spec.ts",
+        "apps/mobile/tests/component/profile.test.tsx",
+        "apps/mobile/tests/component/profile-photo.test.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "13-profile.ready",
+          "setup": "Restore complete QA profile",
+          "expect": "Own public card and actions",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "13-profile.missing",
+          "setup": "Hold or omit profile while signed in",
+          "expect": "Sign-out remains usable",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "13-profile.edit",
+          "setup": "Open editor",
+          "expect": "All editable fields; immutable age/photo excluded from form",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "13-profile.edit-selected",
+          "setup": "Change vibe audience union values and prompt in draft",
+          "expect": "Correct selected states and 3–5-value limit",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "13-profile.edit-invalid",
+          "setup": "Clear name or leave fewer than three values then save",
+          "expect": "Validation; no write",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "13-profile.edit-saving",
+          "setup": "Hold updateProfile promise",
+          "expect": "Save and cancel disabled; no duplicate write",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "13-profile.edit-error",
+          "setup": "Reject updateProfile",
+          "expect": "Draft retained; retry available",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "13-profile.edit-cancel",
+          "setup": "Modify draft then cancel",
+          "expect": "Own card unchanged",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "13-profile.edit-success",
+          "setup": "Save changed emulator profile then reload",
+          "expect": "Persisted edits; age/photo/createdAt/private fields unchanged",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "13-profile.edit-account-switch",
+          "setup": "Change UID during pending save",
+          "expect": "New account unaffected by late completion",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "13-profile.photo",
+          "setup": "Use existing portrait fixture",
+          "expect": "Change and remove available",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "13-profile.photo-uploading",
+          "setup": "Hold upload promise",
+          "expect": "Busy state; duplicate action guarded",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "13-profile.photo-error",
+          "setup": "Reject picker or upload",
+          "expect": "Recoverable photo error",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "13-profile.photo-remove",
+          "setup": "Remove portrait",
+          "expect": "Initial fallback; old file handling checked separately",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "13-profile.signout-error",
+          "setup": "Reject sign-out",
+          "expect": "Profile stays usable",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "13-profile.signed-out",
+          "setup": "Complete sign-out",
+          "expect": "Welcome landing; protected state cleared",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "13-profile.delete-confirm",
+          "setup": "Open delete panel",
+          "expect": "Consequences and confirm/cancel actions",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "13-profile.delete-cancel",
+          "setup": "Cancel deletion",
+          "expect": "No data removed; profile retained",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "13-profile.delete-reauth",
+          "setup": "Use sign-in older than freshness threshold",
+          "expect": "Recent-sign-in guidance; no deletion",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "13-profile.delete-error",
+          "setup": "Reject deleteAccount",
+          "expect": "Error and retry/cancel state",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "13-profile.deleted",
+          "setup": "Delete disposable emulator account only",
+          "expect": "Welcome landing; deletion effects checked separately",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        }
+      ]
+    },
+    {
+      "id": "14-safety",
+      "route": "/safety/[uid]",
+      "journey": "From Discover/chat → report or block → both users lose access.",
+      "sources": [
+        "apps/mobile/app/safety/[uid].tsx"
+      ],
+      "evidenceSources": [
+        "apps/mobile/tests/e2e/safety.spec.ts",
+        "apps/mobile/tests/component/safety.test.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "14-safety.profile-context",
+          "setup": "Open from disposable candidate",
+          "expect": "Correct target and profile context",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "14-safety.chat-context",
+          "setup": "Open from existing match",
+          "expect": "Correct target and chat context",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "14-safety.block-confirm",
+          "setup": "Press block",
+          "expect": "Confirmation with cancel and confirm",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "14-safety.block-cancel",
+          "setup": "Cancel block",
+          "expect": "No write; sheet usable",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "14-safety.block-pending",
+          "setup": "Hold block promise",
+          "expect": "Busy controls; no duplicate block",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "14-safety.block-error",
+          "setup": "Reject block write",
+          "expect": "Recoverable error",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "14-safety.blocked",
+          "setup": "Confirm disposable emulator block",
+          "expect": "Return to safe destination; target hidden",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "14-safety.report-draft",
+          "setup": "Choose reason and enter details",
+          "expect": "Selected reason and bounded details",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "14-safety.report-pending",
+          "setup": "Hold report promise",
+          "expect": "Busy controls",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "14-safety.report-error",
+          "setup": "Reject report write",
+          "expect": "Draft retained and error",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "14-safety.reported",
+          "setup": "Submit disposable emulator report",
+          "expect": "Return safely; report also blocks",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        }
+      ]
+    },
+    {
+      "id": "15-notifications-web",
+      "route": "/profile",
+      "journey": "Web profile → honest unavailable push state.",
+      "sources": [
+        "apps/mobile/features/notifications/NotificationSettings.tsx",
+        "apps/mobile/features/notifications/notifications.web.ts"
+      ],
+      "evidenceSources": [
+        "apps/mobile/tests/component/notification-settings.test.tsx",
+        "apps/mobile/tests/component/notification-settings-recovery.test.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "15-notifications-web.unavailable",
+          "setup": "Use web notification adapter",
+          "expect": "Unavailable copy; no fake native permission prompt",
+          "platforms": [
+            "web"
+          ],
+          "viewports": [
+            "mobile",
+            "tablet",
+            "web"
+          ],
+          "capture": "full-page",
+          "fixture": "deterministic-harness-or-emulator",
+          "coverageStatus": "not-captured"
+        }
+      ]
+    },
+    {
+      "id": "16-native-notifications",
+      "route": "/profile + OS notification surface",
+      "journey": "Native opt-in → registration → alert receipt → validated tap routing.",
+      "sources": [
+        "apps/mobile/features/notifications/NotificationSettings.tsx",
+        "apps/mobile/features/notifications/notifications.native.ts"
+      ],
+      "evidenceSources": [
+        "apps/mobile/tests/component/notification-native-integration.test.ts",
+        "apps/mobile/tests/component/notification-settings.test.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "16-native-notifications.disabled",
+          "setup": "Native OS permission not requested and local opt-in false",
+          "expect": "No unsolicited prompt",
+          "platforms": [
+            "ios",
+            "android"
+          ],
+          "viewports": [],
+          "capture": "native-screen",
+          "fixture": "native-harness",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "16-native-notifications.prompt",
+          "setup": "Press enable",
+          "expect": "OS permission sheet for exact app",
+          "platforms": [
+            "ios",
+            "android"
+          ],
+          "viewports": [],
+          "capture": "native-screen",
+          "fixture": "native-harness",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "16-native-notifications.enabled",
+          "setup": "Grant permission and finish registration",
+          "expect": "Enabled settings; language metadata verified separately",
+          "platforms": [
+            "ios",
+            "android"
+          ],
+          "viewports": [],
+          "capture": "native-screen",
+          "fixture": "native-harness",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "16-native-notifications.denied",
+          "setup": "Deny permission",
+          "expect": "Settings recovery action",
+          "platforms": [
+            "ios",
+            "android"
+          ],
+          "viewports": [],
+          "capture": "native-screen",
+          "fixture": "native-harness",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "16-native-notifications.provisional",
+          "setup": "Restore iOS provisional authorization",
+          "expect": "Enabled registration without repeat prompt",
+          "platforms": [
+            "ios",
+            "android"
+          ],
+          "viewports": [],
+          "capture": "native-screen",
+          "fixture": "native-harness",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "16-native-notifications.error",
+          "setup": "Reject registration or revoke",
+          "expect": "Error and correct recovery action",
+          "platforms": [
+            "ios",
+            "android"
+          ],
+          "viewports": [],
+          "capture": "native-screen",
+          "fixture": "native-harness",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "16-native-notifications.background-match",
+          "setup": "Trigger real disposable-account mutual match with app backgrounded",
+          "expect": "Generic localized match alert",
+          "platforms": [
+            "ios",
+            "android"
+          ],
+          "viewports": [],
+          "capture": "native-screen",
+          "fixture": "native-harness",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "16-native-notifications.background-message",
+          "setup": "Peer sends with app backgrounded",
+          "expect": "Generic localized message alert; no message body",
+          "platforms": [
+            "ios",
+            "android"
+          ],
+          "viewports": [],
+          "capture": "native-screen",
+          "fixture": "native-harness",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "16-native-notifications.terminated-tap",
+          "setup": "Receive alert with app terminated then tap",
+          "expect": "Correct authorized conversation after session readiness",
+          "platforms": [
+            "ios",
+            "android"
+          ],
+          "viewports": [],
+          "capture": "native-screen",
+          "fixture": "native-harness",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "16-native-notifications.blocked",
+          "setup": "Block peer then trigger event",
+          "expect": "No alert; absence verified with bounded provider evidence",
+          "platforms": [
+            "ios",
+            "android"
+          ],
+          "viewports": [],
+          "capture": "native-screen",
+          "fixture": "native-harness",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "16-native-notifications.signed-out",
+          "setup": "Sign out then trigger event",
+          "expect": "No account-linked alert; no cross-account routing",
+          "platforms": [
+            "ios",
+            "android"
+          ],
+          "viewports": [],
+          "capture": "native-screen",
+          "fixture": "native-harness",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "16-native-notifications.wrong-recipient",
+          "setup": "Deliver old-account notification after UID switch",
+          "expect": "No private route opened",
+          "platforms": [
+            "ios",
+            "android"
+          ],
+          "viewports": [],
+          "capture": "native-screen",
+          "fixture": "native-harness",
+          "coverageStatus": "not-captured"
+        }
+      ]
+    },
+    {
+      "id": "17-native-auth-media",
+      "route": "/register + /vibe + /profile",
+      "journey": "Native provider and media handoffs → safe return to app.",
+      "sources": [
+        "apps/mobile/app/(auth)/register.tsx",
+        "apps/mobile/features/profile/pick-photo.ts"
+      ],
+      "evidenceSources": [
+        "apps/mobile/tests/component/register.test.tsx",
+        "apps/mobile/tests/component/profile-photo.test.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "17-native-auth-media.apple-available",
+          "setup": "Use supported signed-out Apple device",
+          "expect": "Apple action offered only when available",
+          "platforms": [
+            "ios",
+            "android"
+          ],
+          "viewports": [],
+          "capture": "native-screen",
+          "fixture": "native-harness",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "17-native-auth-media.apple-prompt",
+          "setup": "Press Apple sign-in on configured test device",
+          "expect": "OS provider sheet",
+          "platforms": [
+            "ios",
+            "android"
+          ],
+          "viewports": [],
+          "capture": "native-screen",
+          "fixture": "native-harness",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "17-native-auth-media.apple-cancel",
+          "setup": "Cancel native provider sheet",
+          "expect": "Return to usable registration without false error",
+          "platforms": [
+            "ios",
+            "android"
+          ],
+          "viewports": [],
+          "capture": "native-screen",
+          "fixture": "native-harness",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "17-native-auth-media.apple-error",
+          "setup": "Inject native provider failure",
+          "expect": "Localized recoverable error",
+          "platforms": [
+            "ios",
+            "android"
+          ],
+          "viewports": [],
+          "capture": "native-screen",
+          "fixture": "native-harness",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "17-native-auth-media.google-handoff",
+          "setup": "Press native Google on configured test device",
+          "expect": "Account picker and correct return routing",
+          "platforms": [
+            "ios",
+            "android"
+          ],
+          "viewports": [],
+          "capture": "native-screen",
+          "fixture": "native-harness",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "17-native-auth-media.photo-picker",
+          "setup": "Open photo library from onboarding/profile",
+          "expect": "OS permission or library chooser",
+          "platforms": [
+            "ios",
+            "android"
+          ],
+          "viewports": [],
+          "capture": "native-screen",
+          "fixture": "native-harness",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "17-native-auth-media.photo-cancel",
+          "setup": "Cancel library/crop",
+          "expect": "Previous portrait and profile retained",
+          "platforms": [
+            "ios",
+            "android"
+          ],
+          "viewports": [],
+          "capture": "native-screen",
+          "fixture": "native-harness",
+          "coverageStatus": "not-captured"
+        },
+        {
+          "id": "17-native-auth-media.photo-permission",
+          "setup": "Deny media access where OS requests it",
+          "expect": "Recoverable picker error; no destructive change",
+          "platforms": [
+            "ios",
+            "android"
+          ],
+          "viewports": [],
+          "capture": "native-screen",
+          "fixture": "native-harness",
+          "coverageStatus": "not-captured"
+        }
+      ]
+    }
+  ],
+  "variants": {
+    "crossCutting": [
+      "dark scheme",
+      "pt-BR",
+      "es-ES",
+      "reduced motion",
+      "narrow-width wrapping",
+      "keyboard focus and dismissal",
+      "portrait present/absent"
+    ],
+    "policy": "Named checkpoint variants are mandatory; remaining cross-cutting variants are planned overlays, not multiplied into base counts. Freeze overlay entries before implementing a runner."
+  },
+  "gaps": [
+    {
+      "id": "voice-intro",
+      "status": "specified-gap",
+      "description": "Starter voice intro is coming soon; capture disabled affordance, not a recording journey."
+    },
+    {
+      "id": "web-push",
+      "status": "platform-exclusion",
+      "description": "Web push is unavailable; capture honest unavailable state only."
+    },
+    {
+      "id": "native-provider",
+      "status": "qualification-gap",
+      "description": "Component tests and emulator evidence do not establish fresh OS/provider delivery or negative delivery guarantees."
+    },
+    {
+      "id": "large-screen-navigation",
+      "status": "not-implemented",
+      "description": "No tablet rail or desktop sidebar; do not classify existing bottom tabs as atlas failures."
+    },
+    {
+      "id": "swipe-write-feedback",
+      "status": "implemented-gap",
+      "description": "Failed swipes restore the card but do not surface an explicit error; atlas captures this existing state rather than inventing feedback."
+    }
+  ],
+  "coverage": {
+    "requiredWebCheckpoints": 140,
+    "requiredWebScreenshots": 420,
+    "nativeCheckpoints": 20,
+    "verifiedScreenshots": null,
+    "note": "Definition counts only. No capture or coverage verification has run."
+  },
+  "scopeExclusions": [
+    "Static marketing website apps/website is outside this Expo-client manifest.",
+    "Backend-only cleanup and security invariants need tests/provider receipts, not invented screens.",
+    "Future location/ranking, voice recording and unimplemented navigation shells are not working journeys."
+  ],
+  "fixtureContract": {
+    "accounts": "Disposable emulator accounts A and B with explicit complete/incomplete profiles; do not use owner data.",
+    "time": "Freeze age calculations, timestamps, resend countdown and sign-in freshness per checkpoint.",
+    "pending": "Hold named owning-layer promise/subscription until after capture; settle via state assertions.",
+    "errors": "Reject named operation with the localized error code called out by setup; no production outage required.",
+    "twoAccountChat": "Use two independent authenticated contexts; create mutual likes and messages through UI. Fixture ordering may be controlled; never inject replies and call it a two-account proof.",
+    "negativeCases": "No-write/no-alert/account-fence results require behavioral assertions in addition to screenshots.",
+    "privacy": "Use synthetic portraits and text; redact device account identifiers and credentials; never put token values in sidecars."
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "ios": {
+    "NSPhotoLibraryUsageDescription": "Comradia opens your photo library so you can pick a profile photo."
+  }
+}

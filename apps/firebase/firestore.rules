@@ -28,7 +28,7 @@ service cloud.firestore {
         && data.keys().hasAll(['token', 'platform', 'updatedAt'])
         && isString(data.token, 1, 4096)
         && data.platform in ['ios', 'android']
-        && (!('locale' in data) || data.locale in ['en-US', 'pt-BR', 'es-ES'])
+        && (!('locale' in data) || data.locale in ['en-US', 'pt-BR', 'es-ES', 'fr-FR', 'de-DE', 'it-IT'])
         && data.updatedAt == request.time;
     }
 

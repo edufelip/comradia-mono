@@ -347,7 +347,7 @@ it('groups one recipient’s devices by locale, falls back for legacy tokens and
   const es = `es-${randomUUID()}`;
   const legacy = `legacy-${randomUUID()}`;
   const unsupported = `unsupported-${randomUUID()}`;
-  for (const [token, locale] of [[pt, 'pt-BR'], [es, 'es-ES'], [legacy, null], [unsupported, 'fr-FR']] as const) {
+  for (const [token, locale] of [[pt, 'pt-BR'], [es, 'es-ES'], [legacy, null], [unsupported, 'zz-ZZ']] as const) {
     const id = await seedToken(users[0], token);
     if (locale) await firestore.doc(`users/${users[0]}/pushTokens/${id}`).update({ locale });
   }
