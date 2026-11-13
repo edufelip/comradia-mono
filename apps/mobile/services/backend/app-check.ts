@@ -3,9 +3,12 @@ import type { ReactNativeFirebaseAppCheckProvider } from '@react-native-firebase
 type ProviderOptions = Parameters<ReactNativeFirebaseAppCheckProvider['configure']>[0];
 
 /** Dev builds pass a debug token (registered in the Firebase console); store builds use real attestation. */
-export function appCheckProviderOptions(debugToken: string | undefined): ProviderOptions {
+export function appCheckProviderOptions(
+  debugToken: string | undefined,
+  variant: unknown,
+): ProviderOptions {
   const token = debugToken?.trim();
-  if (token) {
+  if (variant === 'dev' && token) {
     return {
       android: { provider: 'debug', debugToken: token },
       apple: { provider: 'debug', debugToken: token },

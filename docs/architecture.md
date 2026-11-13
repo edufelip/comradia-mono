@@ -124,7 +124,7 @@ Web reads its Firebase config from `EXPO_PUBLIC_FIREBASE_API_KEY`, `_AUTH_DOMAIN
 - No private data in public documents. Phone and email stay in Firebase Auth; birth date stays in `users/{uid}`.
 - Apple sign-in uses a SHA-256 nonce; the raw nonce never leaves the device except to Firebase.
 - Error messages shown to users come from `BackendErrorCode`, never raw Firebase text.
-- App Check is integrated on native (Play Integrity / App Attest; debug provider when `EXPO_PUBLIC_APP_CHECK_DEBUG_TOKEN` is set) in monitor mode, not enforced: sideloaded dev builds can't pass Play Integrity. Enforce once store builds exist.
+- App Check is integrated on native (Play Integrity / App Attest; debug provider only for the dev variant when `EXPO_PUBLIC_APP_CHECK_DEBUG_TOKEN` is set; production configuration omits the token) in monitor mode, not enforced: sideloaded dev builds can't pass Play Integrity. Enforce once store builds exist.
 - Not done yet: rate limits beyond Firebase's defaults.
 
 ## Deferred (needs a Cloud Function or a later task)

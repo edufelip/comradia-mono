@@ -1,3 +1,4 @@
+import Constants from 'expo-constants';
 import { getApp } from '@react-native-firebase/app';
 import { initializeAppCheck } from '@react-native-firebase/app-check';
 import {
@@ -70,13 +71,13 @@ const host = emulatorHost();
 if (!host) {
   const app = getApp();
   const provider = app.appCheck().newReactNativeFirebaseAppCheckProvider();
-  const debugToken = process.env.EXPO_PUBLIC_APP_CHECK_DEBUG_TOKEN as string | undefined;
-  provider.configure(appCheckProviderOptions(debugToken));
-  initializeAppCheck(app, { provider, isTokenAutoRefreshEnabled: true }).catch(
-    (error: unknown) => {
-      console.warn('[Comradia] App Check did not start; requests go out without a token.', error);
-    },
-  );
+  const extra = Constants.expoConfig?.extra;
+  const debugToken =
+    typeof extra?.appCheckDebugToken === 'string' ? extra.appCheckDebugToken : undefined;
+  provider.configure(appCheckProviderOptions(debugToken, extra?.appVariant));
+  initializeAppCheck(app, { provider, isTokenAutoRefreshEnabled: true }).catch((error: unknown) => {
+    console.warn('[Comradia] App Check did not start; requests go out without a token.', error);
+  });
 }
 
 const auth = getAuth();

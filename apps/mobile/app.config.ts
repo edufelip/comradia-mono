@@ -98,6 +98,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     extra: {
       ...config.extra,
       appVariant: variant,
+      // Resolve only in native build configuration, never inline this token into production JS.
+      appCheckDebugToken: isDev ? process.env.EXPO_PUBLIC_APP_CHECK_DEBUG_TOKEN : undefined,
     },
   };
 };
