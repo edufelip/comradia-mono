@@ -23,4 +23,4 @@ Keep these claims separate:
 
 Before a dev rollout, verify APNs credentials for the exact Firebase iOS app, push entitlements and signing, Android permission/channel behavior, and authenticated Firebase deployment access. Run the two-account match/message flow on the new native binary, with foreground, background, terminated, blocked and signed-out cases. Never use owner account deletion as a destructive smoke-test fixture.
 
-Cloud deployment is separate from implementation. The existing project boundary requires owner approval before enabling new paid/hourly cloud work. Keep real SMS disabled. Build and emulator validation do not require opening SMS delivery.
+Cloud deployment is separate from implementation. The existing project boundary requires owner approval before enabling new paid/hourly cloud work. The notification Functions were deployed to `comradia-dev` on 2026-11-13 with the owner's yes (`southamerica-east1`, zero minimum instances, at most two). Device testing uses the free Firebase test numbers, not real SMS.
