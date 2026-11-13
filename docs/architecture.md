@@ -101,7 +101,7 @@ Everything else is denied. Option ids are listed once in `features/profile/profi
 | Name | Firebase project | Used by |
 | --- | --- | --- |
 | emulators | `demo-comradia` (no cloud project) | all automated tests; `EXPO_PUBLIC_FIREBASE_EMULATOR_HOST=127.0.0.1` (Android emulator: `10.0.2.2`) |
-| dev | `comradia-dev` | dev builds on real devices; phone sign-in with two owner-set Firebase test numbers (code `123456`; listed in the Firebase console, not here). Real SMS is off: the SMS region policy is an empty allowlist, so no paid SMS can go out. Opening it (all regions, no Brazil-only limit) needs the owner's yes. |
+| dev | `comradia-dev` | dev builds on real devices; phone sign-in with two owner-set Firebase test numbers (code `123456`; listed in the Firebase console, not here). Real SMS is on in all regions since 2026-11-13 (owner's yes): any other number gets a real, paid SMS. |
 | prod | not created yet | — |
 
 Web reads its Firebase config from `EXPO_PUBLIC_FIREBASE_API_KEY`, `_AUTH_DOMAIN`, `_PROJECT_ID` and `_APP_ID`; without them it uses the demo project, which only works with the emulators. Native Google sign-in also needs `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` (in `.env.example`). Android Google sign-in only works for builds signed with a key whose SHA-1 is registered on the Firebase Android app (today: the React Native debug key).
@@ -113,7 +113,7 @@ Web reads its Firebase config from `EXPO_PUBLIC_FIREBASE_API_KEY`, `_AUTH_DOMAIN
 - **Budget alert:** "comradia-dev monthly", R$ 25, emails at 10%, 50%, 90% and 100% of actual spend and at 100% of forecast. An alert only warns; it does not stop charges.
 - **Storage bucket in `us-east1`:** one of the three regions (`us-east1`, `us-west1`, `us-central1`) where Storage has a free allowance (5 GB stored, 100 GB downloaded per month). Firestore stays in `southamerica-east1`.
 - **Photos are small and cached:** resized to 1080 px, JPEG 0.8 (about 100–200 KB), never overwritten, uploaded with `Cache-Control: public, max-age=31536000, immutable`. Old files are deleted after a change on a best-effort basis; account deletion stops if removing a file fails so it can be retried.
-- **Real SMS is disabled on dev.** The SMS region policy is an empty allowlist, so no paid SMS can go out. Phone sign-in uses the two owner-set Firebase test numbers (code `123456`; listed in the Firebase console, not here). Enabling real SMS requires the owner's yes; the policy should not impose a Brazil-only limit. Turn on App Check before a public build.
+- **Real SMS is on for dev in all regions** (SMS region policy `allowByDefault`, owner's yes on 2026-11-13; no Brazil-only limit). Each real SMS bills a few cents and counts against the budget. The two owner-set Firebase test numbers (code `123456`; listed in the Firebase console, not here) never send an SMS and are free, so use them for testing. App Check runs in monitor mode; enforce it before a public build.
 - **Billing account limit:** the account allows 5 linked projects. `mapfriends-92e3c` was unlinked on 2026-11-12 to make room.
 
 ## Security
@@ -124,7 +124,8 @@ Web reads its Firebase config from `EXPO_PUBLIC_FIREBASE_API_KEY`, `_AUTH_DOMAIN
 - No private data in public documents. Phone and email stay in Firebase Auth; birth date stays in `users/{uid}`.
 - Apple sign-in uses a SHA-256 nonce; the raw nonce never leaves the device except to Firebase.
 - Error messages shown to users come from `BackendErrorCode`, never raw Firebase text.
-- Not done yet: App Check, rate limits beyond Firebase's defaults.
+- App Check is integrated on native (Play Integrity / App Attest; debug provider only for the dev variant when `EXPO_PUBLIC_APP_CHECK_DEBUG_TOKEN` is set; production configuration omits the token) in monitor mode, not enforced: sideloaded dev builds can't pass Play Integrity. Enforce once store builds exist.
+- Not done yet: rate limits beyond Firebase's defaults.
 
 ## Deferred (needs a Cloud Function or a later task)
 
@@ -134,4 +135,4 @@ Web reads its Firebase config from `EXPO_PUBLIC_FIREBASE_API_KEY`, `_AUTH_DOMAIN
 - Unblock (there is no UI yet).
 - Cleaning up the messages the other person sent after an account deletion (the match document is deleted, their messages stay orphaned; needs a Cloud Function).
 - Moderation tooling for `reports` (reviewed in the Firebase console for now).
-- App Check.
+- App Check enforcement (needs store builds).

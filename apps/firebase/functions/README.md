@@ -38,3 +38,12 @@ at-most-once tradeoff to avoid duplicate pushes. Blocks, account/profile existen
 membership, and active token registrations are rechecked immediately before each FCM call;
 a block or token revocation that lands after that database check can still race an external
 send already in flight.
+
+## Deploying
+
+`firebase deploy --project dev --only functions` builds on Google's servers with Node 22. The
+`resolutions` entry pins `@firebase/database-compat` to 2.1.7 because 2.1.8 requires Node 24
+and fails that install. Drop the pin when the runtime moves to Node 24. If a first deploy fails
+half-way, Firebase can leave HTTPS-typed shells that block the retry: delete them with
+`firebase functions:delete <name> --region southamerica-east1` and deploy again. The
+`gcf-artifacts` image repository deletes images older than a day and keeps the newest two.
