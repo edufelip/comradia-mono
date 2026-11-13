@@ -2,12 +2,14 @@ import { initializeApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
 import { logger } from 'firebase-functions';
-import { onDocumentCreated } from 'firebase-functions/v2/firestore';
+import { onDocumentCreated, onDocumentDeleted } from 'firebase-functions/v2/firestore';
 import {
   createNotificationDispatcher,
   FirestoreNotificationStore,
   type CreatedNotificationEvent,
 } from './notification-handler';
+
+import { cleanupDeletedMatch } from './match-cleanup';
 
 const DATABASE_REGION = 'southamerica-east1';
 const app = initializeApp();
@@ -53,5 +55,19 @@ export const notifyOnMessageCreated = onDocumentCreated(
       senderUid: event.data.get('from'),
     };
     await dispatch(input);
+  },
+);
+
+export const cleanupOnMatchDeleted = onDocumentDeleted(
+  {
+    document: 'matches/{matchId}',
+    region: DATABASE_REGION,
+    retry: true,
+    minInstances: 0,
+    maxInstances: 2,
+  },
+  async (event) => {
+    if (!event.data) return;
+    await cleanupDeletedMatch(getFirestore(app), event.params.matchId, event.data.get('users'));
   },
 );
