@@ -214,6 +214,11 @@ export const frFR: Record<TranslationKey, string> = {
   'onboarding.starter.answer_count': '{count}/280',
   'onboarding.starter.voice_soon': 'Les messages vocaux arrivent bientôt.',
   'onboarding.starter.finish': 'Commencer les rencontres',
+  'onboarding.consent.body':
+    'Comradia utilise vos valeurs politiques et vos préférences de rencontre uniquement pour vous montrer des personnes compatibles. Elles sont affichées sur votre profil aux autres membres. Vous pouvez supprimer votre compte et vos données à tout moment depuis Profil.',
+  'onboarding.consent.toggle':
+    "J'accepte que Comradia traite mes valeurs politiques et mes préférences de rencontre pour la mise en relation.",
+  'onboarding.consent.privacy_link': 'Lire la politique de confidentialité',
   'session.error.title': 'Impossible de charger votre profil.',
   'session.error.body': 'Vérifiez votre connexion et réessayez.',
   'session.error.retry': 'Réessayer',

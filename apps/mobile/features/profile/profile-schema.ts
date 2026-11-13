@@ -44,6 +44,8 @@ export const VALUES_MIN = 3;
 export const VALUES_MAX = 5;
 export const ANSWER_MAX = 280;
 export const DEFAULT_SHARED_PASSION_WEIGHT = 60;
+/** Version of the LGPD art. 11 consent text the user accepts; stored as `users/{uid}.consentVersion`. */
+export const SENSITIVE_DATA_CONSENT_VERSION = '2026-11-13';
 
 /** Longest side, in pixels, of the JPEG the app uploads (the picker crops to 3:4 first). */
 export const PHOTO_MAX_SIDE = 1080;
@@ -109,6 +111,8 @@ export type OnboardingDraft = {
   promptAnswer: string;
   /** Local JPEG picked in S2; uploaded when onboarding finishes. Null when skipped. */
   photoUri: string | null;
+  /** The explicit opt-in to process political values and dating preferences (S4). */
+  sensitiveDataConsent: boolean;
 };
 
 export const EMPTY_DRAFT: OnboardingDraft = {
@@ -123,6 +127,7 @@ export const EMPTY_DRAFT: OnboardingDraft = {
   promptId: 'perfect_sunday',
   promptAnswer: '',
   photoUri: null,
+  sensitiveDataConsent: false,
 };
 
 /** Parses DD/MM/YYYY into ISO YYYY-MM-DD; null when it is not a real calendar date. */
@@ -184,7 +189,7 @@ export function canLeaveValuesStep(draft: OnboardingDraft): boolean {
 
 export function canFinish(draft: OnboardingDraft): boolean {
   const answer = draft.promptAnswer.trim();
-  return answer.length > 0 && answer.length <= ANSWER_MAX;
+  return answer.length > 0 && answer.length <= ANSWER_MAX && draft.sensitiveDataConsent;
 }
 
 /** Adds or removes a value, never exceeding VALUES_MAX. */
@@ -198,7 +203,10 @@ export function toggleValue(values: ValueId[], id: ValueId): ValueId[] {
 export function buildDocuments(
   draft: OnboardingDraft,
   today: Date,
-): { profile: PublicProfile; account: { birthDate: string; sharedPassionWeight: number } } {
+): {
+  profile: PublicProfile;
+  account: { birthDate: string; sharedPassionWeight: number; consentVersion: string };
+} {
   if (!canLeaveVibeStep(draft, today) || !canLeaveValuesStep(draft) || !canFinish(draft)) {
     throw new Error('Onboarding draft is incomplete');
   }
@@ -220,6 +228,8 @@ export function buildDocuments(
     account: {
       birthDate,
       sharedPassionWeight: Math.round(Math.min(100, Math.max(0, draft.sharedPassionWeight))),
+      // The timestamp is the server's (`sensitiveDataConsentAt`), written by the backend.
+      consentVersion: SENSITIVE_DATA_CONSENT_VERSION,
     },
   };
 }

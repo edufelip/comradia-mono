@@ -239,6 +239,7 @@ export const backend: Backend = {
       });
       batch.set(doc(db, 'users', uid), {
         ...docs.account,
+        sensitiveDataConsentAt: serverTimestamp(),
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });

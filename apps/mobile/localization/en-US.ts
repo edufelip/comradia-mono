@@ -204,6 +204,11 @@ export const enUS = {
   'onboarding.starter.answer_count': '{count}/280',
   'onboarding.starter.voice_soon': 'Voice notes are coming soon.',
   'onboarding.starter.finish': 'Start swiping',
+  'onboarding.consent.body':
+    'Comradia uses your political values and dating preferences only to show you compatible people. They are shown on your profile to other members. You can delete your account and data anytime from Profile.',
+  'onboarding.consent.toggle':
+    'I agree that Comradia processes my political values and dating preferences for matching.',
+  'onboarding.consent.privacy_link': 'Read the privacy policy',
   'session.error.title': "We couldn't load your profile.",
   'session.error.body': 'Check your connection and try again.',
   'session.error.retry': 'Try again',

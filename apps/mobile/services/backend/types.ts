@@ -55,7 +55,7 @@ export type Unsubscribe = () => void;
 
 export type OnboardingDocuments = {
   profile: PublicProfile;
-  account: { birthDate: string; sharedPassionWeight: number };
+  account: { birthDate: string; sharedPassionWeight: number; consentVersion: string };
 };
 
 /**

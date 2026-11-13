@@ -34,6 +34,7 @@ const COMPLETE = draft({
   values: ['bookshops_coffee', 'tenant_rights', 'cycling'],
   promptId: 'green_flag',
   promptAnswer: '  You know your neighbours by name.  ',
+  sensitiveDataConsent: true,
 });
 
 describe('parseBirthDate', () => {
@@ -168,10 +169,15 @@ describe('canLeaveValuesStep', () => {
 
 describe('canFinish', () => {
   it('needs a non-blank answer of at most 280 characters', () => {
-    assert.equal(canFinish(draft({ promptAnswer: '' })), false);
-    assert.equal(canFinish(draft({ promptAnswer: '   ' })), false);
-    assert.equal(canFinish(draft({ promptAnswer: 'a'.repeat(280) })), true);
-    assert.equal(canFinish(draft({ promptAnswer: 'a'.repeat(281) })), false);
+    assert.equal(canFinish(draft({ ...COMPLETE, promptAnswer: '' })), false);
+    assert.equal(canFinish(draft({ ...COMPLETE, promptAnswer: '   ' })), false);
+    assert.equal(canFinish(draft({ ...COMPLETE, promptAnswer: 'a'.repeat(280) })), true);
+    assert.equal(canFinish(draft({ ...COMPLETE, promptAnswer: 'a'.repeat(281) })), false);
+  });
+
+  it('needs the explicit sensitive-data consent', () => {
+    assert.equal(canFinish(draft({ ...COMPLETE, sensitiveDataConsent: false })), false);
+    assert.equal(canFinish(COMPLETE), true);
   });
 });
 
@@ -211,7 +217,7 @@ describe('buildDocuments', () => {
         promptAnswer: 'You know your neighbours by name.',
         photoPath: null,
       },
-      account: { birthDate: '1994-03-14', sharedPassionWeight: 60 },
+      account: { birthDate: '1994-03-14', sharedPassionWeight: 60, consentVersion: '2026-11-13' },
     });
   });
 
@@ -245,6 +251,7 @@ describe('buildDocuments', () => {
     assert.throws(() => buildDocuments(draft({ ...COMPLETE, vibe: null }), TODAY));
     assert.throws(() => buildDocuments(draft({ ...COMPLETE, values: [] }), TODAY));
     assert.throws(() => buildDocuments(draft({ ...COMPLETE, promptAnswer: ' ' }), TODAY));
+    assert.throws(() => buildDocuments(draft({ ...COMPLETE, sensitiveDataConsent: false }), TODAY));
   });
 });
 
