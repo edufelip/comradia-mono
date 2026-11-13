@@ -1,3 +1,5 @@
+import { getApp } from '@react-native-firebase/app';
+import { initializeAppCheck } from '@react-native-firebase/app-check';
 import {
   AppleAuthProvider,
   connectAuthEmulator,
@@ -48,6 +50,7 @@ import {
   revokeNotificationsBeforeSignOut,
 } from '@/features/notifications/notifications';
 import { newPhotoId, PHOTO_METADATA, photoPathFor } from '@/features/profile/profile-schema';
+import { appCheckProviderOptions } from './app-check';
 import { chunk, DELETE_BATCH_SIZE } from './batches';
 import {
   AUTH_EMULATOR_PORT,
@@ -61,11 +64,25 @@ import { phoneFailureSummary } from './phone-diagnostics';
 import { filterDiscovery, matchIdFor, MESSAGE_MAX, otherUid, toPublicProfile } from './shared';
 import type { AuthUser, Backend, LikeResult, Match } from './types';
 
+const host = emulatorHost();
+
+// Before the first Firebase call below. Emulators don't check App Check, so skip them.
+if (!host) {
+  const app = getApp();
+  const provider = app.appCheck().newReactNativeFirebaseAppCheckProvider();
+  const debugToken = process.env.EXPO_PUBLIC_APP_CHECK_DEBUG_TOKEN as string | undefined;
+  provider.configure(appCheckProviderOptions(debugToken));
+  initializeAppCheck(app, { provider, isTokenAutoRefreshEnabled: true }).catch(
+    (error: unknown) => {
+      console.warn('[Comradia] App Check did not start; requests go out without a token.', error);
+    },
+  );
+}
+
 const auth = getAuth();
 const db = getFirestore();
 const storage = getStorage();
 
-const host = emulatorHost();
 if (host) {
   connectAuthEmulator(auth, `http://${host}:${AUTH_EMULATOR_PORT}`);
   connectFirestoreEmulator(db, host, FIRESTORE_EMULATOR_PORT);

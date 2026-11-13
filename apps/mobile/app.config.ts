@@ -33,6 +33,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       entitlements: {
         ...config.ios?.entitlements,
         'aps-environment': isDev ? 'development' : 'production',
+        // App Attest for App Check on iOS (the RNFB App Check plugin does not add it).
+        'com.apple.developer.devicecheck.appattest-environment': isDev
+          ? 'development'
+          : 'production',
       },
       infoPlist: {
         ...config.ios?.infoPlist,
@@ -53,6 +57,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       ...(config.plugins ?? []),
       '@react-native-firebase/app',
       '@react-native-firebase/auth',
+      '@react-native-firebase/app-check',
       '@react-native-firebase/messaging',
       // Adds the Crashlytics Gradle plugin; without it the Android app crashes at startup
       // ("The Crashlytics build ID is missing") because the package is linked natively.
@@ -84,6 +89,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
               'RNFBCrashlytics',
               'RNFBFirestore',
               'RNFBStorage',
+              'RNFBAppCheck',
             ],
           },
         },
