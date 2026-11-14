@@ -103,8 +103,8 @@ Everything else is denied. Option ids are listed once in `features/profile/profi
 | Name | Firebase project | Used by |
 | --- | --- | --- |
 | emulators | `demo-comradia` (no cloud project) | all automated tests; `EXPO_PUBLIC_FIREBASE_EMULATOR_HOST=127.0.0.1` (Android emulator: `10.0.2.2`) |
-| dev | `comradia-dev` | dev builds on real devices; phone sign-in with two owner-set Firebase test numbers (code `123456`; listed in the Firebase console, not here). Real SMS is on in all regions since 2026-11-13 (owner's yes): any other number gets a real, paid SMS. |
-| prod | `comradia-prod` (created 2026-11-14; Spark until billing is linked) | store builds. Firestore in `southamerica-east1` with the rules and indexes from `develop`. Still to do: billing (the shared billing account is at its 5-project limit), budget alert, Auth providers, Storage bucket, Functions, App Check |
+| dev | `comradia-dev` | dev builds on real devices; phone sign-in with two owner-set Firebase test numbers (code `123456`; listed in the Firebase console, not here). Real SMS goes to Brazilian numbers (+55) only, since 2026-11-14 (SMS region policy, owner's yes): any other +55 number gets a real, paid SMS; numbers from other countries are refused. |
+| prod | `comradia-prod` (created 2026-11-14) | store builds. Firestore in `southamerica-east1` with the rules and indexes from `develop`. Billing linked with a R$ 50/month budget alert; Storage bucket `comradia-prod.firebasestorage.app` with the storage rules. Still to do: Auth providers (with the SMS region policy set to Brazil only, as in dev), Functions, App Check |
 
 Firebase config files and API keys are not committed, so they never show up in the public repo. Native builds read `apps/mobile/firebase/<dev|prod>/`; fetch the files once (the Firebase CLI must be logged in to the project):
 
