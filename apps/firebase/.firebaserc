@@ -1,6 +1,7 @@
 {
   "projects": {
     "default": "demo-comradia",
-    "dev": "comradia-dev"
+    "dev": "comradia-dev",
+    "prod": "comradia-prod"
   }
 }
