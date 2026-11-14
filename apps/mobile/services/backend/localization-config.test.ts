@@ -9,7 +9,11 @@ it('advertises every app language on native platforms and localizes the photo pe
   const config = buildConfig({ config: { name: 'Comradia', slug: 'comradia' } } as ConfigContext);
   const plugin = config.plugins?.find((p) => Array.isArray(p) && p[0] === 'expo-localization');
   assert.ok(Array.isArray(plugin), 'expo-localization must advertise supported native languages');
-  assert.deepEqual(plugin[1].supportedLocales, locales);
+  // Android takes language-only codes: aapt resourceConfigurations rejects 'en-US'.
+  assert.deepEqual(plugin[1].supportedLocales, {
+    ios: locales,
+    android: locales.map((l) => l.split('-')[0]),
+  });
   for (const locale of locales) {
     const file = config.locales?.[locale];
     assert.equal(typeof file, 'string', locale);
