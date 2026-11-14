@@ -38,7 +38,7 @@ apps/mobile
     types.ts                 Backend interface
     index.ts / index.web.ts  native (@react-native-firebase) / web (firebase JS SDK)
     errors.ts                maps Firebase / Google / Apple errors to BackendErrorCode
-  firebase/<dev|prod>/       GoogleService-Info.plist, google-services.json
+  firebase/<dev|prod>/       GoogleService-Info.plist, google-services.json (git-ignored)
 apps/firebase
   firestore.rules            security rules (the trust boundary)
   storage.rules              photo upload rules
@@ -105,6 +105,15 @@ Everything else is denied. Option ids are listed once in `features/profile/profi
 | emulators | `demo-comradia` (no cloud project) | all automated tests; `EXPO_PUBLIC_FIREBASE_EMULATOR_HOST=127.0.0.1` (Android emulator: `10.0.2.2`) |
 | dev | `comradia-dev` | dev builds on real devices; phone sign-in with two owner-set Firebase test numbers (code `123456`; listed in the Firebase console, not here). Real SMS is on in all regions since 2026-11-13 (owner's yes): any other number gets a real, paid SMS. |
 | prod | `comradia-prod` (created 2026-11-14; Spark until billing is linked) | store builds. Firestore in `southamerica-east1` with the rules and indexes from `develop`. Still to do: billing (the shared billing account is at its 5-project limit), budget alert, Auth providers, Storage bucket, Functions, App Check |
+
+Firebase config files and API keys are not committed, so they never show up in the public repo. Native builds read `apps/mobile/firebase/<dev|prod>/`; fetch the files once (the Firebase CLI must be logged in to the project):
+
+```sh
+cd apps/mobile
+npx firebase-tools apps:sdkconfig android --project comradia-dev --out firebase/dev/google-services.json
+npx firebase-tools apps:sdkconfig ios --project comradia-dev --out firebase/dev/GoogleService-Info.plist
+# prod: the same with --project comradia-prod and firebase/prod/
+```
 
 Web reads its Firebase config from `EXPO_PUBLIC_FIREBASE_API_KEY`, `_AUTH_DOMAIN`, `_PROJECT_ID` and `_APP_ID`; without them it uses the demo project, which only works with the emulators. Native Google sign-in also needs `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` (in `.env.example`). Android Google sign-in only works for builds signed with a key whose SHA-1 is registered on the Firebase Android app (today: the React Native debug key).
 

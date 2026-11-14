@@ -36,7 +36,7 @@ const withNotificationColorOverride: ConfigPlugin = (config) =>
   });
 
 // Firebase native config files, one pair per Firebase project (docs/architecture.md, "Environments").
-// They hold public client ids, not secrets; security comes from Auth and Firestore rules.
+// Not committed (they hold the app's API key); fetch them as that section says. Missing files are skipped.
 function firebaseFiles(variant: 'dev' | 'prod') {
   const dir = join(__dirname, 'firebase', variant);
   const ios = join(dir, 'GoogleService-Info.plist');

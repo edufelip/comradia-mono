@@ -25,6 +25,10 @@ android/keystore.properties
 *.key
 *.mobileprovision
 
+# Firebase native config files: not committed, fetch them (docs/architecture.md, "Environments")
+/firebase/*/google-services.json
+/firebase/*/GoogleService-Info.plist
+
 # Metro
 .metro-health-check*
 
