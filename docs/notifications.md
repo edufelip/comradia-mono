@@ -8,6 +8,8 @@ Device registrations are private documents at `users/{uid}/pushTokens/{sha256(to
 
 Create-only Firestore triggers handle new matches and messages. A match targets its two members; a message targets the other member. Current account/profile existence, match membership and both block directions must be checked before dispatch. Invalid FCM registrations are pruned. Delivery state is server-only. The server considers the newest 20 registrations per account. A claim is written before the external FCM request to suppress duplicate events: a failure after claiming can lose an alert. See [Functions delivery behavior](../apps/firebase/functions/README.md) for this deliberate tradeoff and the final-check race window.
 
+Filed reports use a separate owner-only push (`notifyOnReportCreated`, `type: report`); see [moderation](moderation.md). The app ignores that type.
+
 Lock-screen copy is generic: no name, message text, profile details or political values. Data contains `type` (`match` or `message`), `matchId`, and `recipientUid`. Android uses the `matches-messages` channel. The app accepts no arbitrary URL from notification data. Before opening a match or chat it waits for a ready session and verifies the intended recipient, current match and blocks. Switching accounts discards an alert for the previous recipient.
 
 ## Validation and release evidence

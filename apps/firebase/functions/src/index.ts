@@ -10,6 +10,7 @@ import {
 } from './notification-handler';
 
 import { cleanupDeletedMatch } from './match-cleanup';
+export { notifyOnReportCreated } from './report-alert';
 
 const DATABASE_REGION = 'southamerica-east1';
 const app = initializeApp();

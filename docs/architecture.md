@@ -134,5 +134,5 @@ Web reads its Firebase config from `EXPO_PUBLIC_FIREBASE_API_KEY`, `_AUTH_DOMAIN
 - Age recompute, ranking by shared passions and distance (Cloud Function).
 - Unblock (there is no UI yet).
 - Cleaning up the messages the other person sent after an account deletion (the match document is deleted, their messages stay orphaned; needs a Cloud Function).
-- Moderation tooling for `reports` (reviewed in the Firebase console for now).
+- Reports: owners get a push and review in the Firebase console (see [moderation](moderation.md)). There is still no in-app moderation tool.
 - App Check enforcement (needs store builds).
