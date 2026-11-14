@@ -98,7 +98,13 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       ...(config.plugins ?? []),
       [
         'expo-localization',
-        { supportedLocales: ['en-US', 'pt-BR', 'es-ES', 'fr-FR', 'de-DE', 'it-IT'] },
+        {
+          supportedLocales: {
+            ios: ['en-US', 'pt-BR', 'es-ES', 'fr-FR', 'de-DE', 'it-IT'],
+            // Android also feeds these to aapt resourceConfigurations, which rejects 'en-US'.
+            android: ['en', 'pt', 'es', 'fr', 'de', 'it'],
+          },
+        },
       ],
       '@react-native-firebase/app',
       '@react-native-firebase/auth',
