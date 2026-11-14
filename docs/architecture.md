@@ -116,7 +116,7 @@ Web reads its Firebase config from `EXPO_PUBLIC_FIREBASE_API_KEY`, `_AUTH_DOMAIN
 - **Storage bucket in `us-east1`:** one of the three regions (`us-east1`, `us-west1`, `us-central1`) where Storage has a free allowance (5 GB stored, 100 GB downloaded per month). Firestore stays in `southamerica-east1`.
 - **Photos are small and cached:** resized to 1080 px, JPEG 0.8 (about 100–200 KB), never overwritten, uploaded with `Cache-Control: public, max-age=31536000, immutable`. Old files are deleted after a change on a best-effort basis; account deletion stops if removing a file fails so it can be retried.
 - **Real SMS is on for dev in all regions** (SMS region policy `allowByDefault`, owner's yes on 2026-11-13; no Brazil-only limit). Each real SMS bills a few cents and counts against the budget. The two owner-set Firebase test numbers (code `123456`; listed in the Firebase console, not here) never send an SMS and are free, so use them for testing. App Check runs in monitor mode; enforce it before a public build.
-- **Billing account limit:** the account allows 5 linked projects. `mapfriends-92e3c` was unlinked on 2026-11-12 to make room.
+- **Billing account limit:** the shared billing account allows 5 linked projects.
 
 ## Security
 

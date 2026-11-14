@@ -129,13 +129,11 @@ Gotchas:
 
 ## CI
 
-Every job runs on our own self-hosted runner, `comradia-ci-ubuntu-1` on the home PC (`ssh pc`, labels `self-hosted, Linux, X64, comradia-ci`). The repo has no GitHub-hosted minutes, so `ubuntu-latest` jobs would sit in the queue forever. There is one runner on purpose: the emulators and the web server use fixed ports (9099, 8089, 9199, 8199), so Comradia jobs must run one at a time.
+The repo is public, so every job runs on free GitHub-hosted `ubuntu-latest` runners. Each job gets its own VM, so the fixed emulator and web-server ports (9099, 8089, 9199, 8199) never clash. `setup-node` caches yarn per lockfile.
 
-- Service: `systemctl --user status actions.runner.edufelip-comradia-mono.comradia-ci-ubuntu-1` on the PC; files in `~/actions-runners/comradia-ci-ubuntu-1`. Its `.env` sets `PLAYWRIGHT_BROWSERS_PATH=~/.cache/ms-playwright-comradia` and `TMPDIR=~/ci-tmp/comradia`.
-- The runner has no sudo, so never use `playwright install --with-deps` or `apt-get` in a job.
-- Playwright WebKit is built for Ubuntu 24.04 and needs ICU 74 and `libxml2.so.2`, which the PC (Ubuntu 26.04) lacks. Private copies live in `~/ci-libs/playwright-webkit-noble` (the runner `.env` adds them to `LD_LIBRARY_PATH`), and `~/ci-libs/playwright-webkit-noble/link.sh` links them into WebKit's own `sys/lib`. After a Playwright upgrade, WebKit fails with "libicudata.so.74: cannot open shared object file": run `link.sh` once on the PC.
-- No `setup-node` yarn cache: the runner shares one ~4 GB yarn cache with other repos, and uploading it to GitHub takes longer than the job. Yarn reuses that local cache by itself.
-- **iOS jobs are the exception.** They need a Mac, so they run on GitHub-hosted `macos-15`, and every one is gated by the repo variable `IOS_CI_ENABLED` (starts `false`): add `if: vars.IOS_CI_ENABLED == 'true'` to each iOS job. Turn them on with `gh variable set IOS_CI_ENABLED --body true -R edufelip/comradia-mono`. Hosted macOS minutes cost money on a private repo. No iOS job exists yet.
+- Workflows from forks need approval before they run (Settings → Actions → "Require approval for all external contributors"). Never add a self-hosted runner to this repo: a fork PR could run code on it.
+- No job uses secrets yet. If one ever does, run it only on `push` or behind an environment, never on `pull_request` from forks.
+- **iOS jobs** need a Mac: run them on GitHub-hosted `macos-15` (free for public repos) and gate each with the repo variable `IOS_CI_ENABLED` (`if: vars.IOS_CI_ENABLED == 'true'`). No iOS job exists yet.
 
 | Workflow | Runs when | Jobs |
 | --- | --- | --- |

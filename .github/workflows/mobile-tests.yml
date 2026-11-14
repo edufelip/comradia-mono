@@ -18,14 +18,18 @@ defaults:
 jobs:
   checks:
     name: Types, lint, unit, component
-    # Self-hosted runner on the home PC (one runner, so jobs never share emulator ports).
-    runs-on: [self-hosted, Linux, X64, comradia-ci]
+    # GitHub-hosted (free for public repos); each job gets its own VM, so emulator ports never clash.
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+          cache: yarn
+          cache-dependency-path: |
+            apps/mobile/yarn.lock
+            apps/firebase/yarn.lock
       - run: yarn install --frozen-lockfile
       - run: yarn typecheck
       - run: yarn lint
@@ -35,9 +39,9 @@ jobs:
 
   e2e-web:
     name: E2E (Playwright web)
-    # Self-hosted runner on the home PC (one runner, so jobs never share emulator ports).
-    runs-on: [self-hosted, Linux, X64, comradia-ci]
-    timeout-minutes: 20
+    # GitHub-hosted (free for public repos); each job gets its own VM, so emulator ports never clash.
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       # Playwright starts the Firebase emulators (`yarn --cwd ../firebase emulators`),
@@ -49,11 +53,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+          cache: yarn
+          cache-dependency-path: |
+            apps/mobile/yarn.lock
+            apps/firebase/yarn.lock
       - run: yarn install --frozen-lockfile
       - run: yarn install --frozen-lockfile
         working-directory: apps/firebase
-      # Browsers persist on the runner (PLAYWRIGHT_BROWSERS_PATH in its .env); no --with-deps, it needs sudo.
-      - run: npx playwright install chromium webkit
+      - run: npx playwright install --with-deps chromium webkit
       - run: yarn test:e2e
         env:
           CI: '1'
