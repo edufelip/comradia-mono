@@ -116,6 +116,15 @@ describe('push notification taps', () => {
     assert.deepEqual(calls, []);
   });
 
+  it('ignores owner report alerts, which carry no match to open', async () => {
+    const { router, calls, setSession } = createHarness();
+    setSession({ status: 'ready', uid: 'alice' });
+
+    await router.handle({ type: 'report', reportId: 'report-1' });
+
+    assert.deepEqual(calls, []);
+  });
+
   it('checks that the returned match id is canonical for the signed-in member', async () => {
     const baseline = createHarness();
     const { router, calls, matchId, setSession } = createHarness({

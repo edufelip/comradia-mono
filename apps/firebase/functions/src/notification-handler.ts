@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 import type { MulticastMessage } from 'firebase-admin/messaging';
 
-const MAX_TOKENS_PER_FCM_CALL = 500;
+export const MAX_TOKENS_PER_FCM_CALL = 500;
 const MAX_DEVICES_PER_USER = 20;
 const PUSH_TOKEN_ID_PATTERN = /^[0-9a-f]{64}$/;
 const INVALID_TOKEN_CODES = new Set([
@@ -154,6 +154,16 @@ export class FirestoreNotificationStore implements NotificationStore {
     });
   }
 
+  /** One owner alert per report: same marker collection as match and message claims. */
+  async claimReportAlert(reportId: string, recipientUid: string): Promise<boolean> {
+    const markerRef = this.firestore.doc(`notificationDispatches/${digest(`report\0${reportId}\0${recipientUid}`)}`);
+    return this.firestore.runTransaction(async (transaction) => {
+      if ((await transaction.get(markerRef)).exists) return false;
+      transaction.create(markerRef, { createdAt: FieldValue.serverTimestamp() });
+      return true;
+    });
+  }
+
   async isDispatchAllowed(input: DispatchClaim): Promise<boolean> {
     return this.firestore.runTransaction((transaction) => this.readDispatchSafety(transaction, input));
   }
@@ -205,7 +215,7 @@ export class FirestoreNotificationStore implements NotificationStore {
   }
 }
 
-function isInvalidTokenError(code: string | undefined): boolean {
+export function isInvalidTokenError(code: string | undefined): boolean {
   if (!code) return false;
   const shortCode = code.startsWith('messaging/') ? code.slice('messaging/'.length) : code;
   return INVALID_TOKEN_CODES.has(shortCode);
