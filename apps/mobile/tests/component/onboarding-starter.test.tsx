@@ -28,6 +28,7 @@ function seedDraft(overrides: Partial<OnboardingDraft> = {}) {
     values: ['bookshops_coffee', 'tenant_rights', 'cycling'],
     sharedPassionWeight: 70,
     promptAnswer: '',
+    sensitiveDataConsent: true,
     ...overrides,
   });
 }
@@ -149,6 +150,32 @@ describe('StarterScreen (S4)', () => {
     expect(screen.getByTestId('starter-finish')).toBeEnabled();
   });
 
+  it('keeps Finish disabled until the sensitive-data consent is on', async () => {
+    seedDraft({ sensitiveDataConsent: false });
+    await renderStarter();
+
+    await type('starter-answer', 'You know your neighbours by name.');
+    expect(screen.getByTestId('starter-finish')).toBeDisabled();
+
+    await press('starter-consent-toggle');
+    expect(store().sensitiveDataConsent).toBe(true);
+    expect(screen.getByTestId('starter-consent-toggle')).toBeChecked();
+    expect(screen.getByTestId('starter-finish')).toBeEnabled();
+
+    await press('starter-consent-toggle');
+    expect(screen.getByTestId('starter-finish')).toBeDisabled();
+  });
+
+  it('links the privacy policy from the consent card', async () => {
+    seedDraft();
+    await renderStarter();
+
+    expect(screen.getByTestId('starter-consent')).toBeOnTheScreen();
+    expect(screen.getByTestId('starter-consent-privacy')).toHaveTextContent(
+      enUS['onboarding.consent.privacy_link'],
+    );
+  });
+
   it('counts the answer and never stores more than 280 characters', async () => {
     seedDraft();
     await renderStarter();
@@ -176,7 +203,11 @@ describe('StarterScreen (S4)', () => {
       TEST_USER.uid,
       {
         profile: expectedProfile(),
-        account: { birthDate: '1994-03-14', sharedPassionWeight: 70 },
+        account: {
+          birthDate: '1994-03-14',
+          sharedPassionWeight: 70,
+          consentVersion: '2026-11-13',
+        },
       },
       null,
     ]);

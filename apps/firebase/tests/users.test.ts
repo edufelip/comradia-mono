@@ -2,6 +2,7 @@ import { after, before, beforeEach, describe, it } from 'node:test';
 import { assertFails, assertSucceeds, type RulesTestEnvironment } from '@firebase/rules-unit-testing';
 import {
   deleteDoc,
+  deleteField,
   doc,
   getDoc,
   serverTimestamp,
@@ -94,6 +95,28 @@ describe('users/{uid} create', () => {
       setDoc(aliceAccount(), account({ updatedAt: Timestamp.fromDate(new Date('2020-01-01')) })),
     );
   });
+
+  it('denies a create without the sensitive-data consent', async () => {
+    await assertFails(setDoc(aliceAccount(), without(account(), 'sensitiveDataConsentAt')));
+    await assertFails(setDoc(aliceAccount(), without(account(), 'consentVersion')));
+  });
+
+  it('denies a consent time that is a client timestamp instead of request.time', async () => {
+    await assertFails(
+      setDoc(
+        aliceAccount(),
+        account({ sensitiveDataConsentAt: Timestamp.fromDate(new Date('2020-01-01')) }),
+      ),
+    );
+  });
+
+  it('denies an empty or over-long consent version and allows 32 characters', async () => {
+    await assertFails(setDoc(aliceAccount(), account({ consentVersion: '' })));
+    await assertFails(setDoc(aliceAccount(), account({ consentVersion: 'v'.repeat(33) })));
+    await assertSucceeds(
+      setDoc(doc(db(aliceMax), 'users/alice-max'), account({ consentVersion: 'v'.repeat(32) })),
+    );
+  });
 });
 
 describe('users/{uid} update and delete', () => {
@@ -106,6 +129,40 @@ describe('users/{uid} update and delete', () => {
   it('allows the owner to update a field and refresh updatedAt', async () => {
     await assertSucceeds(
       updateDoc(aliceAccount(), { sharedPassionWeight: 80, updatedAt: serverTimestamp() }),
+    );
+  });
+
+  it('allows an update that keeps the consent unchanged', async () => {
+    await assertSucceeds(
+      updateDoc(aliceAccount(), {
+        sharedPassionWeight: 80,
+        consentVersion: '2026-11-13',
+        updatedAt: serverTimestamp(),
+      }),
+    );
+  });
+
+  it('denies an update that removes the consent', async () => {
+    await assertFails(
+      updateDoc(aliceAccount(), {
+        sensitiveDataConsentAt: deleteField(),
+        updatedAt: serverTimestamp(),
+      }),
+    );
+    await assertFails(
+      updateDoc(aliceAccount(), { consentVersion: deleteField(), updatedAt: serverTimestamp() }),
+    );
+  });
+
+  it('denies an update that changes the consent time or version', async () => {
+    await assertFails(
+      updateDoc(aliceAccount(), {
+        sensitiveDataConsentAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }),
+    );
+    await assertFails(
+      updateDoc(aliceAccount(), { consentVersion: '2026-01-01', updatedAt: serverTimestamp() }),
     );
   });
 

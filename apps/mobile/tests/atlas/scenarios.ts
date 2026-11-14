@@ -261,6 +261,7 @@ export async function captureCheckpoint(page: Page, c: Checkpoint): Promise<void
       'starter-answer',
       state === 'answer-limit' ? 'A'.repeat(280) : 'A community garden together.',
     );
+    await click('starter-consent-toggle');
     if (state === 'valid' || state === 'answer-limit') {
       await expect(id('starter-finish')).toBeEnabled();
       return;

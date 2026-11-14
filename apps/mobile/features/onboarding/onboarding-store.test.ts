@@ -140,6 +140,16 @@ describe('onboarding draft store', () => {
     assert.equal(state().photoUri, null);
   });
 
+  it('stores the sensitive-data consent and starts without it', () => {
+    assert.equal(state().sensitiveDataConsent, false);
+
+    state().setSensitiveDataConsent(true);
+    assert.equal(state().sensitiveDataConsent, true);
+
+    state().setSensitiveDataConsent(false);
+    assert.equal(state().sensitiveDataConsent, false);
+  });
+
   it('resets to the empty draft and stays usable afterwards', () => {
     state().setDisplayName('Rosa');
     state().setVibe('foodie');

@@ -229,6 +229,7 @@ describe('auth and onboarding motion', () => {
       lookingFor: 'everyone',
       values: ['bookshops_coffee', 'tenant_rights', 'cycling'],
       promptAnswer: '',
+      sensitiveDataConsent: true,
     });
     fakeBackend.state.failNext.set('saveOnboarding', 'network');
 

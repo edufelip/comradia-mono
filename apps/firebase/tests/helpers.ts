@@ -88,6 +88,8 @@ export function account(overrides: Record<string, unknown> = {}): Record<string,
   return {
     birthDate: '1990-01-02',
     sharedPassionWeight: 60,
+    sensitiveDataConsentAt: serverTimestamp(),
+    consentVersion: '2026-11-13',
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
     ...overrides,

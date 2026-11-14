@@ -59,6 +59,7 @@ type OnboardingState = OnboardingDraft & {
   setPromptAnswer: (answer: string) => void;
   /** A local JPEG from `pickPhoto`, or null to drop it. */
   setPhotoUri: (photoUri: string | null) => void;
+  setSensitiveDataConsent: (sensitiveDataConsent: boolean) => void;
   reset: () => void;
 };
 
@@ -82,5 +83,6 @@ export const useOnboardingStore = create<OnboardingState>((set) => ({
   setPromptId: (promptId) => set({ promptId }),
   setPromptAnswer: (answer) => set({ promptAnswer: answer.slice(0, ANSWER_MAX) }),
   setPhotoUri: (photoUri) => set({ photoUri }),
+  setSensitiveDataConsent: (sensitiveDataConsent) => set({ sensitiveDataConsent }),
   reset: () => set(createEmptyDraft()),
 }));

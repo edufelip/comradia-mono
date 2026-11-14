@@ -37,6 +37,7 @@ export async function completeOnboarding(
   const starter = onboardingStep(page, 'starter');
   await starter.getByTestId('prompt-green_flag').click();
   await starter.getByTestId('starter-answer').fill('You know your neighbours by name.');
+  await starter.getByTestId('starter-consent-toggle').click();
   await starter.getByTestId('starter-finish').click();
 
   await expectPathname(page, '/discover');

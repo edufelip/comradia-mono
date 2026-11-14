@@ -126,6 +126,11 @@ tags:
     end: 50%, 45%
 - scrollUntilVisible:
     element:
+      id: starter-consent-toggle
+- tapOn:
+    id: starter-consent-toggle
+- scrollUntilVisible:
+    element:
       id: starter-finish
 - tapOn:
     id: starter-finish
