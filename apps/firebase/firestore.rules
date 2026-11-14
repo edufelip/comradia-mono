@@ -127,7 +127,7 @@ service cloud.firestore {
       }
 
       // The blocker's own list of who they blocked: private, written once, never edited.
-      // Delete is for account deletion (there is no unblock yet).
+      // Delete is for unblocking and for account deletion.
       match /blocks/{targetUid} {
         allow read, delete: if isOwner(uid);
         allow create: if isOwner(uid) && targetUid != uid

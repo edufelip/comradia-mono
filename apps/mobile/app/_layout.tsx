@@ -104,6 +104,7 @@ function RootLayoutContent() {
               }}
             />
             <Stack.Screen name="chat/[id]" />
+            <Stack.Screen name="blocked" />
             <Stack.Screen
               name="safety/[uid]"
               options={{

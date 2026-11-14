@@ -505,6 +505,31 @@ export const backend: Backend = {
       ];
     }),
 
+  unblockUser: (uid, targetId) =>
+    run(async () => {
+      // The mirror of blockUser: the rules let the blocker delete both docs. Reports stay.
+      const batch = writeBatch(db);
+      batch.delete(doc(db, 'users', uid, 'blocks', targetId));
+      batch.delete(doc(db, 'blocks', targetId, 'by', uid));
+      await batch.commit();
+    }),
+
+  listBlocked: (uid) =>
+    run(async () => {
+      const mine = await getDocs(collection(db, 'users', uid, 'blocks'));
+      // A missing profile means the person deleted their account: the screen shows a fallback.
+      return Promise.all(
+        mine.docs.map(async (d: Snapshot) => {
+          const profile = (await getDoc(doc(db, 'profiles', d.id))).data();
+          return {
+            id: d.id,
+            displayName: profile ? String(profile.displayName) : null,
+            photoPath: profile?.photoPath ? String(profile.photoPath) : null,
+          };
+        }),
+      );
+    }),
+
   lastSignInAt() {
     // Sync by contract: the screen decides, before deleting, whether to re-authenticate.
     const time = auth.currentUser?.metadata.lastSignInTime;

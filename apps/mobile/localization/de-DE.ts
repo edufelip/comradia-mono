@@ -231,6 +231,22 @@ export const deDE: Record<TranslationKey, string> = {
   'photo.error':
     'Dein Foto konnte nicht gespeichert werden. Prüfe deine Verbindung und versuch es erneut.',
   'photo.saving': 'Dein Foto wird gespeichert…',
+  'blocked.back': 'Zurück',
+  'profile.blocked': 'Blockierte Personen',
+  'blocked.title': 'Blockierte Personen',
+  'blocked.subtitle': 'Ihr könnt einander nicht sehen, bis die Blockierung aufgehoben wird.',
+  'blocked.loading': 'Wird geladen…',
+  'blocked.error': 'Blockierte Personen konnten nicht geladen werden. Prüfe deine Verbindung.',
+  'blocked.empty.title': 'Niemand blockiert',
+  'blocked.empty.body':
+    'Personen, die du in Entdecken oder in einem Chat blockierst, erscheinen hier.',
+  'blocked.unknown_name': 'Profil nicht verfügbar',
+  'blocked.unblock': 'Entblocken',
+  'blocked.unblock.title': 'Diese Person entblocken?',
+  'blocked.unblock.body':
+    'Ihr werdet euch wieder sehen, außer die Person hat dich ebenfalls blockiert. Gemeldete Fälle bleiben gespeichert.',
+  'blocked.unblock.confirm': 'Entblocken',
+  'blocked.unblock.cancel': 'Abbrechen',
   'profile.sign_out': 'Abmelden',
   'profile.age': '{age}',
   'profile.delete_account': 'Mein Konto löschen',

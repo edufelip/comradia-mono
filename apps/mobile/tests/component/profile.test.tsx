@@ -17,6 +17,8 @@ jest.mock('@react-navigation/native', () => ({
   useIsFocused: () => mockIsFocused,
 }));
 jest.mock('@/features/profile/pick-photo', () => ({ pickPhoto: jest.fn() }));
+const mockPush = jest.fn();
+jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush, navigate: jest.fn() }) }));
 const notificationApi = jest.requireMock('@/features/notifications/notifications');
 
 function signIn(profile: PublicProfile | null = TEST_PROFILE) {
@@ -26,6 +28,16 @@ function signIn(profile: PublicProfile | null = TEST_PROFILE) {
 describe('ProfileScreen', () => {
   beforeEach(() => {
     mockIsFocused = true;
+  });
+
+  it('opens Blocked people from a row above the delete account control', async () => {
+    signIn();
+    await render(<ProfileScreen />);
+
+    expect(screen.getByTestId('profile-blocked')).toHaveTextContent(enUS['profile.blocked']);
+    await fireEvent.press(screen.getByTestId('profile-blocked'));
+
+    expect(mockPush).toHaveBeenCalledWith('/blocked');
   });
 
   it('shows the signed-in user own card', async () => {

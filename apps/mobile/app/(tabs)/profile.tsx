@@ -1,4 +1,5 @@
 import { useIsFocused } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { DsMotionPressable } from '@/components/ds/motion/DsMotionPressable';
@@ -35,6 +36,7 @@ export default function ProfileScreen() {
   const isFocused = useIsFocused();
   const isFocusedRef = useRef(isFocused);
   isFocusedRef.current = isFocused;
+  const router = useRouter();
   const [editingUid, setEditingUid] = useState<string | null>(null);
   useEffect(() => {
     setEditingUid(null);
@@ -289,6 +291,14 @@ export default function ProfileScreen() {
       ) : null}
 
       <NotificationSettings {...notificationSettings} motionActive={isFocused} />
+
+      <DsPillButton
+        label={t('profile.blocked')}
+        onPress={() => router.push('/blocked')}
+        scheme={scheme}
+        testID="profile-blocked"
+        variant="secondary"
+      />
 
       {confirmingDelete ? (
         <DsMotionView testID="profile-delete-motion" variant="scale">

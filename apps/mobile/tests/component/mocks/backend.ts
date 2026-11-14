@@ -262,6 +262,21 @@ function createFakeBackend() {
       record('listBlockedUids', [uid]);
       return [...state.blocked];
     },
+    async unblockUser(uid, targetId) {
+      record('unblockUser', [uid, targetId]);
+      state.blocked.delete(targetId);
+    },
+    async listBlocked(uid) {
+      record('listBlocked', [uid]);
+      return [...state.blocked].map((id) => {
+        const profile = state.profiles.get(id);
+        return {
+          id,
+          displayName: profile?.displayName ?? null,
+          photoPath: profile?.photoPath ?? null,
+        };
+      });
+    },
     lastSignInAt() {
       record('lastSignInAt', []);
       return Date.now();
