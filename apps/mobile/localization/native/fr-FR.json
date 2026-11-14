@@ -1,0 +1,5 @@
+{
+  "ios": {
+    "NSPhotoLibraryUsageDescription": "Comradia accède à votre photothèque pour vous permettre de choisir une photo de profil."
+  }
+}

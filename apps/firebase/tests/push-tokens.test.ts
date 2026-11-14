@@ -152,7 +152,7 @@ it('accepts optional supported registration locales while retaining legacy regis
   const token = `locale-${randomUUID()}`;
   const ref = tokenRef(alice, 'alice', tokenId(token));
   await assertSucceeds(setDoc(ref, pushToken(token)));
-  for (const locale of ['en-US', 'pt-BR', 'es-ES']) {
+  for (const locale of ['en-US', 'pt-BR', 'es-ES', 'fr-FR', 'de-DE', 'it-IT']) {
     await assertSucceeds(setDoc(ref, pushToken(token, { locale })));
   }
 });
@@ -160,7 +160,7 @@ it('accepts optional supported registration locales while retaining legacy regis
 it('denies malformed or unsupported registration locales', async () => {
   const token = `locale-invalid-${randomUUID()}`;
   const ref = tokenRef(alice, 'alice', tokenId(token));
-  for (const locale of ['fr-FR', '', null, 123, ['pt-BR']]) {
+  for (const locale of ['zz-ZZ', '', null, 123, ['pt-BR']]) {
     await assertFails(setDoc(ref, pushToken(token, { locale })));
   }
 });

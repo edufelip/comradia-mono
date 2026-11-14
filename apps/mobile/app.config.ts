@@ -57,6 +57,15 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     name: isDev ? 'Comradia (Dev)' : 'Comradia',
     slug: 'comradia',
     scheme: 'comradia',
+    locales: {
+      ...config.locales,
+      ...Object.fromEntries(
+        ['en-US', 'pt-BR', 'es-ES', 'fr-FR', 'de-DE', 'it-IT'].map((locale) => [
+          locale,
+          `./localization/native/${locale}.json`,
+        ]),
+      ),
+    },
     ios: {
       ...config.ios,
       bundleIdentifier: isDev ? 'com.edufelip.comradia.dev' : 'com.edufelip.comradia',
@@ -87,6 +96,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     },
     plugins: [
       ...(config.plugins ?? []),
+      [
+        'expo-localization',
+        { supportedLocales: ['en-US', 'pt-BR', 'es-ES', 'fr-FR', 'de-DE', 'it-IT'] },
+      ],
       '@react-native-firebase/app',
       '@react-native-firebase/auth',
       '@react-native-firebase/app-check',

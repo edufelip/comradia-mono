@@ -31,6 +31,7 @@ const IDENTICAL_BY_DESIGN = new Set<TranslationKey>([
   'onboarding.values.weight_value',
   'onboarding.starter.answer_count',
   'profile.age',
+  'match.names', // Names joined by an ampersand are valid in several locales.
 ]);
 
 const LOCALES: { locale: SupportedLocale; dictionary: Record<TranslationKey, string> }[] = [
@@ -98,7 +99,7 @@ describe('localization dictionary parity', () => {
 
 describe('localization fallback and interpolation', () => {
   it('falls back to en-US for an unknown locale', () => {
-    const unknown = 'fr-FR' as SupportedLocale;
+    const unknown = 'ja-JP' as SupportedLocale;
 
     assert.equal(t(unknown, 'tabs.profile'), 'Profile');
     assert.equal(t(unknown, 'matches.title'), enUS['matches.title']);
@@ -154,7 +155,7 @@ describe('localization locale resolution', () => {
   });
 
   it('falls back to en-US for unsupported languages', () => {
-    for (const raw of ['de-DE', 'fr-FR', 'ja-JP', 'zh-Hans-CN', 'ru']) {
+    for (const raw of ['ja-JP', 'zh-Hans-CN', 'ru', 'italics', 'french']) {
       assert.equal(resolveLocale(raw), 'en-US', `raw=${raw}`);
     }
   });
@@ -176,4 +177,56 @@ describe('localization locale resolution', () => {
     assert.equal(resolveLocale('constructor'), 'en-US');
     assert.equal(resolveLocale('toString'), 'en-US');
   });
+});
+
+describe('required product languages', () => {
+  it('registers all five required languages plus English', () => {
+    assert.deepEqual(Object.keys(DICTIONARIES).sort(), [
+      'de-DE',
+      'en-US',
+      'es-ES',
+      'fr-FR',
+      'it-IT',
+      'pt-BR',
+    ]);
+  });
+  it('resolves regional and platform tags without accepting prefix lookalikes', () => {
+    for (const [raw, expected] of [
+      ['fr-CA', 'fr-FR'],
+      ['FR_fr', 'fr-FR'],
+      ['de-AT', 'de-DE'],
+      ['it-CH', 'it-IT'],
+      ['pt_PT', 'pt-BR'],
+      ['es-419', 'es-ES'],
+      ['french', 'en-US'],
+      ['italics', 'en-US'],
+    ]) {
+      assert.equal(resolveLocale(raw), expected, raw);
+    }
+  });
+  it('requires exact key parity, nonempty translations and unchanged placeholders in every registered locale', () => {
+    const placeholders = (s: string) =>
+      [...s.matchAll(/\{([A-Za-z_]+)\}/g)].map((m) => m[1]).sort();
+    for (const [locale, dictionary] of Object.entries(DICTIONARIES)) {
+      assert.deepEqual(Object.keys(dictionary).sort(), EN_KEYS, locale);
+      for (const key of EN_KEYS) {
+        assert.ok(dictionary[key].trim(), locale + ' ' + key);
+        assert.deepEqual(
+          placeholders(dictionary[key]),
+          placeholders(enUS[key]),
+          locale + ' ' + key,
+        );
+        if (locale !== 'en-US' && /\s/.test(enUS[key]) && !IDENTICAL_BY_DESIGN.has(key))
+          assert.notEqual(dictionary[key], enUS[key], locale + ' ' + key + ' untranslated');
+      }
+    }
+  });
+});
+
+it('does not copy Spanish prose into the Italian dictionary', () => {
+  const italian = DICTIONARIES['it-IT'];
+  for (const key of EN_KEYS) {
+    if (/\s/.test(esES[key]) && !IDENTICAL_BY_DESIGN.has(key))
+      assert.notEqual(italian[key], esES[key], key + ' contains copied Spanish');
+  }
 });

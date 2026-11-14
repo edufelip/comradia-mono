@@ -22,7 +22,8 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:native": "maestro test .maestro",
-    "test:all": "yarn typecheck && yarn lint && yarn test && yarn test:component:coverage && yarn test:e2e"
+    "test:all": "yarn typecheck && yarn lint && yarn test && yarn test:component:coverage && yarn test:e2e",
+    "test:atlas": "node scripts/atlas/run.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/geist": "0.4.2",
