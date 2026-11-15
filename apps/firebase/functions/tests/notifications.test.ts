@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { createHash, randomUUID } from 'node:crypto';
 import { after, before, describe, it } from 'node:test';
 import { deleteApp, initializeApp } from 'firebase-admin/app';
-import { FieldValue, getFirestore, type Firestore } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp, getFirestore, type Firestore } from 'firebase-admin/firestore';
 import type { MulticastMessage } from 'firebase-admin/messaging';
 import {
   createNotificationDispatcher,
@@ -205,6 +205,43 @@ describe('match and message notification dispatch', () => {
     assert.equal(calls, 2);
   });
 
+  it('reads a Portuguese recipient token at most twice and checks dispatch safety once', async () => {
+    const { users, matchId } = await fixture();
+    const tokenId = createHash('sha256').update('single-locale-cost-token').digest('hex');
+    await firestore.doc(`users/${users[1]}/pushTokens/${tokenId}`).set({
+      token: 'single-locale-cost-token',
+      platform: 'ios',
+      locale: 'pt-BR',
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+    const store = new FirestoreNotificationStore(firestore);
+    let listCalls = 0;
+    let safetyCalls = 0;
+    const listPushTokens = store.listPushTokens.bind(store);
+    const isDispatchAllowed = store.isDispatchAllowed.bind(store);
+    store.listPushTokens = async (uid) => {
+      listCalls += 1;
+      return listPushTokens(uid);
+    };
+    store.isDispatchAllowed = async (input) => {
+      safetyCalls += 1;
+      return isDispatchAllowed(input);
+    };
+    const sender = new RecordingSender();
+
+    await createNotificationDispatcher(store, sender)(createdEvent(matchId, {
+      eventId: 'pt-br-one-token',
+      type: 'message',
+      senderUid: users[0],
+    }));
+
+    assert.equal(sender.messages.length, 1);
+    assert.equal(sender.messages[0]?.notification?.title, 'Nova mensagem');
+    assert.ok(listCalls <= 2);
+    assert.equal(listCalls, 2);
+    assert.equal(safetyCalls, 1);
+  });
+
   it('claims deterministic per-event recipient markers before sending duplicates', async () => {
     const { users, matchId } = await fixture();
     await seedToken(users[1], `duplicate-token-${randomUUID()}`);
@@ -220,6 +257,30 @@ describe('match and message notification dispatch', () => {
     await dispatch(event);
 
     assert.equal(sender.messages.length, 1);
+  });
+
+  it('sets a seven-day TTL on notification dispatch and report alert markers', async () => {
+    const { users, matchId } = await fixture();
+    const store = new FirestoreNotificationStore(firestore);
+    const dispatchId = 'ttl-dispatch-marker';
+    assert.equal(await store.claimDispatch({
+      eventId: dispatchId,
+      type: 'match',
+      matchId,
+      users,
+      recipientUid: users[0],
+    }), 'claimed');
+    assert.equal(await store.claimReportAlert('ttl-report-marker', users[0]), true);
+
+    for (const rawId of [`match\0${dispatchId}\0${users[0]}`, `report\0ttl-report-marker\0${users[0]}`]) {
+      const markerId = createHash('sha256').update(rawId).digest('hex');
+      const marker = await firestore.doc(`notificationDispatches/${markerId}`).get();
+      const createdAt = marker.get('createdAt');
+      const expireAt = marker.get('expireAt');
+      assert.ok(createdAt instanceof Timestamp);
+      assert.ok(expireAt instanceof Timestamp);
+      assert.ok(Math.abs(expireAt.toMillis() - createdAt.toMillis() - 7 * 24 * 60 * 60 * 1000) < 1000);
+    }
   });
 
   it('does not send or later replay an event that had no registered tokens', async () => {
