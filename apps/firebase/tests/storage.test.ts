@@ -1,5 +1,6 @@
 import { after, before, beforeEach, describe, it } from 'node:test';
 import { assertFails, assertSucceeds, type RulesTestEnvironment } from '@firebase/rules-unit-testing';
+import { listAll } from 'firebase/storage';
 import { testEnvironment } from './helpers';
 
 let env: RulesTestEnvironment;
@@ -87,6 +88,12 @@ describe('portrait read', () => {
   it('allows another signed-in user to read a portrait', async () => {
     await seed('photos/alice/abc123.jpg');
     await assertSucceeds(bob.storage().ref('photos/alice/abc123.jpg').getMetadata());
+  });
+
+  it('allows only the folder owner to list their portraits', async () => {
+    await seed('photos/alice/abc123.jpg');
+    await assertSucceeds(listAll(alice.storage().ref('photos/alice')));
+    await assertFails(listAll(bob.storage().ref('photos/alice')));
   });
 
   it('denies a signed-out read', async () => {
