@@ -242,11 +242,11 @@ function createFakeBackend() {
         messagesListeners.delete(entry);
       };
     },
-    async loadOlderMessages(matchId, beforeMs, limit = 200) {
-      record('loadOlderMessages', [matchId, beforeMs, limit]);
-      return (state.messages.get(matchId) ?? [])
-        .filter((message) => message.createdAt !== null && message.createdAt < beforeMs)
-        .slice(-limit);
+    async loadOlderMessages(matchId, beforeId, limit = 200) {
+      record('loadOlderMessages', [matchId, beforeId, limit]);
+      const messages = state.messages.get(matchId) ?? [];
+      const anchor = messages.findIndex((message) => message.id === beforeId);
+      return messages.slice(0, Math.max(anchor, 0)).slice(-limit);
     },
     async sendMessage(uid, matchId, text) {
       record('sendMessage', [uid, matchId, text]);

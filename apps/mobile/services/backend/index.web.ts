@@ -227,6 +227,17 @@ async function loadMatches(uid: string, docs: Snapshot[]): Promise<Match[]> {
   return rows.filter((row): row is Match => row !== null).sort((a, b) => b.createdAt - a.createdAt);
 }
 
+/** Discovery cursor: `seconds:nanoseconds:profileId` of the last profile read. */
+function discoveryCursorOf(snapshot: { id: string; data(): { createdAt?: unknown } }): string {
+  const at = snapshot.data().createdAt as Timestamp;
+  return `${at.seconds}:${at.nanoseconds}:${snapshot.id}`;
+}
+
+function discoveryCursorValues(cursor: string): [Timestamp, string] | undefined {
+  const match = /^(\d+):(\d+):(.+)$/.exec(cursor);
+  return match ? [new Timestamp(Number(match[1]), Number(match[2])), match[3]] : undefined;
+}
+
 export const backend: Backend = {
   onAuthChanged(listener) {
     return onAuthStateChanged(auth, (user) => listener(user ? toAuthUser(user) : null));
@@ -348,15 +359,22 @@ export const backend: Backend = {
               ? query(
                   collection(db, 'profiles'),
                   orderBy('createdAt'),
-                  startAfter(Timestamp.fromMillis(cursor as number)),
+                  // The id breaks createdAt ties, so a page ending inside a tie skips no one.
+                  orderBy(documentId()),
+                  startAfter(...discoveryCursorValues(cursor as string)!),
                   limit(DISCOVERY_PAGE_SIZE),
                 )
-              : query(collection(db, 'profiles'), orderBy('createdAt'), limit(DISCOVERY_PAGE_SIZE)),
+              : query(
+                  collection(db, 'profiles'),
+                  orderBy('createdAt'),
+                  orderBy(documentId()),
+                  limit(DISCOVERY_PAGE_SIZE),
+                ),
           );
           return {
             docs: page.docs.map((d) => ({ id: d.id, data: d.data() })),
             cursor: page.docs.length
-              ? epochMs(page.docs[page.docs.length - 1].data().createdAt)
+              ? discoveryCursorOf(page.docs[page.docs.length - 1])
               : undefined,
           };
         },
@@ -370,10 +388,10 @@ export const backend: Backend = {
           );
           return new Set(swipePages.flatMap((page) => page.docs.map((swipe) => swipe.id)));
         },
-        saved ? Number(saved) : undefined,
+        saved && discoveryCursorValues(saved) ? saved : undefined,
       );
-      if (typeof resume === 'number')
-        await AsyncStorage.setItem(key, String(resume)).catch(() => undefined);
+      if (typeof resume === 'string')
+        await AsyncStorage.setItem(key, resume).catch(() => undefined);
       return candidates;
     }),
 
@@ -494,13 +512,15 @@ export const backend: Backend = {
       () => onError(),
     ),
 
-  loadOlderMessages: (matchId, beforeMs, limitCount) =>
+  loadOlderMessages: (matchId, beforeId, limitCount) =>
     run<ChatMessage[]>(async () => {
+      // A snapshot cursor carries createdAt and the id, so messages tied with the anchor still load.
+      const anchor = await getDoc(doc(db, 'matches', matchId, 'messages', beforeId));
       const page = await getDocs(
         query(
           collection(db, 'matches', matchId, 'messages'),
           orderBy('createdAt', 'asc'),
-          endBefore(Timestamp.fromMillis(beforeMs)),
+          endBefore(anchor),
           limitToLast(limitCount ?? MESSAGE_PAGE_SIZE),
         ),
       );

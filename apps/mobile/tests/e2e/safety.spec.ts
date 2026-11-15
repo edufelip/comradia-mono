@@ -325,14 +325,13 @@ test.describe('safety', () => {
     // without trying to rewrite the existing (create-only) report.
     await deleteDoc(`users/${uid}/blocks/${target}`);
     await deleteDoc(`blocks/${target}/by/${uid}`);
-    await page.reload();
+    // Open the report directly: the deck ranks cards on the device, and parallel signups can
+    // outrank the target, so card order proves nothing here.
+    await page.goto(`/safety/${target}`);
     await signInAgainIfSignedOut(page, digits);
-    await expectPathname(page, '/discover');
-    await expect.poll(() => currentPerson(page)).toBe(target);
-    await page.getByTestId('discover-report').click();
+    await expect(page.getByTestId('safety-screen')).toBeVisible();
     await page.getByTestId('report-reason-spam').click();
     await page.getByTestId('report-submit').click();
-    await expectPathname(page, '/discover');
     await expect.poll(() => docStatus(`users/${uid}/blocks/${target}`)).toBe(200);
     await expect.poll(() => docStatus(`blocks/${target}/by/${uid}`)).toBe(200);
     await expect.poll(async () => await mine()).toHaveLength(1);

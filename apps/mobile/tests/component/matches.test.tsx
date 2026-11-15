@@ -236,6 +236,25 @@ describe('MatchesScreen', () => {
     expect(await screen.findByTestId(`match-row-${matchId}`)).toBeOnTheScreen();
     expect(screen.queryByTestId('matches-error')).not.toBeOnTheScreen();
     expect(fakeBackend.callsTo('reconcileMatches')).toHaveLength(1);
+
+    // A failed repair runs again the next time Matches opens.
+    await screen.unmount();
+    await render(<MatchesScreen />);
+    expect(await screen.findByTestId(`match-row-${matchId}`)).toBeOnTheScreen();
+    expect(fakeBackend.callsTo('reconcileMatches')).toHaveLength(2);
+  });
+
+  it('shows an error when the live list fails and recovers on retry', async () => {
+    signIn();
+    seedProfiles(MAYA);
+    const matchId = matchIdFor(TEST_USER.uid, MAYA.id);
+    fakeBackend.state.matches.set(matchId, 1);
+    fakeBackend.state.failNext.set('onMatches', 'network');
+
+    await render(<MatchesScreen />);
+
+    await fireEvent.press(await screen.findByTestId('matches-retry'));
+    expect(await screen.findByTestId(`match-row-${matchId}`)).toBeOnTheScreen();
   });
 
   it('stops following the matches when the screen unmounts', async () => {

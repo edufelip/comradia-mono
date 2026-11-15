@@ -122,7 +122,7 @@ export type Backend = {
     onError: () => void,
   ): Unsubscribe;
   /** Loads messages strictly before an epoch-ms cursor, oldest first. */
-  loadOlderMessages(matchId: string, beforeMs: number, limit?: number): Promise<ChatMessage[]>;
+  loadOlderMessages(matchId: string, beforeId: string, limit?: number): Promise<ChatMessage[]>;
   sendMessage(uid: string, matchId: string, text: string): Promise<void>;
   /** Blocks `targetId`: writes users/{uid}/blocks/{targetId} and blocks/{targetId}/by/{uid} in one batch. */
   blockUser(uid: string, targetId: string): Promise<void>;

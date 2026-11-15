@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import type { Backend, Match, Unsubscribe } from '@/services/backend/types';
-import { markReconciliationForSession } from './reconcile-session';
+import { forgetReconciliationForSession, markReconciliationForSession } from './reconcile-session';
 
 /** The backend calls S9 needs. Passed in, so this module never imports Firebase. */
 export type MatchesBackend = Pick<Backend, 'reconcileMatches' | 'onMatches'>;
@@ -27,7 +27,7 @@ export function useMatches(backend: MatchesBackend, uid: string | undefined) {
     setStatus('loading');
 
     if (markReconciliationForSession(uid)) {
-      void backend.reconcileMatches(uid).catch(() => undefined);
+      void backend.reconcileMatches(uid).catch(() => forgetReconciliationForSession(uid));
     }
     unsubscribe = backend.onMatches(
       uid,

@@ -79,7 +79,7 @@ export function useChat(backend: ChatBackend, uid: string | undefined, matchId: 
     setLoadingEarlier(true);
     setEarlierFailed(false);
     try {
-      const page = await backend.loadOlderMessages(matchId, earliest.createdAt);
+      const page = await backend.loadOlderMessages(matchId, earliest.id);
       setOlderMessages((current) => {
         const existing = new Set(current.map((message) => message.id));
         return [...page.filter((message) => !existing.has(message.id)), ...current];
