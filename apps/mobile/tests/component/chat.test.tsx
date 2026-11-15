@@ -162,6 +162,32 @@ describe('ChatScreen', () => {
     expect(screen.queryByTestId('chat-message-motion-history-1')).not.toBeOnTheScreen();
   });
 
+  it('loads and prepends earlier messages when the live window is full', async () => {
+    signIn();
+    const matchId = await seedMatch();
+    fakeBackend.state.messages.set(
+      matchId,
+      Array.from({ length: 205 }, (_, index) => ({
+        id: `history-${index + 1}`,
+        from: MAYA.id,
+        text: `History ${index + 1}`,
+        createdAt: index + 1,
+      })),
+    );
+
+    await render(<ChatScreen />);
+
+    const loadEarlier = await screen.findByTestId('chat-load-earlier');
+    expect(loadEarlier).toHaveAccessibleName(enUS['chat.load_earlier']);
+    await fireEvent.press(loadEarlier);
+
+    expect(await screen.findByText('History 1')).toBeOnTheScreen();
+    expect(screen.getByTestId('chat-message-history-205')).toBeOnTheScreen();
+    expect(fakeBackend.callsTo('loadOlderMessages')).toEqual([
+      { method: 'loadOlderMessages', args: [matchId, 6, 200] },
+    ]);
+  });
+
   it('does not replay a message that arrived while Chat was hidden', async () => {
     signIn();
     const matchId = await seedMatch();

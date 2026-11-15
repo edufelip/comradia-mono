@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import type { Backend, Match, Unsubscribe } from '@/services/backend/types';
+import { markReconciliationForSession } from './reconcile-session';
 
 /** The backend calls S9 needs. Passed in, so this module never imports Firebase. */
 export type MatchesBackend = Pick<Backend, 'reconcileMatches' | 'onMatches'>;
@@ -9,8 +10,8 @@ export type MatchesStatus = 'idle' | 'loading' | 'ready' | 'error';
 
 /**
  * S9's live list. Opening Matches first repairs any match both people created at the same
- * moment without seeing each other's like (decision #8), then follows the matches
- * collection until the screen unmounts.
+ * moment without seeing each other's like once per app session, then follows the matches
+ * collection until the screen unmounts. Repair failures do not stop the live list.
  */
 export function useMatches(backend: MatchesBackend, uid: string | undefined) {
   const [status, setStatus] = useState<MatchesStatus>('idle');
@@ -25,26 +26,21 @@ export function useMatches(backend: MatchesBackend, uid: string | undefined) {
     let unsubscribe: Unsubscribe | undefined;
     setStatus('loading');
 
-    backend
-      .reconcileMatches(uid)
-      .then(() => {
+    if (markReconciliationForSession(uid)) {
+      void backend.reconcileMatches(uid).catch(() => undefined);
+    }
+    unsubscribe = backend.onMatches(
+      uid,
+      (list) => {
         if (!active) return;
-        unsubscribe = backend.onMatches(
-          uid,
-          (list) => {
-            if (!active) return;
-            setMatches(list);
-            setStatus('ready');
-          },
-          () => {
-            if (!active) return;
-            setStatus('error');
-          },
-        );
-      })
-      .catch(() => {
-        if (active) setStatus('error');
-      });
+        setMatches(list);
+        setStatus('ready');
+      },
+      () => {
+        if (!active) return;
+        setStatus('error');
+      },
+    );
 
     return () => {
       active = false;

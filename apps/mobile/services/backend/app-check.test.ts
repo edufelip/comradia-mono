@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { appCheckProviderOptions } from './app-check';
+import { appCheckProviderOptions, shouldInitializeWebAppCheck } from './app-check';
 
 const attestation = {
   android: { provider: 'playIntegrity' },
@@ -26,4 +26,14 @@ it('ignores a debug token for production and unknown variants', () => {
   for (const variant of ['prod', undefined, 'unexpected']) {
     assert.deepEqual(appCheckProviderOptions('dev-token-123', variant), attestation);
   }
+});
+
+describe('shouldInitializeWebAppCheck', () => {
+  it('requires a non-empty site key and skips all emulator hosts', () => {
+    assert.equal(shouldInitializeWebAppCheck(null, 'site-key'), true);
+    assert.equal(shouldInitializeWebAppCheck(null, '  site-key  '), true);
+    assert.equal(shouldInitializeWebAppCheck(null, undefined), false);
+    assert.equal(shouldInitializeWebAppCheck(null, '  '), false);
+    assert.equal(shouldInitializeWebAppCheck('127.0.0.1', 'site-key'), false);
+  });
 });

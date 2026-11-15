@@ -2,6 +2,13 @@ import type { ReactNativeFirebaseAppCheckProvider } from '@react-native-firebase
 
 type ProviderOptions = Parameters<ReactNativeFirebaseAppCheckProvider['configure']>[0];
 
+export function shouldInitializeWebAppCheck(
+  emulatorHost: string | null,
+  siteKey: string | undefined,
+): boolean {
+  return !emulatorHost && Boolean(siteKey?.trim());
+}
+
 /** Dev builds pass a debug token (registered in the Firebase console); store builds use real attestation. */
 export function appCheckProviderOptions(
   debugToken: string | undefined,

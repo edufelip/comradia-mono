@@ -121,10 +121,12 @@ export type Backend = {
     listener: (messages: ChatMessage[]) => void,
     onError: () => void,
   ): Unsubscribe;
+  /** Loads messages strictly before an epoch-ms cursor, oldest first. */
+  loadOlderMessages(matchId: string, beforeMs: number, limit?: number): Promise<ChatMessage[]>;
   sendMessage(uid: string, matchId: string, text: string): Promise<void>;
   /** Blocks `targetId`: writes users/{uid}/blocks/{targetId} and blocks/{targetId}/by/{uid} in one batch. */
   blockUser(uid: string, targetId: string): Promise<void>;
-  /** Writes reports/{auto} and blocks the target, in one batch. */
+  /** Creates reports/{reporterUid_targetUid} once and ensures both block docs exist. */
   reportUser(uid: string, input: ReportInput): Promise<void>;
   /** Uids to hide from me: people I blocked plus people who blocked me (no duplicates). */
   listBlockedUids(uid: string): Promise<string[]>;

@@ -223,24 +223,19 @@ describe('MatchesScreen', () => {
     ).toBeOnTheScreen();
   });
 
-  it('shows a failed reconciliation and recovers through Retry', async () => {
-    signIn();
+  it('keeps the live match list when reconciliation fails', async () => {
+    const sessionUser = { ...TEST_USER, uid: 'reconcile-failure-user' };
+    useSessionStore.setState({ status: 'ready', user: sessionUser, profile: TEST_PROFILE });
     seedProfiles(MAYA);
-    fakeBackend.likeFrom(MAYA.id, TEST_USER.uid);
-    fakeBackend.likeFrom(TEST_USER.uid, MAYA.id);
+    const matchId = matchIdFor(sessionUser.uid, MAYA.id);
+    fakeBackend.state.matches.set(matchId, 1);
     fakeBackend.state.failNext.set('reconcileMatches', 'network');
 
     await render(<MatchesScreen />);
 
-    expect(await screen.findByTestId('matches-error')).toBeOnTheScreen();
-    expect(screen.getByText(enUS['matches.error'])).toBeOnTheScreen();
-
-    await fireEvent.press(screen.getByTestId('matches-retry'));
-
-    expect(
-      await screen.findByTestId(`match-row-${matchIdFor(TEST_USER.uid, MAYA.id)}`),
-    ).toBeOnTheScreen();
-    expect(fakeBackend.callsTo('reconcileMatches')).toHaveLength(2);
+    expect(await screen.findByTestId(`match-row-${matchId}`)).toBeOnTheScreen();
+    expect(screen.queryByTestId('matches-error')).not.toBeOnTheScreen();
+    expect(fakeBackend.callsTo('reconcileMatches')).toHaveLength(1);
   });
 
   it('stops following the matches when the screen unmounts', async () => {

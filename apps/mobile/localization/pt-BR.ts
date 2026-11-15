@@ -70,6 +70,7 @@ export const ptBR: Record<TranslationKey, string> = {
   'chat.not_found': 'Não encontramos esta conversa.',
   'chat.load_error': 'Não foi possível carregar esta conversa.',
   'chat.retry': 'Tentar de novo',
+  'chat.load_earlier': 'Carregar mensagens anteriores',
   'chat.error': 'Sua mensagem não foi enviada. Tente de novo.',
   'chat.safety': 'Opções de segurança',
   'chat.closed': 'Esta conversa está encerrada.',

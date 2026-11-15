@@ -249,7 +249,7 @@ test.describe('photos', () => {
     // A path never changes content, so clients may cache it for a year.
     expect(await objectMetadata(path)).toMatchObject({
       contentType: 'image/jpeg',
-      cacheControl: 'public, max-age=31536000, immutable',
+      cacheControl: 'private, max-age=31536000, immutable',
     });
 
     await openProfile(page);

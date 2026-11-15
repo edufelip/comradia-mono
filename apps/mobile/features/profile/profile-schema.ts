@@ -58,7 +58,7 @@ export const PHOTO_MAX_BYTES = 5 * 1024 * 1024;
  */
 export const PHOTO_METADATA = {
   contentType: 'image/jpeg',
-  cacheControl: 'public, max-age=31536000, immutable',
+  cacheControl: 'private, max-age=31536000, immutable',
 } as const;
 
 /** Storage path of a portrait. Mirrors storage.rules and the `photoPath` check in firestore.rules. */

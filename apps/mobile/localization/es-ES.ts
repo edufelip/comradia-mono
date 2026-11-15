@@ -70,6 +70,7 @@ export const esES: Record<TranslationKey, string> = {
   'chat.not_found': 'No encontramos esta conversación.',
   'chat.load_error': 'No pudimos cargar esta conversación.',
   'chat.retry': 'Reintentar',
+  'chat.load_earlier': 'Cargar mensajes anteriores',
   'chat.error': 'Tu mensaje no se envió. Inténtalo de nuevo.',
   'chat.safety': 'Opciones de seguridad',
   'chat.closed': 'Esta conversación está cerrada.',

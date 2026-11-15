@@ -66,17 +66,17 @@ When the status changes, the user lands on `app/index.tsx`, which redirects to t
 
 | Path | Who can read | Who can write | Fields |
 | --- | --- | --- | --- |
-| `profiles/{uid}` | any signed-in user | owner only; must be a complete, valid card | `displayName` (1–40), `age` (18–99), `vibe`, `lookingFor`, `unionMember`, `union` (null unless member), `values` (3–5 unique ids), `promptId`, `promptAnswer` (1–280), `photoPath` (null or `photos/{uid}/<id>.jpg`), `createdAt`, `updatedAt` (server time) |
-| `users/{uid}` | owner | owner | `birthDate` (YYYY-MM-DD), `sharedPassionWeight` (0–100), `createdAt`, `updatedAt` |
+| `profiles/{uid}` | owner can always get their card; other signed-in users can get it unless the owner blocked them. List requires a signed-in caller with their own profile and a query limit of at most 50. | owner only; must be a complete, valid card and have `users/{uid}` present (including same-batch onboarding) | `displayName` (1–40), `age` (18–99), `vibe`, `lookingFor`, `unionMember`, `union` (null unless member), `values` (3–5 unique ids), `promptId`, `promptAnswer` (1–280), `photoPath` (null or `photos/{uid}/<id>.jpg`), `createdAt`, `updatedAt` (server time) |
+| `users/{uid}` | owner | owner; birth date must be a real date from 1900 onward and at least 18 years before request time | `birthDate` (YYYY-MM-DD), `sharedPassionWeight` (0–100), `createdAt`, `updatedAt` |
 | `users/{uid}/swipes/{targetUid}` | owner | owner, not on self | `direction` (`like` / `pass`), `createdAt` |
 | `likes/{targetUid}/from/{likerUid}` | the liked person and the liker | the liker, not on self | `createdAt` |
-| `matches/{a_b}` (uids sorted, `_`) | the two people in it | create only, by one of the two, when both likes exist | `users` ([a, b] sorted), `createdAt` |
+| `matches/{a_b}` (uids sorted, `_`) | the two people in it | create when both likes exist; delete only after the caller has withdrawn their like to the other person | `users` ([a, b] sorted), `createdAt` |
 | `matches/{a_b}/messages/{id}` | the two people | the sender, one of the two; never edited | `from`, `text` (1–1000), `createdAt` |
 | `users/{uid}/blocks/{targetUid}` | owner | owner, not on self | `createdAt` |
 | `blocks/{uid}/by/{blockerUid}` | the blocked person and the blocker | the blocker, not on self | `createdAt` |
-| `reports/{id}` | nobody (write-only) | any signed-in user, about someone else | `reporter`, `target`, `reason`, `details` (≤500), `context` (`profile` / `chat`), `createdAt` |
+| `reports/{reporter_target}` | reporter may get their own report; list is denied | signed-in reporter creates once per target using the deterministic id; updates and deletes are denied | `reporter`, `target`, `reason`, `details` (≤500), `context` (`profile` / `chat`), `createdAt` |
 
-| Storage `photos/{uid}/{id}.jpg` | any signed-in user | create only, by the owner: `image/jpeg`, 1 byte–5 MB, never overwritten; delete by the owner | the portrait file |
+| Storage `photos/{uid}/{id}.jpg` | any signed-in user can get an individual portrait; only the owner can list their folder | create only, by the owner: `image/jpeg`, 1 byte–5 MB, never overwritten; delete by the owner | the portrait file |
 
 Everything else is denied. Option ids are listed once in `features/profile/profile-schema.ts` and mirrored in `firestore.rules`; a rules test fails when they drift. Labels come from localization (`onboarding.*`).
 
@@ -90,10 +90,10 @@ Everything else is denied. Option ids are listed once in `features/profile/profi
 | S2 | `/vibe` | Optional portrait (pick from the library and crop), first name, birthday (18+), vibe (5 cards), looking for (3), optional union badge | `onboarding-name`, `onboarding-birthday`, `onboarding-photo`, `onboarding-photo-pick`, `onboarding-photo-remove`, `vibe-<id>`, `looking-for-<id>`, `union-toggle`, `union-<id>`, `onboarding-continue` |
 | S3 | `/values` | 3–5 values, shared-passion weight (0–100, step 10) | `value-<id>`, `weight-decrease`, `weight-increase`, `onboarding-continue` |
 | S4 | `/starter` | Prompt picker + text answer (voice: "coming soon"); "Start swiping" writes the profile | `prompt-<id>`, `starter-answer`, `starter-finish`, `onboarding-error` |
-| S5 | `/discover` | Deck from Firestore (oldest profiles first, 50 per load), each card with its portrait or the name's initial; Like / Pass are saved as swipes | `discover-screen`, `discover-person-<id>`, `discover-card-name`, `discover-photo`, `discover-like`, `discover-pass`, `discover-retry`, `discover-refresh` |
+| S5 | `/discover` | Deck from Firestore (oldest profiles first, up to five pages to find 50 unswiped candidates), each card with its portrait or the name's initial; Like / Pass are saved as swipes | `discover-screen`, `discover-person-<id>`, `discover-card-name`, `discover-photo`, `discover-like`, `discover-pass`, `discover-retry`, `discover-refresh` |
 | S8 | `/match/[id]` (modal) | Shown right after a like that matched: both portraits and names, shared values, "Send a message" / "Keep swiping" | `match-screen`, `match-photo-me`, `match-photo-other`, `match-send-message`, `match-keep-swiping` |
 | S9 | `/matches` | Live list of matches, newest first; tap opens the chat | `matches-screen`, `match-row-<matchId>`, `match-row-photo-<matchId>`, `matches-empty` |
-| S10 | `/chat/[id]` | Live chat with one match; text only for now. A block on either side closes it: the messages stay, the composer goes | `chat-screen`, `chat-photo`, `chat-input`, `chat-send`, `chat-message-<id>`, `chat-error`, `chat-safety`, `chat-closed` |
+| S10 | `/chat/[id]` | Live chat with one match; text only for now, with earlier messages loaded in pages. A block on either side closes it: the messages stay, the composer goes | `chat-screen`, `chat-photo`, `chat-input`, `chat-send`, `chat-load-earlier`, `chat-message-<id>`, `chat-error`, `chat-safety`, `chat-closed` |
 | S11 | `/profile` | Own card from the session; add, change or remove the portrait; sign out; delete the account behind an inline confirm panel (needs a sign-in newer than five minutes) | `profile-screen`, `profile-card-name`, `profile-photo`, `profile-photo-change`, `profile-photo-remove`, `profile-photo-error`, `profile-sign-out`, `profile-delete-account`, `profile-delete-confirm`, `profile-delete-cancel`, `profile-delete-error`, `profile-delete-reauth` |
 | S11B | `/blocked` | Blocked people, opened from Profile: each one with Unblock behind an inline confirm. Unblocking removes only my two block docs; reports stay and a block they made on me stays | `blocked-screen`, `blocked-row-<uid>`, `blocked-unblock-<uid>`, `blocked-unblock-confirm-<uid>`, `blocked-empty`, `profile-blocked` |
 | S12 | `/safety/[uid]` (modal) | Block or report one person, from Discover (`context=profile`) or a chat (`context=chat`); a report also blocks. A block drops them from the deck and hides the match | `safety-screen`, `safety-error`, `safety-block`, `safety-block-confirm`, `report-reason-<id>`, `report-details`, `report-submit` |
@@ -115,7 +115,7 @@ npx firebase-tools apps:sdkconfig ios --project comradia-dev --out firebase/dev/
 # prod: the same with --project comradia-prod and firebase/prod/
 ```
 
-Web reads its Firebase config from `EXPO_PUBLIC_FIREBASE_API_KEY`, `_AUTH_DOMAIN`, `_PROJECT_ID` and `_APP_ID`; without them it uses the demo project, which only works with the emulators. Native Google sign-in also needs `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` (in `.env.example`). Android Google sign-in only works for builds signed with a key whose SHA-1 is registered on the Firebase Android app (today: the React Native debug key).
+Web reads its Firebase config from `EXPO_PUBLIC_FIREBASE_API_KEY`, `_AUTH_DOMAIN`, `_PROJECT_ID` and `_APP_ID`; without them it uses the demo project, which only works with the emulators. Web App Check uses the optional `EXPO_PUBLIC_RECAPTCHA_ENTERPRISE_SITE_KEY` and is skipped for emulators. Web Firestore keeps its deliberate in-memory cache so Playwright contexts remain isolated. Native Google sign-in also needs `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` (in `.env.example`). Android Google sign-in only works for builds signed with a key whose SHA-1 is registered on the Firebase Android app (today: the React Native debug key).
 
 ## Costs
 
@@ -123,7 +123,7 @@ Web reads its Firebase config from `EXPO_PUBLIC_FIREBASE_API_KEY`, `_AUTH_DOMAIN
 
 - **Budget alert:** "comradia-dev monthly", R$ 25, emails at 10%, 50%, 90% and 100% of actual spend and at 100% of forecast. An alert only warns; it does not stop charges.
 - **Storage bucket in `us-east1`:** one of the three regions (`us-east1`, `us-west1`, `us-central1`) where Storage has a free allowance (5 GB stored, 100 GB downloaded per month). Firestore stays in `southamerica-east1`.
-- **Photos are small and cached:** resized to 1080 px, JPEG 0.8 (about 100–200 KB), never overwritten, uploaded with `Cache-Control: public, max-age=31536000, immutable`. Old files are deleted after a change on a best-effort basis; account deletion stops if removing a file fails so it can be retried.
+- **Photos are small and cached:** resized to 1080 px, JPEG 0.8 (about 100–200 KB), never overwritten, uploaded with `Cache-Control: private, max-age=31536000, immutable`. Old files are deleted after a change on a best-effort basis; account deletion stops if removing a file fails so it can be retried.
 - **Real SMS is on for dev in all regions** (SMS region policy `allowByDefault`, owner's yes on 2026-11-13; no Brazil-only limit). Each real SMS bills a few cents and counts against the budget. The two owner-set Firebase test numbers (code `123456`; listed in the Firebase console, not here) never send an SMS and are free, so use them for testing. App Check runs in monitor mode; enforce it before a public build.
 - **Billing account limit:** the shared billing account allows 5 linked projects.
 
@@ -135,14 +135,28 @@ Web reads its Firebase config from `EXPO_PUBLIC_FIREBASE_API_KEY`, `_AUTH_DOMAIN
 - No private data in public documents. Phone and email stay in Firebase Auth; birth date stays in `users/{uid}`.
 - Apple sign-in uses a SHA-256 nonce; the raw nonce never leaves the device except to Firebase.
 - Error messages shown to users come from `BackendErrorCode`, never raw Firebase text.
-- App Check is integrated on native (Play Integrity / App Attest; debug provider only for the dev variant when `EXPO_PUBLIC_APP_CHECK_DEBUG_TOKEN` is set; production configuration omits the token) in monitor mode, not enforced: sideloaded dev builds can't pass Play Integrity. Enforce once store builds exist.
+- App Check is integrated on native (Play Integrity / App Attest; debug provider only for the dev variant when `EXPO_PUBLIC_APP_CHECK_DEBUG_TOKEN` is set; production configuration omits the token) and on web when `EXPO_PUBLIC_RECAPTCHA_ENTERPRISE_SITE_KEY` is set. Both refresh tokens automatically; emulator builds skip App Check. It is in monitor mode, not enforced: sideloaded dev builds can't pass Play Integrity. Enforce once store builds exist.
 - Not done yet: rate limits beyond Firebase's defaults.
+
+## Firebase Functions
+
+Functions use Node 22 and Firebase Functions v2 for Firestore notification and match-cleanup
+triggers. Notifications claim a per-recipient marker before reading tokens, refresh token
+registrations once before sending, group active tokens by locale, and check live account, match
+membership and mirrored block state once before the first send. Markers expire after seven days;
+notification triggers ignore events older than six days. The Firebase Auth user-deleted trigger recursively removes private user
+data, relationship documents, matches and portrait objects, including accounts already partly
+cleaned up by the client. A Storage finalize trigger in `us-east1` rejects non-JPEG portraits
+and keeps each account to at most three unreferenced/active photo objects. These triggers have
+zero minimum instances and add no scheduled jobs or external services. See
+[`apps/firebase/functions/README.md`](../apps/firebase/functions/README.md) for delivery and
+cleanup behavior.
 
 ## Deferred (needs a Cloud Function or a later task)
 
 - Native notification delivery verification and dev rollout (Functions and client implementation: see [notifications](notifications.md)). Unmatch; block and report exist without one.
 - Voice intros, more than one photo, photo moderation.
 - Age recompute, ranking by shared passions and distance (Cloud Function).
-- Cleaning up the messages the other person sent after an account deletion (the match document is deleted, their messages stay orphaned; needs a Cloud Function).
+- Cleaning up messages after account deletion relies on the match-deletion trigger; partial cleanup remains retryable.
 - Reports: owners get a push and review in the Firebase console (see [moderation](moderation.md)). There is still no in-app moderation tool.
 - App Check enforcement (needs store builds).

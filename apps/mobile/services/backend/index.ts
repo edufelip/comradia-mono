@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import { getApp } from '@react-native-firebase/app';
 import { initializeAppCheck } from '@react-native-firebase/app-check';
@@ -17,6 +18,7 @@ import {
   collection,
   connectFirestoreEmulator,
   doc,
+  documentId,
   getDoc,
   getDocs,
   getFirestore,
@@ -26,7 +28,10 @@ import {
   orderBy,
   query,
   serverTimestamp,
+  startAfter,
+  endBefore,
   setDoc,
+  Timestamp,
   updateDoc,
   where,
   writeBatch,
@@ -63,8 +68,21 @@ import {
 } from './config';
 import { BackendError, toBackendError } from './errors';
 import { phoneFailureSummary } from './phone-diagnostics';
-import { filterDiscovery, matchIdFor, MESSAGE_MAX, otherUid, toPublicProfile } from './shared';
-import type { AuthUser, Backend, LikeResult, Match } from './types';
+import {
+  cachedProfile,
+  collectDiscoveryCandidates,
+  invalidateDisappearedProfiles,
+  mapWithConcurrency,
+  matchIdFor,
+  MESSAGE_MAX,
+  MESSAGE_PAGE_SIZE,
+  otherUid,
+  processQueryPages,
+  reconcileLikePairs,
+  reportIdFor,
+  toPublicProfile,
+} from './shared';
+import type { AuthUser, Backend, ChatMessage, LikeResult, Match } from './types';
 
 const host = emulatorHost();
 
@@ -115,10 +133,23 @@ async function run<T>(task: () => Promise<T>): Promise<T> {
   }
 }
 
-const MESSAGE_PAGE_SIZE = 200;
-
 /** Download URLs per path. Photo files are never overwritten, so an entry never goes stale. */
 const photoUrls = new Map<string, Promise<string>>();
+const profiles = new Map<string, Promise<Record<string, unknown> | null>>();
+const matchProfileIds = new Map<string, Set<string>>();
+
+function cachedProfileRead(uid: string): Promise<Record<string, unknown> | null> {
+  return cachedProfile(profiles, uid, async () => {
+    const snapshot = await getDoc(doc(db, 'profiles', uid));
+    return snapshot.data() ?? null;
+  });
+}
+
+function trackMatchProfiles(uid: string, docs: Snapshot[]): void {
+  const current = new Set(docs.map((match) => otherUid(match.id, uid)));
+  invalidateDisappearedProfiles(profiles, matchProfileIds.get(uid) ?? new Set(), current);
+  matchProfileIds.set(uid, current);
+}
 
 /** Uploads a picked JPEG under a fresh id and returns its storage path. */
 async function uploadPhoto(uid: string, localUri: string): Promise<string> {
@@ -156,8 +187,7 @@ async function loadMatches(uid: string, docs: Snapshot[]): Promise<Match[]> {
   const rows = await Promise.all(
     docs.map(async (match) => {
       const otherId = otherUid(match.id, uid);
-      const profile = await getDoc(doc(db, 'profiles', otherId));
-      const data = profile.data();
+      const data = await cachedProfileRead(otherId);
       return data
         ? {
             id: match.id,
@@ -324,19 +354,48 @@ export const backend: Backend = {
 
   listDiscovery: (uid) =>
     run(async () => {
-      // shortcut: newest-unfiltered page of 50, filtered on the device; move ranking and
-      // distance to a Cloud Function once the Blaze plan is on (docs/architecture.md).
-      const [profiles, swipes] = await Promise.all([
-        getDocs(
-          query(collection(db, 'profiles'), orderBy('createdAt'), limit(DISCOVERY_PAGE_SIZE)),
-        ),
-        getDocs(collection(db, 'users', uid, 'swipes')),
-      ]);
-      return filterDiscovery(
+      // shortcut: ranking and distance stay client-side until a Cloud Function is justified.
+      const key = `comradia.discoveryCursor.${uid}`;
+      const saved = await AsyncStorage.getItem(key).catch(() => null);
+      const { candidates, resume } = await collectDiscoveryCandidates(
         uid,
-        profiles.docs.map((d: Snapshot) => ({ id: d.id, data: d.data() })),
-        new Set(swipes.docs.map((d: Snapshot) => d.id)),
+        DISCOVERY_PAGE_SIZE,
+        5,
+        async (cursor) => {
+          const page = await getDocs(
+            cursor !== undefined
+              ? query(
+                  collection(db, 'profiles'),
+                  orderBy('createdAt'),
+                  startAfter(Timestamp.fromMillis(cursor as number)),
+                  limit(DISCOVERY_PAGE_SIZE),
+                )
+              : query(collection(db, 'profiles'), orderBy('createdAt'), limit(DISCOVERY_PAGE_SIZE)),
+          );
+          return {
+            docs: page.docs.map((d: Snapshot) => ({ id: d.id, data: d.data() })),
+            cursor: page.docs.length
+              ? epochMs(page.docs[page.docs.length - 1].data().createdAt)
+              : undefined,
+          };
+        },
+        async (ids) => {
+          const swipePages = await Promise.all(
+            chunk(ids, 30).map((group) =>
+              getDocs(
+                query(collection(db, 'users', uid, 'swipes'), where(documentId(), 'in', group)),
+              ),
+            ),
+          );
+          return new Set<string>(
+            swipePages.flatMap((page: { docs: Snapshot[] }) => page.docs.map((swipe) => swipe.id)),
+          );
+        },
+        saved ? Number(saved) : undefined,
       );
+      if (typeof resume === 'number')
+        await AsyncStorage.setItem(key, String(resume)).catch(() => undefined);
+      return candidates;
     }),
 
   recordSwipe: (uid, targetId, direction) =>
@@ -373,21 +432,26 @@ export const backend: Backend = {
   reconcileMatches: (uid) =>
     run(async () => {
       // Two likes written at the same moment both saw "no like back"; fill in the gap.
-      const [likes, swipes] = await Promise.all([
+      const [likes, swipes, blockedUids] = await Promise.all([
         getDocs(collection(db, 'likes', uid, 'from')),
-        getDocs(collection(db, 'users', uid, 'swipes')),
+        getDocs(query(collection(db, 'users', uid, 'swipes'), where('direction', '==', 'like'))),
+        backend.listBlockedUids(uid),
       ]);
-      const likedMe = new Set(likes.docs.map((d: Snapshot) => d.id));
-      for (const swipe of swipes.docs) {
-        if (swipe.data().direction !== 'like' || !likedMe.has(swipe.id)) continue;
-        const matchId = matchIdFor(uid, swipe.id);
-        const existing = await getDoc(doc(db, 'matches', matchId));
-        if (existing.data()) continue;
-        await setDoc(doc(db, 'matches', matchId), {
-          users: [uid, swipe.id].sort(),
-          createdAt: serverTimestamp(),
-        });
-      }
+      const likedMe = new Set<string>(likes.docs.map((d: Snapshot) => d.id));
+      await reconcileLikePairs(
+        swipes.docs.map((swipe: Snapshot) => swipe.id),
+        likedMe,
+        new Set<string>(blockedUids),
+        async (targetUid) => {
+          const matchId = matchIdFor(uid, targetUid);
+          const existing = await getDoc(doc(db, 'matches', matchId));
+          if (existing.data()) return;
+          await setDoc(doc(db, 'matches', matchId), {
+            users: [uid, targetUid].sort(),
+            createdAt: serverTimestamp(),
+          });
+        },
+      );
     }),
 
   onMatches: (uid, listener, onError) => {
@@ -396,6 +460,7 @@ export const backend: Backend = {
     return onSnapshot(
       query(collection(db, 'matches'), where('users', 'array-contains', uid)),
       (snapshot: { docs: Snapshot[] }) => {
+        trackMatchProfiles(uid, snapshot.docs);
         const seq = (latest += 1);
         void loadMatches(uid, snapshot.docs).then(
           (matches) => {
@@ -416,8 +481,7 @@ export const backend: Backend = {
       const match = snapshot.data();
       if (!match) return null;
       const otherId = otherUid(matchId, uid);
-      const profile = await getDoc(doc(db, 'profiles', otherId));
-      const data = profile.data();
+      const data = await cachedProfileRead(otherId);
       if (!data) return null;
       return {
         id: matchId,
@@ -451,6 +515,27 @@ export const backend: Backend = {
       () => onError(),
     ),
 
+  loadOlderMessages: (matchId, beforeMs, limitCount) =>
+    run<ChatMessage[]>(async () => {
+      const page = await getDocs(
+        query(
+          collection(db, 'matches', matchId, 'messages'),
+          orderBy('createdAt', 'asc'),
+          endBefore(Timestamp.fromMillis(beforeMs)),
+          limitToLast(limitCount ?? MESSAGE_PAGE_SIZE),
+        ),
+      );
+      return page.docs.map((message: Snapshot) => {
+        const data = message.data();
+        return {
+          id: message.id,
+          from: String(data.from),
+          text: String(data.text),
+          createdAt: data.createdAt ? epochMs(data.createdAt) : null,
+        };
+      });
+    }),
+
   sendMessage: (uid, matchId, text) =>
     run(async () => {
       const trimmed = text.trim();
@@ -465,29 +550,46 @@ export const backend: Backend = {
   blockUser: (uid, targetId) =>
     run(async () => {
       if (uid === targetId) throw new BackendError('unknown');
-      // Both docs in one batch: the rules see each side of the block appear together.
+      // Read both sides so retries only create the block docs that are still missing.
+      const own = doc(db, 'users', uid, 'blocks', targetId);
+      const mirror = doc(db, 'blocks', targetId, 'by', uid);
+      const [ownDoc, mirrorDoc] = await Promise.all([getDoc(own), getDoc(mirror)]);
+      const ownWrite = !ownDoc.exists();
+      const mirrorWrite = !mirrorDoc.exists();
+      if (!ownWrite && !mirrorWrite) return;
       const batch = writeBatch(db);
-      batch.set(doc(db, 'users', uid, 'blocks', targetId), { createdAt: serverTimestamp() });
-      batch.set(doc(db, 'blocks', targetId, 'by', uid), { createdAt: serverTimestamp() });
+      if (ownWrite) batch.set(own, { createdAt: serverTimestamp() });
+      if (mirrorWrite) batch.set(mirror, { createdAt: serverTimestamp() });
       await batch.commit();
     }),
 
   reportUser: (uid, { targetId, reason, details, context }) =>
     run(async () => {
       if (uid === targetId) throw new BackendError('unknown');
+      const reportRef = doc(db, 'reports', reportIdFor(uid, targetId));
+      const ownBlockRef = doc(db, 'users', uid, 'blocks', targetId);
+      const mirrorBlockRef = doc(db, 'blocks', targetId, 'by', uid);
+      const [reportDoc, ownBlock, mirrorBlock] = await Promise.all([
+        getDoc(reportRef),
+        getDoc(ownBlockRef),
+        getDoc(mirrorBlockRef),
+      ]);
       const batch = writeBatch(db);
-      // A report always blocks, so the report and the two block docs share one batch.
-      batch.set(doc(collection(db, 'reports')), {
-        reporter: uid,
-        target: targetId,
-        reason,
-        details: details.trim(),
-        context,
-        createdAt: serverTimestamp(),
-      });
-      batch.set(doc(db, 'users', uid, 'blocks', targetId), { createdAt: serverTimestamp() });
-      batch.set(doc(db, 'blocks', targetId, 'by', uid), { createdAt: serverTimestamp() });
-      await batch.commit();
+      const reportWrite = !reportDoc.exists();
+      const ownWrite = !ownBlock.exists();
+      const mirrorWrite = !mirrorBlock.exists();
+      if (reportWrite)
+        batch.set(reportRef, {
+          reporter: uid,
+          target: targetId,
+          reason,
+          details: details.trim(),
+          context,
+          createdAt: serverTimestamp(),
+        });
+      if (ownWrite) batch.set(ownBlockRef, { createdAt: serverTimestamp() });
+      if (mirrorWrite) batch.set(mirrorBlockRef, { createdAt: serverTimestamp() });
+      if (reportWrite || ownWrite || mirrorWrite) await batch.commit();
     }),
 
   listBlockedUids: (uid) =>
@@ -520,7 +622,7 @@ export const backend: Backend = {
       // A missing profile means the person deleted their account: the screen shows a fallback.
       return Promise.all(
         mine.docs.map(async (d: Snapshot) => {
-          const profile = (await getDoc(doc(db, 'profiles', d.id))).data();
+          const profile = await cachedProfileRead(d.id);
           return {
             id: d.id,
             displayName: profile ? String(profile.displayName) : null,
@@ -573,11 +675,30 @@ export const backend: Backend = {
 
         // 4. My messages in each match, then the match itself.
         for (const match of matches.docs) {
-          const sent = await getDocs(
-            query(collection(db, 'matches', match.id, 'messages'), where('from', '==', uid)),
-          );
-          await deleteInBatches(
-            sent.docs.map((d: Snapshot) => doc(db, 'matches', match.id, 'messages', d.id)),
+          await processQueryPages<FirebaseFirestoreTypes.QueryDocumentSnapshot>(
+            300,
+            async (cursor) => {
+              const sent = await getDocs(
+                cursor
+                  ? query(
+                      collection(db, 'matches', match.id, 'messages'),
+                      where('from', '==', uid),
+                      startAfter(cursor as FirebaseFirestoreTypes.QueryDocumentSnapshot),
+                      limit(300),
+                    )
+                  : query(
+                      collection(db, 'matches', match.id, 'messages'),
+                      where('from', '==', uid),
+                      limit(300),
+                    ),
+              );
+              return { items: sent.docs, cursor: sent.docs.at(-1) };
+            },
+            async (sent) => {
+              await deleteInBatches(
+                sent.map((d) => doc(db, 'matches', match.id, 'messages', d.id)),
+              );
+            },
           );
         }
         await deleteInBatches(matches.docs.map((d: Snapshot) => doc(db, 'matches', d.id)));
@@ -585,12 +706,16 @@ export const backend: Backend = {
         // 5. My portraits. Every file is tried; a real failure stops here, before the profile
         // that points at them is gone, so the deletion can be retried.
         const photos = await listAll(ref(storage, `photos/${uid}`));
-        const results = await Promise.allSettled(photos.items.map((item) => deleteObject(item)));
-        const failed = results.find(
-          (result) =>
-            result.status === 'rejected' && result.reason?.code !== 'storage/object-not-found',
-        );
-        if (failed?.status === 'rejected') throw failed.reason;
+        const failures: unknown[] = [];
+        await mapWithConcurrency(photos.items, 5, async (item) => {
+          try {
+            await deleteObject(item);
+          } catch (error) {
+            if ((error as { code?: string }).code !== 'storage/object-not-found')
+              failures.push(error);
+          }
+        });
+        if (failures.length > 0) throw failures[0];
 
         // 6. My public card, then my private account.
         await deleteInBatches([doc(db, 'profiles', uid), doc(db, 'users', uid)]);
