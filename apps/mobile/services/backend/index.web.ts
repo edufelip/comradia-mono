@@ -50,6 +50,7 @@ import {
 } from 'firebase/storage';
 import { buildProfileEdits } from '@/features/profile/profile-edits';
 import { newPhotoId, PHOTO_METADATA, photoPathFor } from '@/features/profile/profile-schema';
+import { webAppCheckConfiguration } from './app-check';
 import { chunk, DELETE_BATCH_SIZE } from './batches';
 import {
   AUTH_EMULATOR_PORT,
@@ -60,7 +61,6 @@ import {
   STORAGE_EMULATOR_PORT,
 } from './config';
 import { BackendError, toBackendError } from './errors';
-import { shouldInitializeWebAppCheck } from './app-check';
 import {
   cachedProfile,
   collectDiscoveryCandidates,
@@ -101,11 +101,18 @@ const app = getApps().length
     );
 
 const recaptchaEnterpriseSiteKey = process.env.EXPO_PUBLIC_RECAPTCHA_ENTERPRISE_SITE_KEY?.trim();
-if (shouldInitializeWebAppCheck(host, recaptchaEnterpriseSiteKey)) {
+const webAppCheckState = webAppCheckConfiguration(host, recaptchaEnterpriseSiteKey);
+// Expo Router can evaluate this module during server rendering. App Check's web
+// provider reads `document`, so only initialize it in the browser runtime.
+if (typeof document !== 'undefined' && webAppCheckState === 'configured') {
   initializeAppCheck(app, {
     provider: new ReCaptchaEnterpriseProvider(recaptchaEnterpriseSiteKey!),
     isTokenAutoRefreshEnabled: true,
   });
+} else if (webAppCheckState === 'missing-site-key') {
+  console.error(
+    'Firebase App Check is not configured for this web app. Set EXPO_PUBLIC_RECAPTCHA_ENTERPRISE_SITE_KEY; Firestore and Storage requests to projects enforcing App Check will be rejected.',
+  );
 }
 
 const auth = getAuth(app);

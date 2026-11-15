@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { appCheckProviderOptions, shouldInitializeWebAppCheck } from './app-check';
+import {
+  appCheckProviderOptions,
+  shouldInitializeWebAppCheck,
+  webAppCheckConfiguration,
+} from './app-check';
 
 const attestation = {
   android: { provider: 'playIntegrity' },
@@ -35,5 +39,14 @@ describe('shouldInitializeWebAppCheck', () => {
     assert.equal(shouldInitializeWebAppCheck(null, undefined), false);
     assert.equal(shouldInitializeWebAppCheck(null, '  '), false);
     assert.equal(shouldInitializeWebAppCheck('127.0.0.1', 'site-key'), false);
+  });
+});
+
+describe('webAppCheckConfiguration', () => {
+  it('reports emulator, configured and missing-key states explicitly', () => {
+    assert.equal(webAppCheckConfiguration('127.0.0.1', 'site-key'), 'emulator');
+    assert.equal(webAppCheckConfiguration(null, 'site-key'), 'configured');
+    assert.equal(webAppCheckConfiguration(null, undefined), 'missing-site-key');
+    assert.equal(webAppCheckConfiguration(null, '  '), 'missing-site-key');
   });
 });

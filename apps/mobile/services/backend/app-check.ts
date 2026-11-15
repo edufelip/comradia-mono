@@ -6,7 +6,15 @@ export function shouldInitializeWebAppCheck(
   emulatorHost: string | null,
   siteKey: string | undefined,
 ): boolean {
-  return !emulatorHost && Boolean(siteKey?.trim());
+  return webAppCheckConfiguration(emulatorHost, siteKey) === 'configured';
+}
+
+export function webAppCheckConfiguration(
+  emulatorHost: string | null,
+  siteKey: string | undefined,
+): 'emulator' | 'configured' | 'missing-site-key' {
+  if (emulatorHost) return 'emulator';
+  return siteKey?.trim() ? 'configured' : 'missing-site-key';
 }
 
 /** Dev builds pass a debug token (registered in the Firebase console); store builds use real attestation. */
