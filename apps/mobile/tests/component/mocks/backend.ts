@@ -102,7 +102,7 @@ function createFakeBackend() {
     matchesListeners.forEach(({ uid, listener }) => listener(matchesOf(uid)));
   const notifyMessages = (matchId: string) =>
     messagesListeners.forEach((l) => {
-      if (l.matchId === matchId) l.listener([...(state.messages.get(matchId) ?? [])]);
+      if (l.matchId === matchId) l.listener([...(state.messages.get(matchId) ?? []).slice(-200)]);
     });
   const createMatch = (a: string, b: string) => {
     const id = matchIdFor(a, b);
@@ -237,10 +237,16 @@ function createFakeBackend() {
       }
       const entry = { matchId, listener };
       messagesListeners.add(entry);
-      listener([...(state.messages.get(matchId) ?? [])]);
+      listener([...(state.messages.get(matchId) ?? []).slice(-200)]);
       return () => {
         messagesListeners.delete(entry);
       };
+    },
+    async loadOlderMessages(matchId, beforeId, limit = 200) {
+      record('loadOlderMessages', [matchId, beforeId, limit]);
+      const messages = state.messages.get(matchId) ?? [];
+      const anchor = messages.findIndex((message) => message.id === beforeId);
+      return messages.slice(0, Math.max(anchor, 0)).slice(-limit);
     },
     async sendMessage(uid, matchId, text) {
       record('sendMessage', [uid, matchId, text]);

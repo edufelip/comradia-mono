@@ -11,6 +11,7 @@ import {
   MAX_AGE,
   NAME_MAX,
   newPhotoId,
+  PHOTO_METADATA,
   parseBirthDate,
   photoPathFor,
   toggleValue,
@@ -21,6 +22,10 @@ import {
 
 /** Fixed "today" so ages never depend on when the suite runs. */
 const TODAY = new Date(Date.UTC(2026, 10, 11));
+
+it('uploads private photos with immutable one-year caching', () => {
+  assert.equal(PHOTO_METADATA.cacheControl, 'private, max-age=31536000, immutable');
+});
 
 function draft(overrides: Partial<OnboardingDraft> = {}): OnboardingDraft {
   return { ...EMPTY_DRAFT, values: [], ...overrides };

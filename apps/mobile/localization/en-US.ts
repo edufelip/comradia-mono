@@ -66,6 +66,7 @@ export const enUS = {
   'chat.not_found': "We couldn't find this conversation.",
   'chat.load_error': "Couldn't load this conversation.",
   'chat.retry': 'Try again',
+  'chat.load_earlier': 'Load earlier messages',
   'chat.error': "Your message didn't send. Try again.",
   'chat.safety': 'Safety options',
   'chat.closed': 'This conversation is closed.',

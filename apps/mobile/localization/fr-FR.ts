@@ -70,6 +70,7 @@ export const frFR: Record<TranslationKey, string> = {
   'chat.not_found': 'Cette conversation est introuvable.',
   'chat.load_error': 'Impossible de charger cette conversation.',
   'chat.retry': 'Réessayer',
+  'chat.load_earlier': 'Charger les messages précédents',
   'chat.error': 'Votre message n’a pas été envoyé. Réessayez.',
   'chat.safety': 'Options de sécurité',
   'chat.closed': 'Cette conversation est fermée.',

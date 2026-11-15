@@ -12,6 +12,7 @@ import {
   type PushTokenRegistration,
 } from './notification-handler';
 import { reportAlertMessage, reportAlertRecipients } from './report-alert-logic';
+import { isEventOlderThan } from './event-age';
 
 /** Comma-separated Firebase Auth uids. Set per project in functions/.env.<projectId>. */
 const REPORT_ALERT_UIDS = defineList('REPORT_ALERT_UIDS', { default: [] });
@@ -66,7 +67,7 @@ export const notifyOnReportCreated = onDocumentCreated(
     maxInstances: 2,
   },
   async (event) => {
-    if (!event.data) return;
+    if (!event.data || isEventOlderThan(event.time, 6)) return;
     // defineList().value() throws when the variable is absent, so check for it first.
     const alertUids = process.env.REPORT_ALERT_UIDS === undefined ? [] : REPORT_ALERT_UIDS.value();
     if (alertUids.length === 0) {

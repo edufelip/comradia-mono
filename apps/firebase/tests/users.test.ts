@@ -76,6 +76,17 @@ describe('users/{uid} create', () => {
     await assertFails(setDoc(aliceAccount(), account({ birthDate: 19900102 })));
   });
 
+  it('denies impossible, pre-1900, and under-18 birth dates', async () => {
+    for (const birthDate of ['1899-12-31', '2015-11-16', '1990-00-02', '1990-13-02',
+      '1990-01-00', '1990-01-32', '1990-02-30', '1900-02-29']) {
+      await assertFails(setDoc(aliceAccount(), account({ birthDate })));
+    }
+  });
+
+  it('allows a birthday on the eighteenth-birthday cutoff date', async () => {
+    await assertSucceeds(setDoc(aliceAccount(), account({ birthDate: '2008-11-15' })));
+  });
+
   it('denies a weight outside 0–100 or that is not an int', async () => {
     await assertFails(setDoc(aliceAccount(), account({ sharedPassionWeight: -1 })));
     await assertFails(setDoc(aliceAccount(), account({ sharedPassionWeight: 101 })));

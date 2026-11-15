@@ -70,6 +70,7 @@ export const deDE: Record<TranslationKey, string> = {
   'chat.not_found': 'Diese Unterhaltung wurde nicht gefunden.',
   'chat.load_error': 'Diese Unterhaltung konnte nicht geladen werden.',
   'chat.retry': 'Erneut versuchen',
+  'chat.load_earlier': 'Frühere Nachrichten laden',
   'chat.error': 'Deine Nachricht wurde nicht gesendet. Versuch es erneut.',
   'chat.safety': 'Sicherheitsoptionen',
   'chat.closed': 'Diese Unterhaltung ist geschlossen.',

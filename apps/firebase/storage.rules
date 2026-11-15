@@ -5,7 +5,8 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     match /photos/{uid}/{file} {
-      allow read: if request.auth != null;
+      allow get: if request.auth != null;
+      allow list: if request.auth != null && request.auth.uid == uid;
       allow create: if request.auth != null && request.auth.uid == uid && resource == null
         && file.matches('^[A-Za-z0-9_-]{1,64}[.]jpg$')
         && request.resource.contentType == 'image/jpeg'

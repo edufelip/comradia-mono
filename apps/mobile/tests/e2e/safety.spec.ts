@@ -81,6 +81,12 @@ async function docStatus(path: string): Promise<number> {
   return res.status;
 }
 
+/** Deletes one document as `owner`. */
+async function deleteDoc(path: string): Promise<void> {
+  const res = await fetch(`${DOCS}/${path}`, { method: 'DELETE', headers: ADMIN });
+  if (!res.ok) throw new Error(`delete ${path} failed: ${res.status}`);
+}
+
 /** Every document of a collection. The emulator pages lists at 30, so always ask for more. */
 async function listDocs(
   collection: string,
@@ -314,6 +320,21 @@ test.describe('safety', () => {
         return person === null ? 'loading' : person === target ? 'blocked-target' : 'other-person';
       })
       .toBe('other-person');
+
+    // Unblocking keeps the report. Reporting the same person again must still block them,
+    // without trying to rewrite the existing (create-only) report.
+    await deleteDoc(`users/${uid}/blocks/${target}`);
+    await deleteDoc(`blocks/${target}/by/${uid}`);
+    // Open the report directly: the deck ranks cards on the device, and parallel signups can
+    // outrank the target, so card order proves nothing here.
+    await page.goto(`/safety/${target}`);
+    await signInAgainIfSignedOut(page, digits);
+    await expect(page.getByTestId('safety-screen')).toBeVisible();
+    await page.getByTestId('report-reason-spam').click();
+    await page.getByTestId('report-submit').click();
+    await expect.poll(() => docStatus(`users/${uid}/blocks/${target}`)).toBe(200);
+    await expect.poll(() => docStatus(`blocks/${target}/by/${uid}`)).toBe(200);
+    await expect.poll(async () => await mine()).toHaveLength(1);
   });
 
   test('blocking from a chat closes it for both people and hides the match', async ({ page }) => {

@@ -1,9 +1,10 @@
 # Firebase Functions
 
-This Node 22 codebase sends generic match and message notifications through FCM. Its
-Firestore-triggered handlers run in `southamerica-east1`, matching the dev Firestore region.
-The backend reads up to the 20 most recently updated device registrations per account and
-chunks FCM requests at the Admin SDK limit of 500 tokens.
+This Node 22 codebase sends generic match, message and report notifications through FCM and
+cleans up deleted accounts, matches and uploaded portraits. Firestore and Auth handlers run in
+`southamerica-east1`, matching Firestore. The Storage finalize handler runs in `us-east1`, the
+default bucket region. The notification backend reads up to the 20 most recently updated device
+registrations per account and chunks FCM requests at the Admin SDK limit of 500 tokens.
 
 ## Local build and tests
 
@@ -30,14 +31,19 @@ The integration test refuses to run unless `FIRESTORE_EMULATOR_HOST` points to l
 
 ## Delivery behavior
 
-Before sending, each handler creates a marker keyed by a SHA-256 digest of the event type,
-CloudEvent id, and recipient uid. This prevents duplicate invocations from sending twice.
-The marker is claimed before token lookup and the external FCM request, so a later failure can
-lose the notification when a trigger retry sees the existing marker. This is an intentional
-at-most-once tradeoff to avoid duplicate pushes. Blocks, account/profile existence, match
-membership, and active token registrations are rechecked immediately before each FCM call;
-a block or token revocation that lands after that database check can still race an external
-send already in flight.
+Before sending, each notification handler creates a marker keyed by a SHA-256 digest of the
+event type, CloudEvent id, and recipient uid. Dispatch and report-alert markers expire after
+seven days using the `notificationDispatches.expireAt` Firestore TTL override. Notification
+triggers ignore events older than six days so an expired marker cannot allow a stale retry to
+send again. The marker is claimed before token lookup and the external FCM request, so a later
+failure can lose the notification when a trigger retry sees the existing marker. This is an
+intentional at-most-once tradeoff to avoid duplicate pushes. The registration set is read once
+after the claim and refreshed once immediately before sending, preserving token-revocation
+checks without a query for every locale. Tokens are grouped by locale;
+only locales with registrations are sent, and blocks, account/profile existence and match
+membership are checked once immediately before the recipient's first FCM call. Invalid FCM
+registrations are removed. A safety change after that database check can still race a send
+already in flight.
 
 ## Deploying
 
@@ -64,3 +70,21 @@ sender-only; the Admin cleanup does not broaden client permissions.
 This export needs a separately reviewed dev deployment. It does not backfill deletions that
 happened before the trigger was installed. Historical live orphan removal requires a bounded,
 reviewed maintenance action; no live backfill was performed by this implementation.
+
+## Deleted-account cleanup
+
+The Firebase Auth `onDelete` trigger saves the user's swipe and block ids before recursively
+deleting `users/{uid}`. It removes `profiles/{uid}`, received likes, the user's outgoing likes
+and mirrored blocks, every match containing the uid, and every object under `photos/{uid}/`.
+The match delete trigger cleans up its messages. Firestore collection reads and deletes are
+paged at 300 documents; Storage object listing is paged as well. Deletes tolerate missing
+documents and objects, so the trigger is safe after client-side cleanup and retries after
+partial failures. No historical Auth deletions are backfilled.
+
+## Portrait upload limits
+
+The Storage `onObjectFinalized` handler validates `image/jpeg` and, when a ranged read is
+available, checks the JPEG signature from the first three bytes. It then lists the user's photo
+folder and removes oldest objects until at most three remain, preserving the path currently
+referenced by `profiles/{uid}.photoPath`. Missing objects are tolerated on delete. The trigger
+has no minimum instances; no scheduled cleanup or external image service is used.

@@ -5,7 +5,6 @@ import {
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
 import {
-  addDoc,
   collection,
   deleteDoc,
   doc,
@@ -38,11 +37,14 @@ beforeEach(async () => {
   await env.clearFirestore();
 });
 
-const reports = () => collection(db(alice), 'reports');
-const reportRef = (id = 'r1') => doc(db(alice), `reports/${id}`);
+const reportRef = (id = 'alice_bob') => doc(db(alice), `reports/${id}`);
+
+function submitReport(data: Record<string, unknown> = report()) {
+  return setDoc(doc(db(alice), `reports/alice_${String(data.target)}`), data);
+}
 
 /** A report the rules let through, so the read/update/delete tests start from real data. */
-async function seedValidReport(id = 'r1') {
+async function seedValidReport(id = 'alice_bob') {
   await env.withSecurityRulesDisabled(async (context) => {
     await setDoc(doc(db(context), `reports/${id}`), report());
   });
@@ -51,77 +53,83 @@ async function seedValidReport(id = 'r1') {
 
 describe('reports create', () => {
   it('allows a complete report of another person', async () => {
-    await assertSucceeds(addDoc(reports(), report()));
+    await assertSucceeds(submitReport());
   });
 
   it('allows the boundary lengths: empty details, 500 characters, a 128-character target', async () => {
     await assertSucceeds(
-      addDoc(reports(), report({ details: '', target: 'a'.repeat(128), reason: 'other' })),
+      submitReport(report({ details: '', target: 'a'.repeat(128), reason: 'other' })),
     );
-    await assertSucceeds(addDoc(reports(), report({ details: 'a'.repeat(500) })));
+    await assertSucceeds(submitReport(report({ details: 'a'.repeat(500), target: 'carol' })));
   });
 
   it('allows every reason and both contexts', async () => {
-    for (const reason of ['harassment', 'hate', 'fake', 'spam', 'underage', 'other']) {
-      await assertSucceeds(addDoc(reports(), report({ reason })));
+    for (const [index, reason] of ['harassment', 'hate', 'fake', 'spam', 'underage', 'other'].entries()) {
+      await assertSucceeds(submitReport(report({ reason, target: `target-${index}` })));
     }
-    await assertSucceeds(addDoc(reports(), report({ context: 'profile' })));
-    await assertSucceeds(addDoc(reports(), report({ context: 'chat' })));
+    await assertSucceeds(submitReport(report({ context: 'profile', target: 'profile-target' })));
+    await assertSucceeds(submitReport(report({ context: 'chat', target: 'chat-target' })));
   });
 
   it('denies a report filed as somebody else', async () => {
-    await assertFails(addDoc(reports(), report({ reporter: 'bob' })));
-    await assertFails(addDoc(collection(db(bob), 'reports'), report()));
+    await assertFails(submitReport(report({ reporter: 'bob' })));
+    await assertFails(setDoc(doc(db(bob), 'reports/bob_alice'), report({ reporter: 'bob' })));
   });
 
   it('denies reporting yourself', async () => {
-    await assertFails(addDoc(reports(), report({ target: 'alice' })));
+    await assertFails(submitReport(report({ target: 'alice' })));
   });
 
   it('denies a target that is empty, too long or not a string', async () => {
-    await assertFails(addDoc(reports(), report({ target: '' })));
-    await assertFails(addDoc(reports(), report({ target: 'a'.repeat(129) })));
-    await assertFails(addDoc(reports(), report({ target: 42 })));
+    await assertFails(submitReport(report({ target: '' })));
+    await assertFails(submitReport(report({ target: 'a'.repeat(129) })));
+    await assertFails(submitReport(report({ target: 42 })));
   });
 
   it('denies a reason outside the list', async () => {
-    await assertFails(addDoc(reports(), report({ reason: 'blocked' })));
-    await assertFails(addDoc(reports(), report({ reason: 'HARASSMENT' })));
+    await assertFails(submitReport(report({ reason: 'blocked' })));
+    await assertFails(submitReport(report({ reason: 'HARASSMENT' })));
   });
 
   it('denies details over 500 characters and a non-string', async () => {
-    await assertFails(addDoc(reports(), report({ details: 'a'.repeat(501) })));
-    await assertFails(addDoc(reports(), report({ details: 42 })));
+    await assertFails(submitReport(report({ details: 'a'.repeat(501) })));
+    await assertFails(submitReport(report({ details: 42 })));
   });
 
   it('denies a context outside the list', async () => {
-    await assertFails(addDoc(reports(), report({ context: 'email' })));
+    await assertFails(submitReport(report({ context: 'email' })));
   });
 
   it('denies an extra or missing key', async () => {
-    await assertFails(addDoc(reports(), report({ status: 'open' })));
-    await assertFails(addDoc(reports(), report({ reportId: 'r1' })));
+    await assertFails(submitReport(report({ status: 'open' })));
+    await assertFails(submitReport(report({ reportId: 'r1' })));
     for (const key of ['reporter', 'target', 'reason', 'details', 'context', 'createdAt']) {
-      await assertFails(addDoc(reports(), without(report(), key)));
+      await assertFails(submitReport(without(report(), key)));
     }
   });
 
   it('denies a client timestamp instead of request.time', async () => {
     await assertFails(
-      addDoc(reports(), report({ createdAt: Timestamp.fromDate(new Date('2020-01-01')) })),
+      submitReport(report({ createdAt: Timestamp.fromDate(new Date('2020-01-01')) })),
     );
   });
 
+  it('denies a report id that is not reporter_target and prevents a duplicate report', async () => {
+    await assertFails(setDoc(doc(db(alice), 'reports/random-id'), report()));
+    await assertSucceeds(submitReport());
+    await assertFails(submitReport());
+  });
+
   it('denies a signed-out create', async () => {
-    await assertFails(addDoc(collection(db(signedOut), 'reports'), report()));
+    await assertFails(setDoc(doc(db(signedOut), 'reports/alice_bob'), report()));
   });
 });
 
 describe('reports read, update and delete', () => {
-  it('denies reading the report back, even to the reporter', async () => {
+  it('allows only the reporter to get their own report and denies list', async () => {
     const ref = await seedValidReport();
-    await assertFails(getDoc(ref));
-    await assertFails(getDoc(doc(db(bob), 'reports/r1')));
+    await assertSucceeds(getDoc(ref));
+    await assertFails(getDoc(doc(db(bob), 'reports/alice_bob')));
     await assertFails(getDocs(collection(db(alice), 'reports')));
     await assertFails(getDocs(collection(db(bob), 'reports')));
   });

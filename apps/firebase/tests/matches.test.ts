@@ -164,9 +164,21 @@ describe('matches create', () => {
     await assertFails(updateDoc(matchRef(alice, 'alice_bob'), { createdAt: serverTimestamp() }));
     await assertFails(deleteDoc(matchRef(carol, 'alice_bob')));
     await assertFails(deleteDoc(matchRef(signedOut, 'alice_bob')));
+    await assertFails(deleteDoc(matchRef(alice, 'alice_bob')));
+    await assertSucceeds(deleteDoc(doc(db(alice), 'likes/bob/from/alice')));
     await assertSucceeds(deleteDoc(matchRef(alice, 'alice_bob')));
     await seed('matches/alice_bob', match('alice', 'bob'));
+    await assertFails(deleteDoc(matchRef(bob, 'alice_bob')));
+    await assertSucceeds(deleteDoc(doc(db(bob), 'likes/alice/from/bob')));
     await assertSucceeds(deleteDoc(matchRef(bob, 'alice_bob')));
+  });
+
+  it('allows match deletion only after the caller withdraws their like to the other person', async () => {
+    await seedBothLikes();
+    await seed('matches/alice_bob', match('alice', 'bob'));
+    await assertFails(deleteDoc(matchRef(alice, 'alice_bob')));
+    await assertSucceeds(deleteDoc(doc(db(alice), 'likes/bob/from/alice')));
+    await assertSucceeds(deleteDoc(matchRef(alice, 'alice_bob')));
   });
 });
 

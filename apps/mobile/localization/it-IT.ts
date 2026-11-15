@@ -69,6 +69,7 @@ export const itIT: Record<TranslationKey, string> = {
   'chat.not_found': 'Questa conversazione non è stata trovata.',
   'chat.load_error': 'Impossibile caricare questa conversazione.',
   'chat.retry': 'Riprova',
+  'chat.load_earlier': 'Carica i messaggi precedenti',
   'chat.error': 'Il messaggio non è stato inviato. Riprova.',
   'chat.safety': 'Opzioni di sicurezza',
   'chat.closed': 'Questa conversazione è chiusa.',

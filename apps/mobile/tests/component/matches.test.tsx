@@ -223,24 +223,38 @@ describe('MatchesScreen', () => {
     ).toBeOnTheScreen();
   });
 
-  it('shows a failed reconciliation and recovers through Retry', async () => {
-    signIn();
+  it('keeps the live match list when reconciliation fails', async () => {
+    const sessionUser = { ...TEST_USER, uid: 'reconcile-failure-user' };
+    useSessionStore.setState({ status: 'ready', user: sessionUser, profile: TEST_PROFILE });
     seedProfiles(MAYA);
-    fakeBackend.likeFrom(MAYA.id, TEST_USER.uid);
-    fakeBackend.likeFrom(TEST_USER.uid, MAYA.id);
+    const matchId = matchIdFor(sessionUser.uid, MAYA.id);
+    fakeBackend.state.matches.set(matchId, 1);
     fakeBackend.state.failNext.set('reconcileMatches', 'network');
 
     await render(<MatchesScreen />);
 
-    expect(await screen.findByTestId('matches-error')).toBeOnTheScreen();
-    expect(screen.getByText(enUS['matches.error'])).toBeOnTheScreen();
+    expect(await screen.findByTestId(`match-row-${matchId}`)).toBeOnTheScreen();
+    expect(screen.queryByTestId('matches-error')).not.toBeOnTheScreen();
+    expect(fakeBackend.callsTo('reconcileMatches')).toHaveLength(1);
 
-    await fireEvent.press(screen.getByTestId('matches-retry'));
-
-    expect(
-      await screen.findByTestId(`match-row-${matchIdFor(TEST_USER.uid, MAYA.id)}`),
-    ).toBeOnTheScreen();
+    // A failed repair runs again the next time Matches opens.
+    await screen.unmount();
+    await render(<MatchesScreen />);
+    expect(await screen.findByTestId(`match-row-${matchId}`)).toBeOnTheScreen();
     expect(fakeBackend.callsTo('reconcileMatches')).toHaveLength(2);
+  });
+
+  it('shows an error when the live list fails and recovers on retry', async () => {
+    signIn();
+    seedProfiles(MAYA);
+    const matchId = matchIdFor(TEST_USER.uid, MAYA.id);
+    fakeBackend.state.matches.set(matchId, 1);
+    fakeBackend.state.failNext.set('onMatches', 'network');
+
+    await render(<MatchesScreen />);
+
+    await fireEvent.press(await screen.findByTestId('matches-retry'));
+    expect(await screen.findByTestId(`match-row-${matchId}`)).toBeOnTheScreen();
   });
 
   it('stops following the matches when the screen unmounts', async () => {

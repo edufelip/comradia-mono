@@ -1,6 +1,6 @@
 import { NOTIFICATION_LOCALES, notificationCopy, notificationLocale, type NotificationLocale } from './notification-locale';
 import { createHash } from 'node:crypto';
-import { FieldValue, type Firestore } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp, type Firestore } from 'firebase-admin/firestore';
 import type { MulticastMessage } from 'firebase-admin/messaging';
 
 export const MAX_TOKENS_PER_FCM_CALL = 500;
@@ -149,7 +149,10 @@ export class FirestoreNotificationStore implements NotificationStore {
 
       // Claim even suppressed events. If a block is later removed or an account is restored,
       // a duplicate delivery must not turn an old event into a new notification.
-      transaction.create(markerRef, { createdAt: FieldValue.serverTimestamp() });
+      transaction.create(markerRef, {
+        createdAt: FieldValue.serverTimestamp(),
+        expireAt: Timestamp.fromMillis(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      });
       return allowed ? 'claimed' : 'suppressed';
     });
   }
@@ -159,7 +162,10 @@ export class FirestoreNotificationStore implements NotificationStore {
     const markerRef = this.firestore.doc(`notificationDispatches/${digest(`report\0${reportId}\0${recipientUid}`)}`);
     return this.firestore.runTransaction(async (transaction) => {
       if ((await transaction.get(markerRef)).exists) return false;
-      transaction.create(markerRef, { createdAt: FieldValue.serverTimestamp() });
+      transaction.create(markerRef, {
+        createdAt: FieldValue.serverTimestamp(),
+        expireAt: Timestamp.fromMillis(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      });
       return true;
     });
   }
@@ -266,25 +272,32 @@ export function createNotificationDispatcher(
       const tokens = await store.listPushTokens(recipientUid);
       if (tokens.length === 0) continue;
 
-      const attemptedIds = new Set<string>();
-      chunks: for (let start = 0; start < tokens.length; start += MAX_TOKENS_PER_FCM_CALL) {
-        const proposedChunk = tokens.slice(start, start + MAX_TOKENS_PER_FCM_CALL);
-        for (const locale of NOTIFICATION_LOCALES) {
-          if (proposedChunk.every(({ id }) => attemptedIds.has(id))) break;
-          // Locale, token ownership and revocation are refreshed for EACH external send.
-          const currentTokens = await store.listPushTokens(recipientUid);
-          const currentById = new Map(currentTokens.map((token) => [token.id, token]));
-          const eligible = proposedChunk.filter(({ id, token }) =>
-            !attemptedIds.has(id) && currentById.get(id)?.token === token,
-          );
-          if (eligible.length === 0) break;
-          const chunk = eligible.filter(({ id }) =>
-            notificationLocale(currentById.get(id)?.locale) === locale,
-          );
-          if (chunk.length === 0) continue;
-          if (!await store.isDispatchAllowed(claimInput)) break chunks;
+      // Keep one pre-send registration refresh: it closes the revocation window between the
+      // initial lookup and sending, without repeating the same collection query per locale.
+      const currentTokens = await store.listPushTokens(recipientUid);
+      const currentById = new Map(currentTokens.map((token) => [token.id, token]));
+      const activeTokens = tokens.flatMap(({ id, token }) => {
+        const current = currentById.get(id);
+        return current?.token === token ? [current] : [];
+      });
+      if (activeTokens.length === 0) continue;
 
-          for (const { id } of chunk) attemptedIds.add(id);
+      const tokensByLocale = new Map<NotificationLocale, PushTokenRegistration[]>(
+        NOTIFICATION_LOCALES.map((locale) => [locale, []]),
+      );
+      for (const token of activeTokens) tokensByLocale.get(notificationLocale(token.locale))?.push(token);
+
+      let safetyChecked = false;
+      chunks: for (const locale of NOTIFICATION_LOCALES) {
+        const localeTokens = tokensByLocale.get(locale) ?? [];
+        for (let start = 0; start < localeTokens.length; start += MAX_TOKENS_PER_FCM_CALL) {
+          const chunk = localeTokens.slice(start, start + MAX_TOKENS_PER_FCM_CALL);
+          // The marker was claimed before reads. Recheck live membership, account and block
+          // state once immediately before this recipient's first external send.
+          if (!safetyChecked) {
+            safetyChecked = true;
+            if (!await store.isDispatchAllowed(claimInput)) break chunks;
+          }
           let result: FcmSendResult;
           try {
             result = await sender.sendEachForMulticast({

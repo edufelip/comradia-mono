@@ -6,12 +6,16 @@ import {
   doc,
   getDoc,
   getDocs,
+  limit,
+  orderBy,
+  query,
   serverTimestamp,
   setDoc,
   Timestamp,
   updateDoc,
+  writeBatch,
 } from 'firebase/firestore';
-import { db, profile, testEnvironment, without } from './helpers';
+import { account, db, profile, testEnvironment, without } from './helpers';
 
 let env: RulesTestEnvironment;
 let alice: ReturnType<RulesTestEnvironment['authenticatedContext']>;
@@ -37,6 +41,13 @@ beforeEach(async () => {
 
 const aliceCard = () => doc(db(alice), 'profiles/alice');
 
+async function createAliceCard() {
+  const batch = writeBatch(db(alice));
+  batch.set(doc(db(alice), 'users/alice'), account());
+  batch.set(aliceCard(), profile());
+  await batch.commit();
+}
+
 /** Writes a document with the rules bypassed, to set up read tests. */
 function seed(path: string, data: Record<string, unknown>) {
   return env.withSecurityRulesDisabled(async (context) => {
@@ -55,9 +66,33 @@ describe('profiles read', () => {
     await assertSucceeds(getDoc(doc(db(bob), 'profiles/alice')));
   });
 
+  it('denies a profile get when its owner blocked the caller', async () => {
+    await seed('profiles/alice', profile());
+    await seed('profiles/bob', profile());
+    // Alice blocked Bob: Bob can no longer read Alice, but Alice can still read Bob.
+    await seed('blocks/bob/by/alice', { createdAt: serverTimestamp() });
+    await assertFails(getDoc(doc(db(bob), 'profiles/alice')));
+    await assertSucceeds(getDoc(doc(db(alice), 'profiles/bob')));
+    await assertSucceeds(getDoc(doc(db(alice), 'profiles/alice')));
+  });
+
   it('allows a signed-in user to list cards (Discover)', async () => {
     await seed('profiles/alice', profile());
-    await assertSucceeds(getDocs(collection(db(bob), 'profiles')));
+    await seed('profiles/bob', profile());
+    await assertSucceeds(
+      getDocs(query(collection(db(bob), 'profiles'), orderBy('createdAt'), limit(50))),
+    );
+  });
+
+  it('denies profile lists without a limit, over 50, or without my profile', async () => {
+    await seed('profiles/alice', profile());
+    await assertFails(getDocs(query(collection(db(bob), 'profiles'), orderBy('createdAt'))));
+    await assertFails(
+      getDocs(query(collection(db(bob), 'profiles'), orderBy('createdAt'), limit(51))),
+    );
+    await assertFails(
+      getDocs(query(collection(db(aliceTwo), 'profiles'), orderBy('createdAt'), limit(50))),
+    );
   });
 
   it('denies a signed-out list', async () => {
@@ -67,21 +102,32 @@ describe('profiles read', () => {
 
 describe('profiles create', () => {
   it('allows the owner to create a complete, valid card', async () => {
-    await assertSucceeds(setDoc(aliceCard(), profile()));
+    await assertSucceeds(createAliceCard());
+  });
+
+  it('requires the matching private account on profile create and update', async () => {
+    await assertFails(setDoc(aliceCard(), profile()));
+    await createAliceCard();
+    const batch = writeBatch(db(alice));
+    batch.delete(doc(db(alice), 'users/alice'));
+    batch.update(aliceCard(), { promptAnswer: 'Updated card', updatedAt: serverTimestamp() });
+    await assertFails(batch.commit());
   });
 
   it('allows the boundary values: name 40, answer 280, age 18 and 99', async () => {
-    await assertSucceeds(
-      setDoc(
-        aliceCard(),
-        profile({ displayName: 'a'.repeat(40), promptAnswer: 'a'.repeat(280), age: 18 }),
-      ),
+    const boundaryBatch = writeBatch(db(alice));
+    boundaryBatch.set(doc(db(alice), 'users/alice'), account());
+    boundaryBatch.set(
+      aliceCard(),
+      profile({ displayName: 'a'.repeat(40), promptAnswer: 'a'.repeat(280), age: 18 }),
     );
+    await assertSucceeds(boundaryBatch.commit());
     // A second card needs a second owner: the rules require uid == document id, and a
     // second write to alice's own card would be an update (createdAt != request.time).
-    await assertSucceeds(
-      setDoc(doc(db(aliceTwo), 'profiles/alice-two'), profile({ age: 99 })),
-    );
+    const secondOwnerBatch = writeBatch(db(aliceTwo));
+    secondOwnerBatch.set(doc(db(aliceTwo), 'users/alice-two'), account());
+    secondOwnerBatch.set(doc(db(aliceTwo), 'profiles/alice-two'), profile({ age: 99 }));
+    await assertSucceeds(secondOwnerBatch.commit());
   });
 
   it('denies a signed-out create', async () => {
@@ -98,11 +144,17 @@ describe('profiles create', () => {
   });
 
   it('allows a card with no portrait (photoPath null)', async () => {
-    await assertSucceeds(setDoc(aliceCard(), profile({ photoPath: null })));
+    const batch = writeBatch(db(alice));
+    batch.set(doc(db(alice), 'users/alice'), account());
+    batch.set(aliceCard(), profile({ photoPath: null }));
+    await assertSucceeds(batch.commit());
   });
 
   it('allows a card with the owner’s own portrait path', async () => {
-    await assertSucceeds(setDoc(aliceCard(), profile({ photoPath: 'photos/alice/abc123.jpg' })));
+    const batch = writeBatch(db(alice));
+    batch.set(doc(db(alice), 'users/alice'), account());
+    batch.set(aliceCard(), profile({ photoPath: 'photos/alice/abc123.jpg' }));
+    await assertSucceeds(batch.commit());
   });
 
   it('denies a portrait path outside the owner’s folder, not a jpg, or escaping the folder', async () => {
@@ -143,7 +195,10 @@ describe('profiles create', () => {
   });
 
   it('allows a non-member with a null union', async () => {
-    await assertSucceeds(setDoc(aliceCard(), profile({ unionMember: false, union: null })));
+    const batch = writeBatch(db(alice));
+    batch.set(doc(db(alice), 'users/alice'), account());
+    batch.set(aliceCard(), profile({ unionMember: false, union: null }));
+    await assertSucceeds(batch.commit());
   });
 
   it('denies an unknown union id', async () => {
@@ -199,6 +254,7 @@ describe('profiles create', () => {
 describe('profiles update and delete', () => {
   beforeEach(async () => {
     await env.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(db(context), 'users/alice'), account());
       await setDoc(doc(db(context), 'profiles/alice'), profile());
     });
   });

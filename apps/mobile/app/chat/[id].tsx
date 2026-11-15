@@ -34,7 +34,16 @@ export default function ChatScreen() {
   const isFocused = useIsFocused();
   const uid = useSessionStore((state) => state.user?.uid);
   const myProfile = useSessionStore((state) => state.profile);
-  const { status, match, messages, retry } = useChat(backend, uid, id);
+  const {
+    status,
+    match,
+    messages,
+    canLoadEarlier,
+    loadingEarlier,
+    earlierFailed,
+    loadEarlier,
+    retry,
+  } = useChat(backend, uid, id);
   const { blockedUids } = useBlockedUids(backend, uid);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
@@ -216,6 +225,30 @@ export default function ChatScreen() {
             </DsCard>
           ) : (
             <>
+              {canLoadEarlier ? (
+                <DsPillButton
+                  accessibilityLabel={t('chat.load_earlier')}
+                  disabled={loadingEarlier}
+                  fullWidth={false}
+                  label={t('chat.load_earlier')}
+                  loading={loadingEarlier}
+                  onPress={() => void loadEarlier()}
+                  scheme={scheme}
+                  size="xs"
+                  style={styles.loadEarlier}
+                  testID="chat-load-earlier"
+                  variant="ghost"
+                />
+              ) : null}
+              {earlierFailed ? (
+                <Text
+                  accessibilityRole="alert"
+                  style={[DsTypography.caption, { color: ds.color.danger }]}
+                  testID="chat-earlier-error"
+                >
+                  {t('chat.load_error')}
+                </Text>
+              ) : null}
               {messages.map((message) => {
                 const mine = message.from === uid;
                 const bubble = (
@@ -343,6 +376,9 @@ const styles = StyleSheet.create({
     gap: DsSpace.md,
     flexGrow: 1,
     justifyContent: 'flex-end',
+  },
+  loadEarlier: {
+    alignSelf: 'center',
   },
   footer: {
     gap: DsSpace.md,

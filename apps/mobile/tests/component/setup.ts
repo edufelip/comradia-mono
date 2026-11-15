@@ -4,6 +4,7 @@
  * here).
  */
 import { INITIAL_SESSION, useSessionStore } from '@/features/auth/session-store';
+import { resetReconciliationSession } from '@/features/matches/reconcile-session';
 
 import { fakeBackend } from './mocks/backend';
 import { INITIAL_DISCOVERY, useDiscoveryStore } from '@/features/discovery/discovery-store';
@@ -46,6 +47,7 @@ beforeEach(() => {
   jest.useRealTimers();
   fakeBackend.reset();
   useSessionStore.setState(INITIAL_SESSION);
+  resetReconciliationSession();
   useDiscoveryStore.setState(INITIAL_DISCOVERY);
   require('./mocks/notifications').notificationMockApi.resetPushEvents();
 });
