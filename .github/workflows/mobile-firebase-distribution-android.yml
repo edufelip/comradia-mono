@@ -1,0 +1,124 @@
+name: Android Firebase Distribution
+
+# Builds the dev variant (com.edufelip.comradia.dev, Firebase project comradia-dev) as a release APK
+# and sends it to the App Distribution group base-group. Secrets are only read on push and manual
+# runs, never on pull requests (docs/testing.md, "CI").
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [develop]
+    paths:
+      - 'apps/mobile/**'
+      - '.github/workflows/mobile-firebase-distribution-android.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-firebase-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: apps/mobile
+
+env:
+  APP_VARIANT: dev
+  FIREBASE_PROJECT: comradia-dev
+  FIREBASE_APP_ID: '1:949794653695:android:3f1dd5714a92df809c13ca'
+  # The React Native debug key, the only one registered on the Firebase Android app; Google
+  # sign-in fails for any other signature (docs/architecture.md, "Environments").
+  EXPECTED_SIGNER_SHA1: 5e8f16062ea3cd2c4a0d547876baa6f38cabf625
+
+jobs:
+  firebase-distribution:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Write dev configuration and credentials
+        env:
+          ENV_FILE: ${{ secrets.ENV_FILE }}
+          GOOGLE_SERVICES_JSON: ${{ secrets.FIREBASE_DEV_GOOGLE_SERVICES_JSON }}
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+        run: |
+          set -euo pipefail
+          for name in ENV_FILE GOOGLE_SERVICES_JSON FIREBASE_SERVICE_ACCOUNT_JSON; do
+            [ -n "${!name}" ] || { echo "::error::Secret for $name is not set." >&2; exit 1; }
+          done
+          umask 077
+          printf '%s\n' "$ENV_FILE" > .env
+          mkdir -p firebase/dev
+          printf '%s' "$GOOGLE_SERVICES_JSON" > firebase/dev/google-services.json
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT_JSON" > "$RUNNER_TEMP/firebase-service-account.json"
+          python3 - <<'PY'
+          import json, os
+          env = {}
+          for line in open('.env', encoding='utf-8'):
+              line = line.strip()
+              if line and not line.startswith('#') and '=' in line:
+                  key, value = line.removeprefix('export ').split('=', 1)
+                  env[key.strip()] = value.strip().strip('"').strip("'")
+          assert not env.get('EXPO_PUBLIC_FIREBASE_EMULATOR_HOST'), 'ENV_FILE points at the emulators'
+          assert env.get('EXPO_PUBLIC_FIREBASE_PROJECT_ID') == 'comradia-dev', 'ENV_FILE is not for comradia-dev'
+          assert env.get('EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID'), 'ENV_FILE lacks EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID'
+          services = json.load(open('firebase/dev/google-services.json', encoding='utf-8'))
+          assert services['project_info']['project_id'] == 'comradia-dev', 'google-services.json is not for comradia-dev'
+          account = json.load(open(os.path.join(os.environ['RUNNER_TEMP'], 'firebase-service-account.json'), encoding='utf-8'))
+          assert account.get('type') == 'service_account' and account.get('client_email'), 'invalid service account'
+          print('Dev configuration validated.')
+          PY
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: yarn
+          cache-dependency-path: apps/mobile/yarn.lock
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - run: yarn install --frozen-lockfile
+
+      - name: Generate the native project
+        run: |
+          npx expo prebuild --platform android --clean --no-install
+          # One versionCode per run, above the 1 of the first hand-made upload.
+          sed -i "s/versionCode 1$/versionCode $((GITHUB_RUN_NUMBER + 1))/" android/app/build.gradle
+          grep -q "versionCode $((GITHUB_RUN_NUMBER + 1))$" android/app/build.gradle
+
+      - name: Build the release APK
+        working-directory: apps/mobile/android
+        # Phones only: arm64-v8a keeps the build and the download small.
+        run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon
+
+      - name: Verify the APK signature
+        run: |
+          set -euo pipefail
+          apk=android/app/build/outputs/apk/release/app-release.apk
+          apksigner="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -n 1)/apksigner"
+          sha1=$("$apksigner" verify --print-certs "$apk" | awk '/Signer #1 certificate SHA-1 digest/ {print $NF}')
+          [ "$sha1" = "$EXPECTED_SIGNER_SHA1" ] || { echo "::error::APK signed with $sha1, expected $EXPECTED_SIGNER_SHA1." >&2; exit 1; }
+
+      - name: Upload to Firebase App Distribution
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-service-account.json
+        run: |
+          set -euo pipefail
+          git log -1 --pretty='%h %s%n%n%b' > "$RUNNER_TEMP/release-notes.txt"
+          # Keep the signed download link out of the public log.
+          npx --yes firebase-tools@15.36.0 appdistribution:distribute \
+            android/app/build/outputs/apk/release/app-release.apk \
+            --app "$FIREBASE_APP_ID" \
+            --project "$FIREBASE_PROJECT" \
+            --groups base-group \
+            --release-notes-file "$RUNNER_TEMP/release-notes.txt" 2>&1 | sed -E 's#https?://[^ ]+#[link omitted]#g'
+
+      - name: Remove credentials
+        if: always()
+        run: rm -f .env firebase/dev/google-services.json "$RUNNER_TEMP/firebase-service-account.json"

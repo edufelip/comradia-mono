@@ -132,13 +132,28 @@ Gotchas:
 The repo is public, so every job runs on free GitHub-hosted `ubuntu-latest` runners. Each job gets its own VM, so the fixed emulator and web-server ports (9099, 8089, 9199, 8199) never clash. `setup-node` caches yarn per lockfile.
 
 - Workflows from forks need approval before they run (Settings → Actions → "Require approval for all external contributors"). Never add a self-hosted runner to this repo: a fork PR could run code on it.
-- No job uses secrets yet. If one ever does, run it only on `push` or behind an environment, never on `pull_request` from forks.
-- **iOS jobs** need a Mac: run them on GitHub-hosted `macos-15` (free for public repos) and gate each with the repo variable `IOS_CI_ENABLED` (`if: vars.IOS_CI_ENABLED == 'true'`). No iOS job exists yet.
+- Only the App Distribution workflows use secrets, and they run only on `push` to `develop` or by hand, never on `pull_request`. Keep it that way for any new job with secrets.
+- **iOS jobs** need a Mac: run them on GitHub-hosted `macos-15` (free for public repos) and gate each with the repo variable `IOS_CI_ENABLED` (`if: vars.IOS_CI_ENABLED == 'true'`).
 
 | Workflow | Runs when | Jobs |
 | --- | --- | --- |
 | `.github/workflows/mobile-tests.yml` | every PR; pushes to `develop` / `main` touching `apps/mobile/**` or `apps/firebase/**` | `checks` (typecheck, lint, format, unit, component + coverage) and `e2e-web` (Playwright; report uploaded on failure) |
 | `.github/workflows/firebase-rules.yml` | every PR; pushes to `develop` / `main` touching `apps/firebase/**` or `apps/mobile/features/profile/profile-schema.ts` | `yarn test` in `apps/firebase`: rules tests under a Firestore emulator |
+| `.github/workflows/mobile-firebase-distribution-android.yml` | pushes to `develop` touching `apps/mobile/**`; manual | dev release APK (arm64, React Native debug key) to Firebase App Distribution, group `base-group` |
+| `.github/workflows/mobile-firebase-distribution-ios.yml` | the same, when `IOS_CI_ENABLED` is `true` | dev Ad Hoc IPA on `macos-15` to Firebase App Distribution, group `base-group` |
+
+### App Distribution builds
+
+Both workflows run `expo prebuild` for the dev variant (`com.edufelip.comradia.dev`, Firebase project `comradia-dev`) and upload with the `app-distribution-ci` service account (App Distribution Admin on `comradia-dev`). Testers in the App Distribution group `base-group` get each build.
+
+| Secret | Holds |
+| --- | --- |
+| `ENV_FILE` | the dev `apps/mobile/.env` (see `.env.example`); emulator hosts are rejected |
+| `FIREBASE_DEV_GOOGLE_SERVICES_JSON`, `FIREBASE_DEV_GOOGLE_SERVICE_INFO_PLIST` | the dev native Firebase config files (docs/architecture.md, "Environments") |
+| `FIREBASE_SERVICE_ACCOUNT_JSON` | a key for `app-distribution-ci@comradia-dev.iam.gserviceaccount.com` |
+| `IOS_TEAM_ID`, `IOS_ADHOC_CERT_P12_BASE64`, `IOS_ADHOC_CERT_PASSWORD`, `IOS_ADHOC_PROFILE_BASE64` | the Apple team, an Apple Distribution certificate and its password, and an Ad Hoc profile for `com.edufelip.comradia.dev` with Push Notifications and Sign in with Apple |
+
+Only devices listed in the Ad Hoc profile can install the iOS build. To add an iPhone, register its UDID in the Apple Developer portal, regenerate the profile, and replace `IOS_ADHOC_PROFILE_BASE64`. The iOS job switches the APNs and App Attest entitlements to `production`, the environment an Ad Hoc build runs in.
 
 ## Rules
 
