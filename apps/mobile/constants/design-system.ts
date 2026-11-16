@@ -227,7 +227,7 @@ export const DsTypography: Record<
   | 'figure',
   TextStyle
 > = {
-  /** The one large moment on a screen (match celebration). */
+  /** The one large moment on a screen (welcome headline, match celebration). */
   hero: {
     fontFamily: DsFontFamily.bold,
     fontSize: 40,
@@ -242,7 +242,7 @@ export const DsTypography: Record<
     lineHeight: 26,
     fontWeight: '700',
   },
-  /** Onboarding and welcome headlines. */
+  /** Onboarding and auth headlines. */
   display: {
     fontFamily: DsFontFamily.bold,
     fontSize: 30,

@@ -190,7 +190,7 @@ export default function RegisterScreen() {
                     ? AppleAuthenticationButtonType.CONTINUE
                     : AppleAuthenticationButtonType.SIGN_IN
                 }
-                cornerRadius={DsRadius.pill}
+                cornerRadius={DsLayout.controlHeight / 2}
                 onPress={() => void runProvider('apple')}
                 style={styles.appleButton}
                 testID="register-apple"
@@ -331,7 +331,7 @@ const styles = StyleSheet.create({
     height: StyleSheet.hairlineWidth,
   },
   sendButton: {
-    height: DsLayout.fieldHeight,
+    minHeight: DsLayout.fieldHeight,
     marginTop: DsSpace.xxs,
   },
   footer: {

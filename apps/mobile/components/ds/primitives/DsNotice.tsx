@@ -12,6 +12,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import {
   DsIconSize,
+  DsRadius,
   DsShadow,
   DsSpace,
   DsTypography,
@@ -141,14 +142,16 @@ export function DsNotice({
       <DsMotionView testID={testID ? `${testID}-motion` : undefined} variant="reveal">
         <DsCard
           scheme={scheme}
-          style={[
-            styles.card,
-            { backgroundColor: toneSoft },
-            overlay ? DsShadow.floating : null,
-            style,
-          ]}
+          style={[styles.card, overlay ? DsShadow.floating : null, style]}
           testID={testID}
         >
+          {/* The soft tint is translucent in the dark theme, so it sits on the opaque surface of
+              the card instead of replacing it; a floating notice must not show the screen behind. */}
+          <View
+            pointerEvents="none"
+            style={[styles.tint, { backgroundColor: toneSoft }]}
+            testID={testID ? `${testID}-tint` : undefined}
+          />
           <MaterialIcons
             accessibilityElementsHidden
             aria-hidden
@@ -178,6 +181,10 @@ export function DsNotice({
 }
 
 const styles = StyleSheet.create({
+  tint: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: DsRadius.lg,
+  },
   card: {
     flexDirection: 'row',
     gap: DsSpace.sm,

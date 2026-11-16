@@ -81,7 +81,7 @@ export function DsSheet({
   const keyboardOverlap = useDsKeyboardOverlap(overlayRef, visible);
   const [mounted, setMounted] = useState(visible);
   const [closing, setClosing] = useState(false);
-  const progress = useSharedValue(visible && !reduceMotion ? 0 : 1);
+  const progress = useSharedValue(visible && reduceMotion ? 1 : 0);
 
   const sheetMotion = useAnimatedStyle(() => ({
     opacity: progress.value,

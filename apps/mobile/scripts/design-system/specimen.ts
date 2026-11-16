@@ -130,11 +130,11 @@ function typeRule(name: string): string {
 }
 
 const TYPE_USAGE: Record<string, string> = {
-  hero: 'The one large moment (match celebration)',
+  hero: 'The one large moment (welcome headline, match celebration)',
   heading: 'Section and sheet headings',
   bodyLarge: 'Chat messages, profile answers',
   label: 'Bold label of a card or field',
-  display: 'Welcome and onboarding headline',
+  display: 'Onboarding and auth headline',
   title: 'Screen title in tabs',
   screenTitle: 'Top bar title',
   cardTitle: 'Card and row title',

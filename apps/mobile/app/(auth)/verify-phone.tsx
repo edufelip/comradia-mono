@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
     marginTop: DsSpace.xl,
   },
   submit: {
-    height: DsLayout.fieldHeight,
+    minHeight: DsLayout.fieldHeight,
   },
   resend: {
     alignItems: 'center',

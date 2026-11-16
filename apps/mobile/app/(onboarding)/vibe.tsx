@@ -381,6 +381,6 @@ const styles = StyleSheet.create({
     marginTop: DsSpace.sm,
   },
   cta: {
-    height: DsLayout.fieldHeight,
+    minHeight: DsLayout.fieldHeight,
   },
 });

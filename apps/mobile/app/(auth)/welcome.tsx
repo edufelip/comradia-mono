@@ -159,6 +159,6 @@ const styles = StyleSheet.create({
     fontFamily: DsFontFamily.bold,
   },
   cta: {
-    height: DsLayout.fieldHeight,
+    minHeight: DsLayout.fieldHeight,
   },
 });

@@ -269,7 +269,7 @@ Requirements for every screen (verify with the accessibility tree in the E2E web
 - **State.** Expose `selected`, `checked`, `disabled`, `busy` through `accessibilityState` (and `aria-checked` on web).
 - **Touch targets.** At least 44 × 44. Small visuals reach it with `hitSlop` (the back and icon buttons do) or `minHeight`. Keep 8 pt between adjacent targets.
 - **Contrast.** See [the table](#color). Text on images needs a scrim.
-- **Focus (web).** Visible 3 pt `focusRing` outline with 3 pt offset on `:focus-visible` (global, from `app/+html.tsx`); composite controls draw the ring on the whole control. Tab order follows reading order; no keyboard traps; Escape closes sheets.
+- **Focus (web).** Visible 3 pt `focusRing` outline with 3 pt offset on `:focus-visible` (global, from `app/+html.tsx`); composite controls (`DsTextField`, the code field) show focus as the accent border (`DsBorder.strong`) on the whole control instead of the outline. Tab order follows reading order; no keyboard traps; Escape closes sheets.
 - **Motion.** Reduce Motion respected everywhere; nothing flashes more than three times per second.
 - **Text scaling.** Layouts survive 200% system font size: wrap, `minHeight`, no clipping.
 - **Not color alone.** Selection also changes border or fill shape and exposes state; errors have text and an icon.
@@ -291,7 +291,7 @@ The same code exports to the web (`expo export --platform web`).
 - Cursor pointer on interactive roles and a 3% brightness dip on hover (global, `app/+html.tsx`); no layout shift on hover.
 - Cap content with `DsScreen contentWidth`; for screens not built on `DsScreen`, use `resolveWebWidthCap`.
 - Native `Switch` and `Modal` look different on web; prefer the DS versions.
-- Inputs inside a custom row set `outlineWidth: 0` and let the row show the focus ring.
+- Inputs inside a custom row set `outlineWidth: 0` and let the row show the focus border.
 - Test in Chromium and WebKit at 390 × 844 and 320 × 568, in dark mode, and in two languages (the Playwright suite does).
 
 ## Website
@@ -330,7 +330,7 @@ Copy into the PR description for any screen or component change.
 
 ## Enforcement
 
-- **Lint** (errors in `app/`, `features/` and `components/`; run `yarn lint`): `comradia/no-raw-color` flags hex, `rgb()/rgba()` and `hsl()/hsla()` in strings and templates. `comradia/ds-scale` flags spacing off the `DsSpace` scale (0, 4, 8, 12, 16, 20, 24, 32), radius not in `DsRadius`, border widths not in `DsBorder`, and any literal `fontSize`, `lineHeight`, `letterSpacing`, `fontWeight` or `fontFamily`. Computed values and token references are not flagged. A justified exception needs `// eslint-disable-next-line comradia/ds-scale -- <reason>` (or `no-raw-color`); artwork geometry is the usual one.
+- **Lint** (errors in `app/`, `features/` and `components/`; run `yarn lint`): `comradia/no-raw-color` flags hex, the CSS color functions (`rgb()`, `hsl()`, `oklch()`, `color-mix()` and the rest) in strings and templates, and a string that is exactly a named color (`'white'`). `transparent` is allowed. A literal like `'Order #123'` reads as a hex and needs the disable comment. `comradia/ds-scale` flags spacing off the `DsSpace` scale (0, 4, 8, 12, 16, 20, 24, 32), radius not in `DsRadius`, border widths not in `DsBorder`, and any literal `fontSize`, `lineHeight`, `letterSpacing`, `fontWeight` or `fontFamily`. Computed values and token references are not flagged. A justified exception needs `// eslint-disable-next-line comradia/ds-scale -- <reason>` (or `no-raw-color`); artwork geometry is the usual one.
 - **Tests**: `design-system.test.ts` (token parity, valid values, contrast of every allowed pair, scales), `specimen.test.ts` (the specimen matches the tokens), `no-raw-color.test.ts` and `ds-scale.test.ts` (the rules; the scale rule's allowed lists must equal the tokens), `native-colors-config.test.ts` (splash, adaptive icon and notification colors come from the tokens), plus a component test per primitive.
 - **Review**: component choice, hierarchy, states and copy are checked in review with the checklist above; the lint rules guard the values.
 - **Agents**: `AGENTS.md` requires every AI agent to follow this document for any new UI.

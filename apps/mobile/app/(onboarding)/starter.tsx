@@ -230,6 +230,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   cta: {
-    height: DsLayout.fieldHeight,
+    minHeight: DsLayout.fieldHeight,
   },
 });

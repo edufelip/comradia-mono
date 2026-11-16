@@ -140,8 +140,7 @@ export function DsPillButton({
 
   const getTextSizeStyles = () => {
     if (isExtraSmall) return styles.textXs;
-    if (isSmall) return styles.textSm;
-    return styles.textMd;
+    return styles.text;
   };
 
   return (
@@ -206,7 +205,5 @@ const styles = StyleSheet.create({
     ...DsTypography.button,
     textAlign: 'center',
   },
-  textMd: DsTypography.button,
-  textSm: DsTypography.button,
   textXs: DsTypography.chip,
 });

@@ -34,6 +34,18 @@ describe('comradia/no-raw-color', () => {
     }
   });
 
+  it('flags named colors and modern color functions', () => {
+    for (const color of ['white', 'Red', 'oklch(0.7 0.1 20)', 'color-mix(in srgb, red, blue)']) {
+      assert.equal(lint(`const c = '${color}';`).length, 1, color);
+    }
+  });
+
+  it('does not flag words that merely contain a color name or a # inside an identifier', () => {
+    for (const text of ['white space', 'redo', 'page#add', 'transparent', 'currentColor']) {
+      assert.equal(lint(`const c = '${text}';`).length, 0, text);
+    }
+  });
+
   it('flags rgb, rgba, hsl and hsla', () => {
     for (const color of ['rgb(0, 0, 0)', 'rgba(0,0,0,.3)', 'hsl(0 0% 0%)', 'hsla(0, 0%, 0%, 1)']) {
       assert.equal(lint(`const c = '${color}';`).length, 1, color);

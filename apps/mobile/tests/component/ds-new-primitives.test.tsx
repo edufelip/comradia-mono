@@ -384,7 +384,9 @@ describe('DsNotice', () => {
       <DsNotice body="Check your inbox." scheme="light" testID="n" title="Saved" tone="success" />,
     );
 
-    expect(screen.getByTestId('n')).toHaveStyle({ backgroundColor: light.color.successSoft });
+    expect(screen.getByTestId('n-tint', HIDDEN)).toHaveStyle({
+      backgroundColor: light.color.successSoft,
+    });
     expect(screen.getByTestId('n-motion')).toBeOnTheScreen();
     expect(screen.getByText('Saved')).toHaveStyle({ color: light.color.textPrimary });
     expect(screen.getByText('Check your inbox.')).toHaveStyle({ color: light.color.textPrimary });
@@ -399,7 +401,15 @@ describe('DsNotice', () => {
   ] as const)('tints the %s tone with its soft color', async (tone, token) => {
     await render(<DsNotice scheme="dark" testID="n" title="Hello" tone={tone} />);
 
-    expect(screen.getByTestId('n')).toHaveStyle({ backgroundColor: dark.color[token] });
+    expect(screen.getByTestId('n-tint', HIDDEN)).toHaveStyle({
+      backgroundColor: dark.color[token],
+    });
+  });
+
+  it('keeps an opaque surface under the translucent tint so an overlay hides the screen behind', async () => {
+    await render(<DsNotice overlay scheme="dark" testID="n" title="Hello" />);
+
+    expect(screen.getByTestId('n')).toHaveStyle({ backgroundColor: dark.color.surface });
   });
 
   it('defaults to a polite status and can be urgent', async () => {
@@ -615,6 +625,14 @@ describe('DsSheet', () => {
 
     expect(screen.getByTestId('sheet-footer')).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Apply' })).toBeOnTheScreen();
+  });
+
+  it('starts closed at progress 0 so the first open animates in', async () => {
+    const sharedValue = jest.spyOn(Reanimated, 'useSharedValue');
+    await renderSheet({ visible: false });
+
+    expect(sharedValue).toHaveBeenCalledWith(0);
+    expect(sharedValue).not.toHaveBeenCalledWith(1);
   });
 
   it('opens and closes as visible changes, animated or not', async () => {

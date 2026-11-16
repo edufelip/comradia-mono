@@ -4,20 +4,27 @@
  * welcome artwork), never from a literal. The tokens live in `constants/design-system.ts`,
  * which this rule is not applied to. See docs/design-system.md.
  *
- * Flags hex (`#fff`, `#ffffff`, `#ffffff80`), `rgb()/rgba()` and `hsl()/hsla()` in string
- * literals and template strings. A `${token}22` alpha suffix on a token is fine and is not
+ * Flags hex (`#fff`, `#ffffff`, `#ffffff80`), the CSS color functions (`rgb()`, `hsl()`,
+ * `hwb()`, `lab()`, `lch()`, `oklab()`, `oklch()`, `color()`, `color-mix()`) in string literals
+ * and template strings, and a string that is exactly a named color (`'white'`, `'red'`). A `${token}22` alpha suffix on a token is fine and is not
  * matched. For a rare, justified exception use
  * `// eslint-disable-next-line comradia/no-raw-color -- <reason>`.
  */
-const HEX = /#(?:[0-9a-f]{8}|[0-9a-f]{6}|[0-9a-f]{4}|[0-9a-f]{3})(?![0-9a-z_-])/i;
-const FUNCTIONAL = /\b(?:rgba?|hsla?)\(/i;
+const HEX = /(?<![0-9a-z_-])#(?:[0-9a-f]{8}|[0-9a-f]{6}|[0-9a-f]{4}|[0-9a-f]{3})(?![0-9a-z_-])/i;
+const FUNCTIONAL = /(?<![0-9a-z_-])(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color|color-mix)\(/i;
+// Whole-string match only: words like 'red' inside copy or identifiers must not be flagged.
+// `transparent` and `currentColor` are not palette colors and stay allowed.
+const NAMED =
+  /^(?:white|black|red|green|blue|yellow|orange|purple|pink|gray|grey|silver|gold|brown|cyan|magenta|teal|navy|maroon|olive|lime|aqua|fuchsia|coral|crimson|salmon|tomato|indigo|violet)$/i;
 
 /** @param {string} text */
 function findRawColor(text) {
   const hex = HEX.exec(text);
   if (hex) return hex[0];
   const functional = FUNCTIONAL.exec(text);
-  return functional ? functional[0] : null;
+  if (functional) return functional[0];
+  const trimmed = text.trim();
+  return NAMED.test(trimmed) ? trimmed : null;
 }
 
 /** @type {import('eslint').Rule.RuleModule} */
