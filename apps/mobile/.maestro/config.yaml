@@ -1,0 +1,22 @@
+# Maestro workspace config for the native E2E flows.
+#
+# Run with:  maestro test apps/mobile/.maestro
+# Requires a booted simulator/emulator and a dev build whose app id matches the flows:
+#   dev  -> com.edufelip.comradia.dev   (default, APP_VARIANT unset)  <- used in the flows
+#   prod -> com.edufelip.comradia       (APP_VARIANT=prod)
+# To run the suite against the prod build, override the flows' appId header.
+flows:
+  - welcome.yaml
+  - sign-in.yaml
+  - onboarding.yaml
+  - discover.yaml
+# Flows share one app session (see the sign-out note in each flow), so run them in order:
+# sign-in.yaml leaves a session on S2 that onboarding.yaml picks up, and discover.yaml ends
+# signed out, ready for the next run.
+executionOrder:
+  continueOnFailure: false
+  flowsOrder:
+    - Welcome screen
+    - Sign in with a Brazilian phone number
+    - Onboarding S2–S4
+    - Discover deck

@@ -1,0 +1,390 @@
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { DsMotionPressable } from '@/components/ds/motion/DsMotionPressable';
+import { DsMotionView } from '@/components/ds/motion/DsMotionView';
+import { DsCard } from '@/components/ds/primitives/DsCard';
+import { DsPillButton } from '@/components/ds/primitives/DsPillButton';
+import { DsFontFamily, DsRadius, DsSpace, getDsTheme } from '@/constants/design-system';
+import { OnboardingChip } from '@/features/onboarding/components/OnboardingChip';
+import { OnboardingOptionCard } from '@/features/onboarding/components/OnboardingOptionCard';
+import { OnboardingScreen } from '@/features/onboarding/components/OnboardingScreen';
+import { OnboardingSwitch } from '@/features/onboarding/components/OnboardingSwitch';
+import { useOnboardingStore } from '@/features/onboarding/onboarding-store';
+import { VIBE_VISUALS } from '@/features/onboarding/visuals';
+import { pickPhoto } from '@/features/profile/pick-photo';
+import {
+  canLeaveVibeStep,
+  LOOKING_FOR,
+  NAME_MAX,
+  UNIONS,
+  validateBasics,
+  VIBES,
+} from '@/features/profile/profile-schema';
+import { ProfilePhoto } from '@/features/profile/ProfilePhoto';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useTranslation } from '@/localization';
+
+/**
+ * S2 — first name, birthday, vibe, who you are looking for and an optional union
+ * badge. The Continue button only leaves the step once `canLeaveVibeStep` is true;
+ * the basics errors appear after a field was left, so the form is not shouting at
+ * someone who just arrived.
+ */
+export default function VibeScreen() {
+  const colorScheme = useColorScheme();
+  const scheme = colorScheme === 'dark' ? 'dark' : 'light';
+  const ds = getDsTheme(scheme);
+  const { t } = useTranslation();
+  const router = useRouter();
+  const draft = useOnboardingStore();
+  const [nameTouched, setNameTouched] = useState(false);
+  const [birthdayTouched, setBirthdayTouched] = useState(false);
+  const [attempted, setAttempted] = useState(false);
+  const [photoError, setPhotoError] = useState(false);
+
+  const handlePickPhoto = async () => {
+    setPhotoError(false);
+    try {
+      const uri = await pickPhoto();
+      if (uri) draft.setPhotoUri(uri);
+    } catch {
+      setPhotoError(true);
+    }
+  };
+
+  const today = new Date();
+  const basicsError = validateBasics(draft, today);
+  const canContinue = canLeaveVibeStep(draft, today);
+  const showNameError = basicsError === 'name_required' && (nameTouched || attempted);
+  const showBirthdayError =
+    basicsError !== null && basicsError !== 'name_required' && (birthdayTouched || attempted);
+
+  const handleContinue = () => {
+    setAttempted(true);
+    if (!canLeaveVibeStep(draft, new Date())) return;
+    router.push('/values');
+  };
+
+  return (
+    <OnboardingScreen
+      footer={
+        <DsPillButton
+          contentColor={ds.color.onAccent}
+          disabled={!canContinue}
+          fullWidth
+          label={t('onboarding.continue')}
+          onPress={handleContinue}
+          scheme={scheme}
+          style={[styles.cta, { backgroundColor: ds.color.accentPrimary }]}
+          testID="onboarding-continue"
+          variant="primary"
+        />
+      }
+      lede={t('onboarding.vibe.lede')}
+      scheme={scheme}
+      step={1}
+      testID="onboarding-vibe"
+      title={t('onboarding.vibe.title')}
+    >
+      <View style={styles.photoBlock}>
+        <ProfilePhoto
+          name={draft.displayName}
+          path={draft.photoUri}
+          scheme={scheme}
+          shape="arch"
+          style={styles.photo}
+          testID="onboarding-photo"
+        />
+        <DsPillButton
+          label={draft.photoUri ? t('photo.change') : t('photo.add')}
+          onPress={() => {
+            void handlePickPhoto();
+          }}
+          scheme={scheme}
+          fullWidth={false}
+          testID="onboarding-photo-pick"
+          variant="secondary"
+        />
+        {draft.photoUri ? (
+          <DsMotionPressable
+            accessibilityRole="button"
+            feedbackScale={0.97}
+            onPress={() => draft.setPhotoUri(null)}
+            style={styles.photoRemove}
+            testID="onboarding-photo-remove"
+          >
+            <Text style={[styles.photoRemoveLabel, { color: ds.color.textSecondary }]}>
+              {t('photo.remove')}
+            </Text>
+          </DsMotionPressable>
+        ) : null}
+        <Text style={[styles.hint, styles.photoHint, { color: ds.color.textTertiary }]}>
+          {t('photo.hint')}
+        </Text>
+        {photoError ? (
+          <DsMotionView testID="onboarding-photo-error-motion" variant="reveal">
+            <Text
+              accessibilityRole="alert"
+              style={[styles.error, styles.photoHint, { color: ds.color.danger }]}
+              testID="onboarding-photo-error"
+            >
+              {t('photo.error')}
+            </Text>
+          </DsMotionView>
+        ) : null}
+      </View>
+
+      <Text
+        accessibilityRole="header"
+        style={[styles.sectionLabel, { color: ds.color.textPrimary }]}
+      >
+        {t('onboarding.basics.section')}
+      </Text>
+      <View style={styles.field}>
+        <Text style={[styles.fieldLabel, { color: ds.color.textSecondary }]}>
+          {t('onboarding.basics.name')}
+        </Text>
+        <TextInput
+          accessibilityLabel={t('onboarding.basics.name')}
+          autoCapitalize="words"
+          autoComplete="given-name"
+          maxLength={NAME_MAX}
+          onBlur={() => setNameTouched(true)}
+          onChangeText={draft.setDisplayName}
+          placeholder={t('onboarding.basics.name_placeholder')}
+          placeholderTextColor={ds.color.textTertiary}
+          style={[
+            styles.input,
+            {
+              backgroundColor: ds.color.surface,
+              borderColor: showNameError ? ds.color.dangerBorder : ds.color.border,
+              color: ds.color.textPrimary,
+            },
+          ]}
+          testID="onboarding-name"
+          textContentType="givenName"
+          value={draft.displayName}
+        />
+        {showNameError ? (
+          <DsMotionView testID="onboarding-name-error-motion" variant="reveal">
+            <Text style={[styles.error, { color: ds.color.danger }]} testID="onboarding-name-error">
+              {t('onboarding.error.name_required')}
+            </Text>
+          </DsMotionView>
+        ) : null}
+      </View>
+
+      <View style={styles.field}>
+        <Text style={[styles.fieldLabel, { color: ds.color.textSecondary }]}>
+          {t('onboarding.basics.birthday')}
+        </Text>
+        <TextInput
+          accessibilityLabel={t('onboarding.basics.birthday')}
+          keyboardType="numeric"
+          maxLength={10}
+          onBlur={() => setBirthdayTouched(true)}
+          onChangeText={draft.setBirthDateInput}
+          placeholder={t('onboarding.basics.birthday_placeholder')}
+          placeholderTextColor={ds.color.textTertiary}
+          style={[
+            styles.input,
+            {
+              backgroundColor: ds.color.surface,
+              borderColor: showBirthdayError ? ds.color.dangerBorder : ds.color.border,
+              color: ds.color.textPrimary,
+            },
+          ]}
+          testID="onboarding-birthday"
+          value={draft.birthDateInput}
+        />
+        {showBirthdayError && basicsError ? (
+          <DsMotionView testID="onboarding-birthday-error-motion" variant="reveal">
+            <Text
+              style={[styles.error, { color: ds.color.danger }]}
+              testID="onboarding-birthday-error"
+            >
+              {t(`onboarding.error.${basicsError}`)}
+            </Text>
+          </DsMotionView>
+        ) : (
+          <Text style={[styles.hint, { color: ds.color.textTertiary }]}>
+            {t('onboarding.basics.birthday_hint')}
+          </Text>
+        )}
+      </View>
+
+      <View style={styles.grid}>
+        {VIBES.map((vibe) => (
+          <View key={vibe} style={styles.gridCell}>
+            <OnboardingOptionCard
+              accent={VIBE_VISUALS[vibe].color}
+              description={t(`onboarding.vibe.${vibe}_desc`)}
+              icon={VIBE_VISUALS[vibe].icon}
+              label={t(`onboarding.vibe.${vibe}`)}
+              onPress={() => draft.setVibe(vibe)}
+              scheme={scheme}
+              selected={draft.vibe === vibe}
+              testID={`vibe-${vibe}`}
+            />
+          </View>
+        ))}
+      </View>
+
+      <Text style={[styles.sectionLabel, { color: ds.color.textPrimary }]}>
+        {t('onboarding.looking_for.title')}
+      </Text>
+      <View style={styles.segmented}>
+        {LOOKING_FOR.map((option) => (
+          <OnboardingChip
+            key={option}
+            label={t(`onboarding.looking_for.${option}`)}
+            onPress={() => draft.setLookingFor(option)}
+            role="radio"
+            scheme={scheme}
+            selected={draft.lookingFor === option}
+            style={styles.segment}
+            testID={`looking-for-${option}`}
+          />
+        ))}
+      </View>
+
+      <DsCard scheme={scheme} style={styles.unionCard}>
+        <View style={styles.unionRow}>
+          <View style={styles.unionText}>
+            <Text style={[styles.unionLabel, { color: ds.color.textPrimary }]}>
+              {t('onboarding.union.title')}
+            </Text>
+            <Text style={[styles.hint, { color: ds.color.textSecondary }]}>
+              {t('onboarding.union.hint')}
+            </Text>
+          </View>
+          <OnboardingSwitch
+            accessibilityLabel={t('onboarding.union.title')}
+            onValueChange={draft.setUnionMember}
+            scheme={scheme}
+            testID="union-toggle"
+            value={draft.unionMember}
+          />
+        </View>
+
+        {draft.unionMember ? (
+          <View style={styles.unionChips}>
+            {UNIONS.map((union) => (
+              <OnboardingChip
+                key={union}
+                label={t(`onboarding.union.${union}`)}
+                onPress={() => draft.setUnion(union)}
+                role="radio"
+                scheme={scheme}
+                selected={draft.union === union}
+                testID={`union-${union}`}
+              />
+            ))}
+          </View>
+        ) : null}
+      </DsCard>
+    </OnboardingScreen>
+  );
+}
+
+const styles = StyleSheet.create({
+  photoBlock: {
+    alignItems: 'center',
+    marginTop: DsSpace.md,
+  },
+  photo: {
+    width: 120,
+    aspectRatio: 3 / 4,
+  },
+  photoRemove: {
+    marginTop: DsSpace.xs,
+    paddingVertical: 6,
+  },
+  photoRemoveLabel: {
+    fontFamily: DsFontFamily.semibold,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  photoHint: {
+    textAlign: 'center',
+  },
+  field: {
+    marginTop: DsSpace.md,
+  },
+  fieldLabel: {
+    fontFamily: DsFontFamily.semibold,
+    fontSize: 12,
+    letterSpacing: 0.4,
+    lineHeight: 16,
+    marginBottom: 6,
+    textTransform: 'uppercase',
+  },
+  input: {
+    borderRadius: DsRadius.md,
+    borderWidth: 1.5,
+    fontSize: 15,
+    minHeight: 48,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  hint: {
+    fontSize: 12,
+    lineHeight: 16,
+    marginTop: 6,
+  },
+  error: {
+    fontSize: 12,
+    lineHeight: 16,
+    marginTop: 6,
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: DsSpace.lg,
+  },
+  gridCell: {
+    flexBasis: '47%',
+  },
+  sectionLabel: {
+    fontFamily: DsFontFamily.bold,
+    fontSize: 15,
+    lineHeight: 20,
+    marginTop: DsSpace.lg,
+  },
+  segmented: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: DsSpace.sm,
+  },
+  segment: {
+    flex: 1,
+  },
+  unionCard: {
+    marginTop: DsSpace.lg,
+  },
+  unionRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: DsSpace.sm,
+    justifyContent: 'space-between',
+  },
+  unionText: {
+    flex: 1,
+  },
+  unionLabel: {
+    fontFamily: DsFontFamily.semibold,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  unionChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: DsSpace.sm,
+  },
+  cta: {
+    height: 52,
+  },
+});

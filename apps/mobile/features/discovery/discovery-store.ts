@@ -1,84 +1,109 @@
 import { create } from 'zustand';
+import type { DiscoveryProfile } from '@/features/profile/profile-schema';
+import type { Backend, LikeResult } from '@/services/backend/types';
 
-export type ComradeProfile = {
-  id: string;
-  displayName: string;
-  age: number;
-  pronouns: string;
-  city: string;
-  tendency: string;
-  causes: string[];
-  bio: string;
-  praxisPrompt: string;
-  unionMember: boolean;
-};
+/**
+ * The backend calls Discover needs. Screens pass the real backend in, which keeps this
+ * module free of Firebase at runtime (the `tsx` unit runner cannot load React Native code
+ * and the backend module pulls in `react-native`).
+ */
+export type DiscoveryBackend = Pick<
+  Backend,
+  'listDiscovery' | 'recordSwipe' | 'like' | 'listBlockedUids'
+>;
 
-export const INITIAL_COMRADES: ComradeProfile[] = [
-  {
-    id: 'comrade-maya',
-    displayName: 'Maya',
-    age: 28,
-    pronouns: 'she/her',
-    city: 'São Paulo',
-    tendency: 'Eco-Socialist',
-    causes: ['Climate Justice', 'Transit For All', 'Tenant Union'],
-    bio: 'Urban planner by day, community garden organizer by weekend. Looking for someone to bike with and debate degrowth over espresso.',
-    praxisPrompt: 'Ideal first date: solidarity kitchen prep then live samba at a cooperative bar.',
-    unionMember: true,
-  },
-  {
-    id: 'comrade-lucas',
-    displayName: 'Lucas',
-    age: 31,
-    pronouns: 'he/him',
-    city: 'Florianópolis',
-    tendency: 'Democratic Socialist',
-    causes: ['Labor Rights', 'Public Education', 'Free Software'],
-    bio: 'Public school history teacher & teachers union steward. Big fan of sci-fi, Ursula K. Le Guin, and beach hikes.',
-    praxisPrompt: 'Ask me about my homemade sourdough starter named Rosa Luxemburg.',
-    unionMember: true,
-  },
-  {
-    id: 'comrade-val',
-    displayName: 'Val',
-    age: 26,
-    pronouns: 'they/them',
-    city: 'Rio de Janeiro',
-    tendency: 'Anarcho-Syndicalist',
-    causes: ['Mutual Aid', 'Queer Liberation', 'Zine Libraries'],
-    bio: 'Riso printer, dog fosterer, and neighborhood mutual-aid coordinator. Swipe left (in a good way) if you love punk shows and feijoada.',
-    praxisPrompt: 'Together we could seize the means of weekend brunch.',
-    unionMember: false,
-  },
-];
+export type DiscoveryStatus = 'idle' | 'loading' | 'ready' | 'error';
 
 type DiscoveryState = {
-  candidates: ComradeProfile[];
-  matches: ComradeProfile[];
-  sendSolidarity: (id: string) => void;
-  passCandidate: (id: string) => void;
-  resetDeck: () => void;
+  status: DiscoveryStatus;
+  /** The deck, top card first. */
+  candidates: DiscoveryProfile[];
+  /**
+   * Replaces the deck with the people the backend says are still available, minus everyone
+   * in `listBlockedUids` (people I blocked and people who blocked me).
+   */
+  load: (backend: DiscoveryBackend, uid: string) => Promise<void>;
+  /** Drops one person from the deck, e.g. right after I blocked or reported them. */
+  removeCandidate: (id: string) => void;
+  /**
+   * Saves the like and removes the card at once. Resolves with the backend's answer (a
+   * match when the other person liked first), or null when the card is unknown or the
+   * write failed and the card came back.
+   */
+  like: (backend: DiscoveryBackend, uid: string, id: string) => Promise<LikeResult | null>;
+  pass: (backend: DiscoveryBackend, uid: string, id: string) => Promise<void>;
 };
 
-export const useDiscoveryStore = create<DiscoveryState>((set) => ({
-  candidates: INITIAL_COMRADES,
-  matches: [],
-  sendSolidarity: (id) =>
-    set((state) => {
-      const target = state.candidates.find((c) => c.id === id);
-      if (!target) return state;
-      const alreadyMatched = state.matches.some((m) => m.id === id);
-      return {
-        candidates: state.candidates.filter((c) => c.id !== id),
-        matches: alreadyMatched ? state.matches : [target, ...state.matches],
-      };
-    }),
-  passCandidate: (id) =>
-    set((state) => ({
-      candidates: state.candidates.filter((c) => c.id !== id),
-    })),
-  resetDeck: () =>
-    set({
-      candidates: INITIAL_COMRADES,
-    }),
+export const INITIAL_DISCOVERY: Pick<DiscoveryState, 'status' | 'candidates'> = {
+  status: 'idle',
+  candidates: [],
+};
+
+/** Only the newest load may write; a slower, older one must not resurrect stale cards. */
+let latestLoad = 0;
+
+export const useDiscoveryStore = create<DiscoveryState>((set, get) => ({
+  ...INITIAL_DISCOVERY,
+
+  load: async (backend, uid) => {
+    const ticket = ++latestLoad;
+    set({ status: 'loading' });
+    try {
+      // Both reads decide the deck, so a failure in either fails closed: showing someone
+      // I blocked is worse than asking me to retry.
+      const [people, blocked] = await Promise.all([
+        backend.listDiscovery(uid),
+        backend.listBlockedUids(uid),
+      ]);
+      if (ticket !== latestLoad) return;
+      const hidden = new Set(blocked);
+      set({ status: 'ready', candidates: people.filter((person) => !hidden.has(person.id)) });
+    } catch {
+      if (ticket !== latestLoad) return;
+      set({ status: 'error' });
+    }
+  },
+
+  removeCandidate: (id) => {
+    set((state) => ({ candidates: state.candidates.filter((person) => person.id !== id) }));
+  },
+
+  like: async (backend, uid, id) => {
+    const { candidates } = get();
+    const target = candidates.find((candidate) => candidate.id === id);
+    if (!target) return null;
+
+    // Optimistic: the card leaves the deck at once (matches are created by the backend).
+    set({ candidates: candidates.filter((candidate) => candidate.id !== id) });
+
+    try {
+      return await backend.like(uid, id);
+    } catch {
+      // Put the card back on top, ahead of anything swiped since.
+      set((state) => ({
+        candidates: state.candidates.some((candidate) => candidate.id === id)
+          ? state.candidates
+          : [target, ...state.candidates],
+      }));
+      return null;
+    }
+  },
+
+  pass: async (backend, uid, id) => {
+    const { candidates } = get();
+    const target = candidates.find((candidate) => candidate.id === id);
+    if (!target) return;
+
+    set({ candidates: candidates.filter((candidate) => candidate.id !== id) });
+
+    try {
+      await backend.recordSwipe(uid, id, 'pass');
+    } catch {
+      set((state) => ({
+        candidates: state.candidates.some((candidate) => candidate.id === id)
+          ? state.candidates
+          : [target, ...state.candidates],
+      }));
+    }
+  },
 }));

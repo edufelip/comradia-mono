@@ -1,0 +1,153 @@
+appId: com.edufelip.comradia.dev
+name: Discover deck
+tags:
+  - smoke
+---
+# Full journey: sign up through the auth emulator,
+# finish onboarding, then swipe through the seeded deck. The dev project talks to the
+# emulators, where `apps/firebase/scripts/seed.mjs` provides Maya, Lucas and Val.
+- runFlow: subflows/launch.yaml
+# Sign up, unless an earlier flow (sign-in.yaml) already left a session on onboarding.
+- runFlow:
+    when:
+      visible:
+        id: welcome-cta-start
+    commands:
+      - tapOn:
+          id: welcome-cta-start
+      - tapOn:
+          id: register-phone-input
+      - inputText: '11912345678'
+      - tapOn:
+          id: register-send-code
+      - assertVisible: '.*Enter the code.*'
+      # The emulators send a random code; read it back from the auth emulator.
+      - runScript:
+          file: scripts/sms-code.js
+          env:
+            PHONE_NUMBER: '+5511912345678'
+      # The code field auto-focuses; `opacity: 0` keeps it out of the iOS accessibility
+      # tree, so the flow types into the focused field. The sixth digit submits the code.
+      - inputText: ${output.code}
+
+# S2-S4: a complete profile.
+- assertVisible:
+    id: onboarding-name
+- tapOn:
+    id: onboarding-name
+- inputText: 'Rosa'
+- tapOn:
+    id: onboarding-birthday
+- inputText: '14/03/1994'
+# The number pad has no Done key; a short drag closes it (keyboardDismissMode on-drag).
+- swipe:
+    start: 50%, 55%
+    end: 50%, 45%
+- tapOn:
+    id: vibe-bookworm
+- scrollUntilVisible:
+    element:
+      id: looking-for-everyone
+- tapOn:
+    id: looking-for-everyone
+- scrollUntilVisible:
+    element:
+      id: onboarding-continue
+- tapOn:
+    id: onboarding-continue
+- tapOn:
+    id: value-bookshops_coffee
+- tapOn:
+    id: value-tenant_rights
+- tapOn:
+    id: value-cycling
+- scrollUntilVisible:
+    element:
+      id: onboarding-continue
+- tapOn:
+    id: onboarding-continue
+# The prompt chips scroll sideways; swipe the row until "green flag" shows.
+# shortcut: the row's height (31%) is measured on an iPhone 16-size screen; use a
+# testID on the row's ScrollView if the layout changes.
+- repeat:
+    times: 4
+    while:
+      notVisible:
+        id: prompt-green_flag
+    commands:
+      - swipe:
+          start: 80%, 31%
+          end: 20%, 31%
+- tapOn:
+    id: prompt-green_flag
+- tapOn:
+    id: starter-answer
+- inputText: 'You know your neighbours by name.'
+# The multiline answer has no Done key either; a short drag closes it.
+- swipe:
+    start: 50%, 55%
+    end: 50%, 45%
+- scrollUntilVisible:
+    element:
+      id: starter-consent-toggle
+- tapOn:
+    id: starter-consent-toggle
+- scrollUntilVisible:
+    element:
+      id: starter-finish
+- tapOn:
+    id: starter-finish
+
+# The deck comes from Firestore. The seed profiles share one createdAt, so they come in
+# document-id order: Lucas, Maya, Val.
+- assertVisible: '.*Lucas, 31.*'
+- assertVisible: '.*Bookworm.*'
+- assertVisible:
+    id: discover-pass
+- assertVisible:
+    id: discover-like
+
+# Tab names: iOS reads 'Matches, tab, 2 of 3'; Android reads the label text 'Matches'.
+# Like advances the deck. The seed has no likes, so it is not a match and Matches stays
+# empty (a match needs both likes, decision #8).
+- tapOn:
+    id: discover-like
+- assertVisible: '.*Maya, 28.*'
+- assertNotVisible: '.*Lucas, 31.*'
+- tapOn: 'Matches(, tab, 2 of 3)?'
+- assertVisible:
+    id: matches-empty
+
+# Back on Discover, pass the rest of the deck to reach the empty state.
+- tapOn: 'Discover(, tab, 1 of 3)?'
+- assertVisible: '.*Maya, 28.*'
+- tapOn:
+    id: discover-pass
+- assertVisible: '.*Val, 26.*'
+- tapOn:
+    id: discover-pass
+# People who signed up in earlier flows (onboarding.yaml) come after the seed.
+- repeat:
+    while:
+      visible:
+        id: discover-pass
+    commands:
+      - tapOn:
+          id: discover-pass
+- assertVisible: '.*You are all caught up.*'
+- assertVisible:
+    id: discover-refresh
+
+# Refresh re-reads Firestore; the swipes are persisted, so the deck stays empty.
+- tapOn:
+    id: discover-refresh
+- assertVisible: '.*You are all caught up.*'
+
+# Sign out returns to Welcome.
+- tapOn: 'Profile(, tab, 3 of 3)?'
+- assertVisible:
+    id: profile-sign-out
+- tapOn:
+    id: profile-sign-out
+- assertVisible:
+    id: welcome-cta-start

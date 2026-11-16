@@ -1,0 +1,41 @@
+appId: com.edufelip.comradia.dev
+name: Welcome screen
+tags:
+  - smoke
+---
+# Cold start: the tab layout redirects to /welcome while the session flag is in-memory.
+- runFlow: subflows/launch.yaml
+# Onboarding has no sign-out: when a stopped run left the session there, finish it,
+# then restart signed out.
+- runFlow:
+    when:
+      visible:
+        id: onboarding-progress
+    commands:
+      - runFlow: onboarding.yaml
+      - runFlow: subflows/launch.yaml
+- assertVisible: '.*Meet someone who gives a damn.*'
+- assertVisible: '.*214 first dates this week.*'
+- assertVisible: '.*nearby are already here.*'
+- assertVisible:
+    id: welcome-cta-start
+- assertVisible:
+    id: welcome-cta-login
+- assertVisible: '.*Find your person.*'
+- assertVisible: '.*I already have an account.*'
+
+# S1 → S1B: both calls to action open registration, one per copy.
+- tapOn:
+    id: welcome-cta-start
+- assertVisible: '.*Create your account.*'
+- assertVisible:
+    id: register-phone-input
+- tapOn:
+    id: register-back
+- assertVisible: '.*Meet someone who gives a damn.*'
+
+- tapOn:
+    id: welcome-cta-login
+- assertVisible: '.*Welcome back.*'
+- assertVisible:
+    id: register-phone-input

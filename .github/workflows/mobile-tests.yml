@@ -1,0 +1,74 @@
+name: Mobile tests
+
+on:
+  # Every PR runs this, so branch protection can require it.
+  pull_request:
+  push:
+    branches: [develop, main]
+    paths: ['apps/mobile/**', 'apps/firebase/**', '.github/workflows/mobile-tests.yml']
+
+concurrency:
+  group: mobile-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: apps/mobile
+
+jobs:
+  checks:
+    name: Types, lint, unit, component
+    # GitHub-hosted (free for public repos); each job gets its own VM, so emulator ports never clash.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: yarn
+          cache-dependency-path: |
+            apps/mobile/yarn.lock
+            apps/firebase/yarn.lock
+      - run: yarn install --frozen-lockfile
+      - run: yarn typecheck
+      - run: yarn lint
+      - run: yarn format:check
+      - run: yarn test
+      - run: yarn test:component:coverage
+
+  e2e-web:
+    name: E2E (Playwright web)
+    # GitHub-hosted (free for public repos); each job gets its own VM, so emulator ports never clash.
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      # Playwright starts the Firebase emulators (`yarn --cwd ../firebase emulators`),
+      # and firebase-tools 13 needs a JDK.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: yarn
+          cache-dependency-path: |
+            apps/mobile/yarn.lock
+            apps/firebase/yarn.lock
+      - run: yarn install --frozen-lockfile
+      - run: yarn install --frozen-lockfile
+        working-directory: apps/firebase
+      - run: npx playwright install --with-deps chromium webkit
+      - run: yarn test:e2e
+        env:
+          CI: '1'
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            apps/mobile/playwright-report
+            apps/mobile/test-results
+          retention-days: 7

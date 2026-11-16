@@ -1,0 +1,45 @@
+appId: com.edufelip.comradia.dev
+name: Sign in with a Brazilian phone number
+tags:
+  - smoke
+env:
+  # National digits (area code + number). The auth emulator accepts any number.
+  PHONE: '11987654321'
+---
+# S1: welcome → S1B registration.
+- runFlow: subflows/launch.yaml
+- assertVisible:
+    id: welcome-cta-start
+- tapOn:
+    id: welcome-cta-start
+- assertVisible:
+    id: register-phone-input
+- assertVisible:
+    id: register-google
+
+# S1B: the field formats as it is typed and the send button unlocks.
+- tapOn:
+    id: register-phone-input
+- inputText: ${PHONE}
+- assertVisible: '.*\(11\) 98765-4321.*'
+- tapOn:
+    id: register-send-code
+
+# S1C: the countdown is running and a wrong code is rejected.
+# The code field auto-focuses; its TextInput is `opacity: 0`, which iOS drops from the
+# accessibility tree, so `id: verify-code-input` is not queryable on the simulator.
+- assertVisible: '.*Enter the code.*'
+- assertVisible:
+    id: verify-edit
+- assertVisible: '.*Resend in .*s.*'
+- inputText: '000000'
+- assertVisible:
+    id: verify-error
+
+# S1C: the code the emulator actually sent signs the user in; routing takes over.
+- runScript:
+    file: scripts/sms-code.js
+    env:
+      PHONE_NUMBER: '+5511987654321'
+- inputText: ${output.code}
+- assertNotVisible: '.*Enter the code.*'

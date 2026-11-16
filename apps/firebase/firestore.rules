@@ -1,0 +1,273 @@
+rules_version = '2';
+
+// Data model and the reasons behind it: docs/architecture.md.
+// The option lists below must match apps/mobile/features/profile/profile-schema.ts;
+// apps/firebase/tests/schema-parity.test.ts fails when they drift.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function isString(value, min, max) {
+      return value is string && value.size() >= min && value.size() <= max;
+    }
+
+    function validPushTokenId(tokenId) {
+      // Rules cannot verify that this is the SHA-256 of the token value, but they do enforce
+      // the stable, lowercase document-id shape used by the client.
+      return tokenId.matches('^[0-9a-f]{64}$');
+    }
+
+    function validPushToken(data) {
+      return data.keys().hasOnly(['token', 'platform', 'updatedAt', 'locale'])
+        && data.keys().hasAll(['token', 'platform', 'updatedAt'])
+        && isString(data.token, 1, 4096)
+        && data.platform in ['ios', 'android']
+        && (!('locale' in data) || data.locale in ['en-US', 'pt-BR', 'es-ES', 'fr-FR', 'de-DE', 'it-IT'])
+        && data.updatedAt == request.time;
+    }
+
+    function vibes() {
+      return ['outdoorsy', 'bookworm', 'creative', 'community', 'foodie'];
+    }
+
+    function lookingFor() {
+      return ['women', 'men', 'everyone'];
+    }
+
+    function valueIds() {
+      return ['climate_outdoors', 'public_transit', 'bookshops_coffee', 'indie_film_music',
+        'community_gardens', 'tenant_rights', 'food_markets', 'cycling', 'pets_parks',
+        'volunteering'];
+    }
+
+    function unions() {
+      return ['apeoesp', 'bancarios_sp', 'metalurgicos_abc', 'seesp', 'sintrajud', 'app_workers'];
+    }
+
+    function promptIds() {
+      return ['perfect_sunday', 'hill_to_die_on', 'together_we_could', 'green_flag',
+        'weirdly_good_at'];
+    }
+
+    // Public card other signed-in people see in Discover. Written once, complete,
+    // at the end of onboarding; nothing private (birth date, phone, email) lives here.
+    function validProfile(uid, data) {
+      return data.keys().hasOnly(['displayName', 'age', 'vibe', 'lookingFor', 'unionMember',
+          'union', 'values', 'promptId', 'promptAnswer', 'photoPath', 'createdAt', 'updatedAt'])
+        && data.keys().hasAll(['displayName', 'age', 'vibe', 'lookingFor', 'unionMember',
+          'union', 'values', 'promptId', 'promptAnswer', 'photoPath', 'createdAt', 'updatedAt'])
+        && isString(data.displayName, 1, 40)
+        && data.age is int && data.age >= 18 && data.age <= 99
+        && data.vibe in vibes()
+        && data.lookingFor in lookingFor()
+        && data.unionMember is bool
+        && ((data.unionMember && data.union in unions())
+          || (!data.unionMember && data.union == null))
+        && data.values is list
+        && data.values.size() >= 3 && data.values.size() <= 5
+        && data.values.toSet().size() == data.values.size()
+        && data.values.toSet().hasOnly(valueIds())
+        && data.promptId in promptIds()
+        && isString(data.promptAnswer, 1, 280)
+        // Points at one of the owner's own portraits, or null.
+        && (data.photoPath == null
+          || (data.photoPath is string
+            && data.photoPath.matches('^photos/' + uid + '/[A-Za-z0-9_-]{1,64}[.]jpg$')))
+        && data.updatedAt == request.time
+        && data.createdAt is timestamp;
+    }
+
+    // Private settings only the owner reads. The consent pair is the LGPD art. 11 opt-in for
+    // political values and dating preferences: written once at creation, never edited.
+    function validAccount(data) {
+      return data.keys().hasOnly(['birthDate', 'sharedPassionWeight', 'sensitiveDataConsentAt',
+          'consentVersion', 'createdAt', 'updatedAt'])
+        && data.keys().hasAll(['birthDate', 'sharedPassionWeight', 'sensitiveDataConsentAt',
+          'consentVersion', 'createdAt', 'updatedAt'])
+        && data.birthDate is string && data.birthDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && int(data.birthDate[0:4]) >= 1900
+        && int(data.birthDate[5:7]) >= 1 && int(data.birthDate[5:7]) <= 12
+        && int(data.birthDate[8:10]) >= 1 && int(data.birthDate[8:10]) <= 31
+        // Round-trip through the date constructor to reject impossible calendar days.
+        && timestamp.date(int(data.birthDate[0:4]), int(data.birthDate[5:7]),
+          int(data.birthDate[8:10])).year() == int(data.birthDate[0:4])
+        && timestamp.date(int(data.birthDate[0:4]), int(data.birthDate[5:7]),
+          int(data.birthDate[8:10])).month() == int(data.birthDate[5:7])
+        && timestamp.date(int(data.birthDate[0:4]), int(data.birthDate[5:7]),
+          int(data.birthDate[8:10])).day() == int(data.birthDate[8:10])
+        // A leap-day birthday whose 18th anniversary is not representable is conservatively denied.
+        && timestamp.date(int(data.birthDate[0:4]) + 18, int(data.birthDate[5:7]),
+          int(data.birthDate[8:10])) <= request.time
+        && data.sharedPassionWeight is int
+        && data.sharedPassionWeight >= 0 && data.sharedPassionWeight <= 100
+        && data.sensitiveDataConsentAt is timestamp
+        && isString(data.consentVersion, 1, 32)
+        && data.updatedAt == request.time
+        && data.createdAt is timestamp;
+    }
+
+    match /profiles/{uid} {
+      allow get: if signedIn()
+        && (request.auth.uid == uid
+          // blocks/{blocked}/by/{blocker}: hidden from the people this profile's owner blocked.
+          || !exists(/databases/$(database)/documents/blocks/$(request.auth.uid)/by/$(uid)));
+      allow list: if signedIn() && request.query.limit <= 50
+        && exists(/databases/$(database)/documents/profiles/$(request.auth.uid));
+      allow create: if isOwner(uid) && validProfile(uid, request.resource.data)
+        && existsAfter(/databases/$(database)/documents/users/$(uid))
+        && request.resource.data.createdAt == request.time;
+      allow update: if isOwner(uid) && validProfile(uid, request.resource.data)
+        && existsAfter(/databases/$(database)/documents/users/$(uid))
+        && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isOwner(uid);
+    }
+
+    match /users/{uid} {
+      allow read, delete: if isOwner(uid);
+      allow create: if isOwner(uid) && validAccount(request.resource.data)
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.sensitiveDataConsentAt == request.time;
+      allow update: if isOwner(uid) && validAccount(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.sensitiveDataConsentAt == resource.data.sensitiveDataConsentAt
+        && request.resource.data.consentVersion == resource.data.consentVersion;
+
+      match /swipes/{targetUid} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && targetUid != uid
+          && request.resource.data.keys().hasOnly(['direction', 'createdAt'])
+          && request.resource.data.direction in ['like', 'pass']
+          && request.resource.data.createdAt == request.time;
+      }
+
+      // The blocker's own list of who they blocked: private, written once, never edited.
+      // Delete is for unblocking and for account deletion.
+      match /blocks/{targetUid} {
+        allow read, delete: if isOwner(uid);
+        allow create: if isOwner(uid) && targetUid != uid
+          && request.resource.data.keys().hasOnly(['createdAt'])
+          && request.resource.data.createdAt == request.time;
+      }
+
+      // Device registrations are private to the account owner. The client hashes each FCM
+      // token for its document id; rules validate the digest shape and the bounded payload.
+      match /pushTokens/{tokenId} {
+        // Collection queries cannot establish a per-document id predicate in Rules, so list
+        // is scoped to the owner and direct writes validate the hash-shaped id below.
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && validPushTokenId(tokenId)
+          && validPushToken(request.resource.data);
+      }
+    }
+
+    // One like per direction. The liked person reads the likes they received (that is how
+    // a like back is detected), the liker reads their own. Created once, never edited.
+    match /likes/{targetUid}/from/{likerUid} {
+      allow read: if signedIn()
+        && (request.auth.uid == targetUid || request.auth.uid == likerUid);
+      allow create: if isOwner(likerUid) && likerUid != targetUid
+        && request.resource.data.keys().hasOnly(['createdAt'])
+        && request.resource.data.createdAt == request.time;
+      // Either side may withdraw the like: the liker on their own behalf, or the liked
+      // person when they leave or delete their account.
+      allow delete: if isOwner(likerUid) || isOwner(targetUid);
+    }
+
+    /** Either one blocked the other: the same fact is written from both sides and read here. */
+    function blockedBetween(a, b) {
+      return exists(/databases/$(database)/documents/blocks/$(a)/by/$(b))
+        || exists(/databases/$(database)/documents/blocks/$(b)/by/$(a));
+    }
+
+    // The reverse index of a block, keyed by the blocked person. The target may read that
+    // they were blocked (that is why the profile and chat disappear), the blocker owns the
+    // entry, and the match and message rules check both directions with two exists() calls.
+    match /blocks/{targetUid}/by/{blockerUid} {
+      allow read: if isOwner(targetUid) || isOwner(blockerUid);
+      allow create: if isOwner(blockerUid) && targetUid != blockerUid
+        && request.resource.data.keys().hasOnly(['createdAt'])
+        && request.resource.data.createdAt == request.time;
+      allow delete: if isOwner(blockerUid);
+    }
+
+    // Only the reporter can get their own report to check for an existing one. Listing,
+    // updating, and deleting reports remain denied.
+    match /reports/{reportId} {
+      allow get: if signedIn() && reportId.split('_')[0] == request.auth.uid;
+      allow create: if signedIn()
+        && reportId == request.auth.uid + '_' + request.resource.data.target
+        && request.resource.data.keys().hasOnly(['reporter', 'target', 'reason', 'details',
+          'context', 'createdAt'])
+        && request.resource.data.keys().hasAll(['reporter', 'target', 'reason', 'details',
+          'context', 'createdAt'])
+        && request.resource.data.reporter == request.auth.uid
+        && isString(request.resource.data.target, 1, 128)
+        && request.resource.data.target != request.auth.uid
+        && request.resource.data.reason in ['harassment', 'hate', 'fake', 'spam', 'underage',
+          'other']
+        && isString(request.resource.data.details, 0, 500)
+        && request.resource.data.context in ['profile', 'chat']
+        && request.resource.data.createdAt == request.time;
+    }
+
+    /** The caller is one of the two uids in the match id (a uid never contains `_`). */
+    function isInMatch(matchId) {
+      return signedIn() && request.auth.uid in matchId.split('_');
+    }
+
+    // A match id is the two uids sorted and joined by `_`. Both people may read it, either
+    // one creates it, and only while both likes exist: `existsAfter` sees the like written
+    // in the same batch, which is how a like back creates the match without a server.
+    function validMatch(matchId, data) {
+      return data.keys().hasOnly(['users', 'createdAt'])
+        && data.users is list
+        && data.users.size() == 2
+        && data.users[0] is string
+        && data.users[1] is string
+        && data.users[0] < data.users[1]
+        && matchId == data.users[0] + '_' + data.users[1]
+        && data.createdAt == request.time;
+    }
+
+    match /matches/{matchId} {
+      // A `get` of a match that does not exist yet must succeed: the app checks a match id
+      // before it may exist (the like back creates it).
+      allow get: if isInMatch(matchId);
+      // The app lists with `where('users', 'array-contains', uid)`.
+      allow list: if signedIn() && request.auth.uid in resource.data.users;
+      allow create: if isInMatch(matchId)
+        && request.auth.uid in request.resource.data.users
+        && validMatch(matchId, request.resource.data)
+        && !blockedBetween(request.resource.data.users[0], request.resource.data.users[1])
+        && existsAfter(/databases/$(database)/documents/likes/$(request.resource.data.users[0])/from/$(request.resource.data.users[1]))
+        && existsAfter(/databases/$(database)/documents/likes/$(request.resource.data.users[1])/from/$(request.resource.data.users[0]));
+      // A person may unmatch only after withdrawing their like to the other member.
+      allow delete: if isInMatch(matchId) && matchId.split('_').size() == 2
+        && ((request.auth.uid == matchId.split('_')[0]
+            && !exists(/databases/$(database)/documents/likes/$(matchId.split('_')[1])/from/$(request.auth.uid)))
+          || (request.auth.uid == matchId.split('_')[1]
+            && !exists(/databases/$(database)/documents/likes/$(matchId.split('_')[0])/from/$(request.auth.uid))));
+
+      // One chat per match, text only. The sender is one of the two; nothing is edited.
+      match /messages/{messageId} {
+        allow read: if isInMatch(matchId)
+          && exists(/databases/$(database)/documents/matches/$(matchId));
+        allow create: if isInMatch(matchId)
+          && exists(/databases/$(database)/documents/matches/$(matchId))
+          && !blockedBetween(matchId.split('_')[0], matchId.split('_')[1])
+          && request.resource.data.keys().hasOnly(['from', 'text', 'createdAt'])
+          && request.resource.data.from == request.auth.uid
+          && isString(request.resource.data.text, 1, 1000)
+          && request.resource.data.createdAt == request.time;
+        // Account deletion removes the messages the person sent, and only those.
+        allow delete: if isInMatch(matchId) && resource.data.from == request.auth.uid;
+      }
+    }
+  }
+}

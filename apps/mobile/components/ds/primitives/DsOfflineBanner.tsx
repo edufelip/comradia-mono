@@ -27,6 +27,8 @@ export function DsOfflineBanner({ scheme, text, testID }: DsOfflineBannerProps) 
         },
       ]}
       testID={testID}
+      accessible
+      accessibilityLabel={text}
       accessibilityRole="alert"
     >
       <MaterialIcons color={theme.color.warning} name="cloud-off" size={18} />

@@ -1,8 +1,4 @@
-import {
-  Geist_400Regular,
-  Geist_500Medium,
-  Geist_700Bold,
-} from '@expo-google-fonts/geist';
+import { Geist_400Regular, Geist_500Medium, Geist_700Bold } from '@expo-google-fonts/geist';
 import { GeistMono_500Medium } from '@expo-google-fonts/geist-mono';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
@@ -10,14 +6,15 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
-
+import { useReducedMotion } from 'react-native-reanimated';
 import { getDsTheme } from '@/constants/design-system';
+import { DS_MOTION } from '@/constants/motion';
+import { SessionErrorView } from '@/features/auth/session-error-view';
+import { useSessionStore } from '@/features/auth/session-store';
+import { useSessionSync } from '@/features/auth/use-session-sync';
+import { PushNotificationBridge } from '@/features/notifications/PushNotificationBridge';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { LocaleProvider } from '@/localization/locale-context';
-
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
 
 export default function RootLayout() {
   return (
@@ -28,6 +25,7 @@ export default function RootLayout() {
 }
 
 function RootLayoutContent() {
+  const reduceMotion = useReducedMotion();
   const colorScheme = useColorScheme();
   const scheme = colorScheme === 'dark' ? 'dark' : 'light';
   const ds = getDsTheme(scheme);
@@ -38,6 +36,8 @@ function RootLayoutContent() {
     GeistMono_500Medium,
   });
   const [fontLoadTimedOut, setFontLoadTimedOut] = useState(false);
+  useSessionSync();
+  const status = useSessionStore((s) => s.status);
 
   useEffect(() => {
     if (fontsLoaded || fontError) return;
@@ -45,7 +45,7 @@ function RootLayoutContent() {
     return () => clearTimeout(timer);
   }, [fontsLoaded, fontError]);
 
-  if (!fontsLoaded && !fontError && !fontLoadTimedOut) {
+  if ((!fontsLoaded && !fontError && !fontLoadTimedOut) || status === 'loading') {
     return (
       <View
         style={{
@@ -55,7 +55,7 @@ function RootLayoutContent() {
           backgroundColor: ds.color.canvas,
         }}
       >
-        <ActivityIndicator color={ds.color.accentPrimary} />
+        <ActivityIndicator color={ds.color.accentPrimary} testID="session-loading" />
       </View>
     );
   }
@@ -75,9 +75,47 @@ function RootLayoutContent() {
 
   return (
     <ThemeProvider value={navTheme}>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      </Stack>
+      {status === 'error' ? (
+        <SessionErrorView />
+      ) : (
+        // Exactly one group is reachable per session state; flipping the state moves the
+        // user to that group's first screen (docs/architecture.md, "Routing").
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            animation: reduceMotion ? 'none' : 'slide_from_right',
+            animationDuration: DS_MOTION.duration.standard,
+          }}
+        >
+          <Stack.Screen name="index" />
+          <Stack.Protected guard={status === 'signedOut'}>
+            <Stack.Screen name="(auth)" />
+          </Stack.Protected>
+          <Stack.Protected guard={status === 'needsOnboarding'}>
+            <Stack.Screen name="(onboarding)" />
+          </Stack.Protected>
+          <Stack.Protected guard={status === 'ready'}>
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen
+              name="match/[id]"
+              options={{
+                presentation: 'modal',
+                animation: reduceMotion ? 'none' : 'slide_from_bottom',
+              }}
+            />
+            <Stack.Screen name="chat/[id]" />
+            <Stack.Screen name="blocked" />
+            <Stack.Screen
+              name="safety/[uid]"
+              options={{
+                presentation: 'modal',
+                animation: reduceMotion ? 'none' : 'slide_from_bottom',
+              }}
+            />
+          </Stack.Protected>
+        </Stack>
+      )}
+      <PushNotificationBridge />
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
     </ThemeProvider>
   );

@@ -1,0 +1,27 @@
+appId: com.edufelip.comradia.dev
+---
+# Restart the app and sign out when a previous flow left the session on Discover.
+#
+# A dev build cannot start with `clearState`: that wipes the Metro URL the Expo dev
+# client saved, so the app opens on its launcher instead of the bundle. And the Firebase
+# session lives in the iOS Keychain, which `clearState` does not touch anyway.
+- stopApp
+- launchApp
+# Let the restored session settle before the first screen read. While the dev client
+# swaps its loading view for the app, iOS fails the screen snapshot
+# (kAXErrorInvalidUIElement) and Maestro aborts the flow: `retry` and `optional` do not
+# catch it.
+# shortcut: a fixed 3 s pause; replace it if Maestro starts retrying that error.
+- runScript: ../scripts/settle.js
+- extendedWaitUntil:
+    visible:
+      id: 'welcome-cta-start|onboarding-progress|discover-screen'
+    timeout: 20000
+- runFlow:
+    when:
+      visible:
+        id: discover-screen
+    commands:
+      - tapOn: 'Profile(, tab, 3 of 3)?'
+      - tapOn:
+          id: profile-sign-out
