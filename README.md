@@ -42,5 +42,6 @@ On an Android emulator the host is `10.0.2.2` instead of `127.0.0.1`. Without `E
 
 - [docs/architecture.md](docs/architecture.md) — decisions, data model, rules, screens, environments.
 - [docs/testing.md](docs/testing.md) — the test layers and how to run them.
+- [docs/design-system.md](docs/design-system.md) — the design system and the rules for all new UI; [specimen](docs/design-system-specimen.html).
 
 For notification backend build and emulator tests, also install the lockfile in `apps/firebase/functions`. See [notification delivery](docs/notifications.md) and [Functions setup](apps/firebase/functions/README.md).

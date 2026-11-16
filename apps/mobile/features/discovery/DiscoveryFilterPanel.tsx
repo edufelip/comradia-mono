@@ -3,7 +3,7 @@ import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { DsMotionView } from '@/components/ds/motion/DsMotionView';
 import { DsCard } from '@/components/ds/primitives/DsCard';
 import { DsPillButton } from '@/components/ds/primitives/DsPillButton';
-import { DsSpace, DsTypography, getDsTheme } from '@/constants/design-system';
+import { DsRadius, DsSpace, DsTypography, getDsTheme } from '@/constants/design-system';
 import { MAX_AGE, MIN_AGE, VIBES, type Vibe } from '@/features/profile/profile-schema';
 import { useTranslation } from '@/localization';
 import { DEFAULT_DISCOVERY_FILTERS, type DiscoveryFilters } from './discovery-filters';
@@ -149,6 +149,11 @@ const styles = StyleSheet.create({
   panel: { gap: DsSpace.sm },
   row: { flexDirection: 'row', gap: DsSpace.sm },
   age: { flex: 1, gap: DsSpace.xs },
-  input: { minHeight: 48, borderRadius: 12, padding: 12, fontSize: 18 },
+  input: {
+    minHeight: 48,
+    borderRadius: DsRadius.sm,
+    padding: DsSpace.sm,
+    ...DsTypography.bodyLarge,
+  },
   choices: { flexDirection: 'row', flexWrap: 'wrap', gap: DsSpace.xs },
 });

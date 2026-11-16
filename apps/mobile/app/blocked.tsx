@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { DsMotionView } from '@/components/ds/motion/DsMotionView';
 import { DsBackButton } from '@/components/ds/primitives/DsBackButton';
 import { DsCard } from '@/components/ds/primitives/DsCard';
+import { DsEmptyState } from '@/components/ds/primitives/DsEmptyState';
 import { DsPillButton } from '@/components/ds/primitives/DsPillButton';
 import { DsScreen } from '@/components/ds/primitives/DsScreen';
 import { DsSpace, DsTypography, getDsTheme } from '@/constants/design-system';
@@ -112,14 +113,12 @@ export default function BlockedScreen() {
           </Text>
         </DsCard>
       ) : people.length === 0 ? (
-        <DsCard scheme={scheme} style={styles.card} testID="blocked-empty">
-          <Text style={[DsTypography.cardTitle, { color: ds.color.textPrimary }]}>
-            {t('blocked.empty.title')}
-          </Text>
-          <Text style={[DsTypography.body, { color: ds.color.textSecondary }]}>
-            {t('blocked.empty.body')}
-          </Text>
-        </DsCard>
+        <DsEmptyState
+          body={t('blocked.empty.body')}
+          scheme={scheme}
+          testID="blocked-empty"
+          title={t('blocked.empty.title')}
+        />
       ) : (
         people.map((person) => (
           <BlockedRow

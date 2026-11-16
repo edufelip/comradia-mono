@@ -5,9 +5,10 @@ import { DsMotionPressable } from '@/components/ds/motion/DsMotionPressable';
 import { DsMotionView } from '@/components/ds/motion/DsMotionView';
 import { DsCard } from '@/components/ds/primitives/DsCard';
 import {
-  DsFontFamily,
+  DsIconSize,
   DsRadius,
   DsSpace,
+  DsTypography,
   getDsTheme,
   type DsColorScheme,
 } from '@/constants/design-system';
@@ -59,14 +60,16 @@ export function OnboardingStepper({
   }, [value]);
 
   const valueLabel = (
-    <Text style={[styles.value, { color: ds.color.accentPrimary }]}>{valueText}</Text>
+    <Text style={[styles.value, { color: ds.color.accentText }]}>{valueText}</Text>
   );
 
   return (
     <DsCard scheme={scheme} style={styles.card}>
       <View>
-        <Text style={[styles.label, { color: ds.color.textPrimary }]}>{label}</Text>
-        <Text style={[styles.hint, { color: ds.color.textSecondary }]}>{hint}</Text>
+        <Text style={[DsTypography.button, { color: ds.color.textPrimary }]}>{label}</Text>
+        <Text style={[DsTypography.caption, styles.hint, { color: ds.color.textSecondary }]}>
+          {hint}
+        </Text>
       </View>
 
       <View style={styles.controls}>
@@ -88,7 +91,7 @@ export function OnboardingStepper({
           <MaterialIcons
             color={canDecrease ? ds.color.textPrimary : ds.color.disabledText}
             name="remove"
-            size={20}
+            size={DsIconSize.md}
           />
         </DsMotionPressable>
 
@@ -137,7 +140,7 @@ export function OnboardingStepper({
           <MaterialIcons
             color={canIncrease ? ds.color.textPrimary : ds.color.disabledText}
             name="add"
-            size={20}
+            size={DsIconSize.md}
           />
         </DsMotionPressable>
       </View>
@@ -150,15 +153,8 @@ const styles = StyleSheet.create({
     gap: DsSpace.sm,
     marginTop: DsSpace.md,
   },
-  label: {
-    fontFamily: DsFontFamily.semibold,
-    fontSize: 14,
-    lineHeight: 20,
-  },
   hint: {
-    fontSize: 12,
-    lineHeight: 16,
-    marginTop: 2,
+    marginTop: DsSpace.xxs,
   },
   controls: {
     alignItems: 'center',
@@ -176,12 +172,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
     justifyContent: 'center',
-    paddingVertical: 6,
+    paddingVertical: DsSpace.xs,
   },
   value: {
-    fontFamily: DsFontFamily.bold,
-    fontSize: 22,
+    ...DsTypography.heading,
     fontVariant: ['tabular-nums'],
-    lineHeight: 28,
   },
 });

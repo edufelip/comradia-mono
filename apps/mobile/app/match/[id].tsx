@@ -128,7 +128,7 @@ export default function MatchScreen() {
       <View style={styles.header}>
         <Text
           accessibilityRole="header"
-          style={[DsTypography.title, { color: ds.color.accentPrimary }]}
+          style={[DsTypography.title, { color: ds.color.accentText }]}
         >
           {t('match.title')}
         </Text>
@@ -227,7 +227,7 @@ export default function MatchScreen() {
           </DsCard>
 
           <DsCard scheme={scheme} style={styles.card}>
-            <Text style={[DsTypography.micro, { color: ds.color.accentPrimary }]}>
+            <Text style={[DsTypography.micro, { color: ds.color.accentText }]}>
               {t('match.shared_label')}
             </Text>
             {shared.length > 0 ? (

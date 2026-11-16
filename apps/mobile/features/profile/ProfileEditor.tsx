@@ -3,7 +3,7 @@ import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { DsMotionView } from '@/components/ds/motion/DsMotionView';
 import { DsCard } from '@/components/ds/primitives/DsCard';
 import { DsPillButton } from '@/components/ds/primitives/DsPillButton';
-import { DsSpace, DsTypography, getDsTheme } from '@/constants/design-system';
+import { DsRadius, DsSpace, DsTypography, getDsTheme } from '@/constants/design-system';
 import { useSessionStore } from '@/features/auth/session-store';
 import { useTranslation } from '@/localization';
 import { backend } from '@/services/backend';
@@ -245,6 +245,12 @@ export function ProfileEditor({ uid, profile, scheme, active, onClose }: Props) 
 const styles = StyleSheet.create({
   panel: { gap: DsSpace.sm },
   choices: { flexDirection: 'row', flexWrap: 'wrap', gap: DsSpace.xs },
-  input: { minHeight: 48, padding: 12, borderWidth: 1, borderRadius: 12, fontSize: 16 },
+  input: {
+    minHeight: 48,
+    padding: 12,
+    borderWidth: 1,
+    borderRadius: DsRadius.sm,
+    ...DsTypography.bodyLarge,
+  },
   answer: { minHeight: 120, textAlignVertical: 'top' },
 });

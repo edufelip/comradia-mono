@@ -1,6 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 
-import { type DsColorScheme, getDsTheme } from '@/constants/design-system';
+import { DsRadius, type DsColorScheme, getDsTheme } from '@/constants/design-system';
 
 type DsBlobBackgroundProps = {
   scheme: DsColorScheme;
@@ -57,7 +57,7 @@ export function DsBlobBackground({
 
 const styles = StyleSheet.create({
   blob: {
-    borderRadius: 999,
+    borderRadius: DsRadius.pill,
     opacity: 0.6,
     position: 'absolute',
   },

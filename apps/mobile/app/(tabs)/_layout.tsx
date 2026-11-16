@@ -27,7 +27,7 @@ export default function TabLayout() {
         },
         headerShown: false,
         tabBarButton: HapticTab,
-        tabBarActiveTintColor: ds.color.accentPrimary,
+        tabBarActiveTintColor: ds.color.accentText,
         tabBarInactiveTintColor: ds.color.textTertiary,
         tabBarStyle: {
           backgroundColor: ds.color.surface,

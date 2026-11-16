@@ -13,7 +13,7 @@ import { CodeField } from '@/features/auth/components/code-field';
 import { useSessionStore } from '@/features/auth/session-store';
 import { createEmptyDraft, useOnboardingStore } from '@/features/onboarding/onboarding-store';
 import { OnboardingStepper } from '@/features/onboarding/components/OnboardingStepper';
-import { OnboardingSwitch } from '@/features/onboarding/components/OnboardingSwitch';
+import { DsSwitch } from '@/components/ds/primitives/DsSwitch';
 import { enUS } from '@/localization/en-US';
 import { fakeBackend, TEST_USER } from './mocks/backend';
 
@@ -176,7 +176,7 @@ describe('auth and onboarding motion', () => {
 
       return (
         <View>
-          <OnboardingSwitch
+          <DsSwitch
             accessibilityLabel="Union member"
             onValueChange={setUnionMember}
             scheme="light"
@@ -204,7 +204,7 @@ describe('auth and onboarding motion', () => {
     expect(screen.getByRole('switch', { name: 'Union member' })).toBeChecked();
     expect(
       StyleSheet.flatten(screen.getByTestId('motion-union-toggle.thumb').props.style),
-    ).toMatchObject({ transform: [{ translateX: 18 }] });
+    ).toMatchObject({ transform: [{ translateX: 16 }] });
 
     await press('weight-increase');
 

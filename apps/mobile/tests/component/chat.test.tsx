@@ -362,6 +362,20 @@ describe('ChatScreen', () => {
     expect(mockPush).toHaveBeenCalledWith(`/safety/${MAYA.id}?context=chat&match=${matchId}`);
   });
 
+  it('lets the name and the safety action share a 320 pt header without overflowing', async () => {
+    signIn();
+    await seedMatch();
+
+    await render(<ChatScreen />);
+
+    // Without shrink and a width cap the Geist-wide name and button push the row past the screen.
+    expect(await screen.findByTestId('chat-safety')).toHaveStyle({
+      flexShrink: 1,
+      maxWidth: '32%',
+    });
+    expect(screen.getByRole('header', { name: MAYA.displayName })).toBeOnTheScreen();
+  });
+
   it('closes the conversation when the other person is blocked', async () => {
     signIn();
     const matchId = await seedMatch();

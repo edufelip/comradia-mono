@@ -10,7 +10,7 @@ import { DsScreen } from '@/components/ds/primitives/DsScreen';
 import { DsRadius, DsSpace, DsTypography, getDsTheme } from '@/constants/design-system';
 import { useSessionStore } from '@/features/auth/session-store';
 import { useDiscoveryStore } from '@/features/discovery/discovery-store';
-import { OnboardingChip } from '@/features/onboarding/components/OnboardingChip';
+import { DsChip } from '@/components/ds/primitives/DsChip';
 import { REPORT_DETAILS_MAX, safetyErrorKey } from '@/features/safety/safety';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTranslation } from '@/localization';
@@ -132,7 +132,7 @@ export default function SafetyScreen() {
         />
         <Text
           accessibilityRole="header"
-          style={[DsTypography.title, { color: ds.color.accentPrimary }]}
+          style={[DsTypography.title, { color: ds.color.accentText }]}
         >
           {t('safety.title')}
         </Text>
@@ -175,7 +175,7 @@ export default function SafetyScreen() {
       ) : null}
 
       <DsCard scheme={scheme} style={styles.card} testID="safety-block-card">
-        <Text style={[DsTypography.micro, { color: ds.color.accentPrimary }]}>
+        <Text style={[DsTypography.micro, { color: ds.color.accentText }]}>
           {t('safety.block.title')}
         </Text>
         <Text style={[DsTypography.body, { color: ds.color.textPrimary }]}>
@@ -220,7 +220,7 @@ export default function SafetyScreen() {
       </DsCard>
 
       <DsCard scheme={scheme} style={styles.card} testID="safety-report-card">
-        <Text style={[DsTypography.micro, { color: ds.color.accentPrimary }]}>
+        <Text style={[DsTypography.micro, { color: ds.color.accentText }]}>
           {t('safety.report.title')}
         </Text>
         <Text style={[DsTypography.body, { color: ds.color.textPrimary }]}>
@@ -232,7 +232,7 @@ export default function SafetyScreen() {
         </Text>
         <View style={styles.reasons}>
           {REPORT_REASONS.map((id) => (
-            <OnboardingChip
+            <DsChip
               key={id}
               disabled={busy !== null}
               label={t(`safety.reason.${id}`)}
@@ -307,9 +307,9 @@ const styles = StyleSheet.create({
     gap: DsSpace.xs,
   },
   details: {
-    borderRadius: DsRadius.md,
+    borderRadius: DsRadius.sm,
+    ...DsTypography.input,
     borderWidth: 1,
-    fontSize: 14,
     minHeight: 96,
     paddingHorizontal: DsSpace.md,
     paddingVertical: DsSpace.sm,
