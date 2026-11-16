@@ -66,6 +66,14 @@ describe('shared press feedback', () => {
     );
   });
 
+  it('lets a long label shrink and wrap instead of widening the button past its row', async () => {
+    await render(
+      <DsPillButton label="A very long localized label" onPress={jest.fn()} scheme="light" />,
+    );
+
+    expect(screen.getByText('A very long localized label')).toHaveStyle({ flexShrink: 1 });
+  });
+
   it('exposes an explicitly unselected selectable pill', async () => {
     await render(
       <DsPillButton label="Not chosen" onPress={jest.fn()} scheme="light" selected={false} />,

@@ -203,6 +203,8 @@ const styles = StyleSheet.create({
   },
   text: {
     ...DsTypography.button,
+    // A long label (German, French, 200% text) wraps inside the pill instead of pushing it wider than its row.
+    flexShrink: 1,
     textAlign: 'center',
   },
   textXs: DsTypography.chip,

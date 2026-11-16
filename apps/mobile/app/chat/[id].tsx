@@ -389,10 +389,15 @@ const styles = StyleSheet.create({
     gap: DsSpace.sm,
   },
   headerAction: {
+    // Shares the row with the name; the label wraps rather than overflowing a 320 pt screen.
+    flexShrink: 1,
     marginLeft: 'auto',
+    maxWidth: '32%',
   },
   headerText: {
+    flex: 1,
     gap: DsSpace.xxs,
+    minWidth: 0,
   },
   banner: {
     gap: DsSpace.xs,
