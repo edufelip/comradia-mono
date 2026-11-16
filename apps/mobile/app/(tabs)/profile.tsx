@@ -242,7 +242,7 @@ export default function ProfileScreen() {
             >
               {profile.displayName}, {t('profile.age', { age: profile.age })}
             </Text>
-            <Text style={[DsTypography.caption, { color: ds.color.accentPrimary }]}>
+            <Text style={[DsTypography.caption, { color: ds.color.accentText }]}>
               {t(`onboarding.vibe.${profile.vibe}`)}
             </Text>
             {profile.unionMember ? (
@@ -262,7 +262,7 @@ export default function ProfileScreen() {
           </DsCard>
 
           <DsCard scheme={scheme} style={styles.card}>
-            <Text style={[DsTypography.micro, { color: ds.color.accentPrimary }]}>
+            <Text style={[DsTypography.micro, { color: ds.color.accentText }]}>
               {t('discover.values_label')}
             </Text>
             <View style={styles.valuesRow}>
@@ -280,7 +280,7 @@ export default function ProfileScreen() {
           </DsCard>
 
           <DsCard scheme={scheme} style={styles.card}>
-            <Text style={[DsTypography.micro, { color: ds.color.accentPrimary }]}>
+            <Text style={[DsTypography.micro, { color: ds.color.accentText }]}>
               {t(`onboarding.prompt.${profile.promptId}`)}
             </Text>
             <Text style={[DsTypography.body, { color: ds.color.textPrimary }]}>

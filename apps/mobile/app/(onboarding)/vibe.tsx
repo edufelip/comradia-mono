@@ -4,12 +4,19 @@ import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { DsMotionPressable } from '@/components/ds/motion/DsMotionPressable';
 import { DsMotionView } from '@/components/ds/motion/DsMotionView';
 import { DsCard } from '@/components/ds/primitives/DsCard';
+import { DsChip } from '@/components/ds/primitives/DsChip';
 import { DsPillButton } from '@/components/ds/primitives/DsPillButton';
-import { DsFontFamily, DsRadius, DsSpace, getDsTheme } from '@/constants/design-system';
-import { OnboardingChip } from '@/features/onboarding/components/OnboardingChip';
-import { OnboardingOptionCard } from '@/features/onboarding/components/OnboardingOptionCard';
+import { DsSelectCard } from '@/components/ds/primitives/DsSelectCard';
+import { DsSwitch } from '@/components/ds/primitives/DsSwitch';
+import {
+  DsBorder,
+  DsLayout,
+  DsRadius,
+  DsSpace,
+  DsTypography,
+  getDsTheme,
+} from '@/constants/design-system';
 import { OnboardingScreen } from '@/features/onboarding/components/OnboardingScreen';
-import { OnboardingSwitch } from '@/features/onboarding/components/OnboardingSwitch';
 import { useOnboardingStore } from '@/features/onboarding/onboarding-store';
 import { VIBE_VISUALS } from '@/features/onboarding/visuals';
 import { pickPhoto } from '@/features/profile/pick-photo';
@@ -217,7 +224,7 @@ export default function VibeScreen() {
       <View style={styles.grid}>
         {VIBES.map((vibe) => (
           <View key={vibe} style={styles.gridCell}>
-            <OnboardingOptionCard
+            <DsSelectCard
               accent={VIBE_VISUALS[vibe].color}
               description={t(`onboarding.vibe.${vibe}_desc`)}
               icon={VIBE_VISUALS[vibe].icon}
@@ -236,7 +243,7 @@ export default function VibeScreen() {
       </Text>
       <View style={styles.segmented}>
         {LOOKING_FOR.map((option) => (
-          <OnboardingChip
+          <DsChip
             key={option}
             label={t(`onboarding.looking_for.${option}`)}
             onPress={() => draft.setLookingFor(option)}
@@ -259,7 +266,7 @@ export default function VibeScreen() {
               {t('onboarding.union.hint')}
             </Text>
           </View>
-          <OnboardingSwitch
+          <DsSwitch
             accessibilityLabel={t('onboarding.union.title')}
             onValueChange={draft.setUnionMember}
             scheme={scheme}
@@ -271,7 +278,7 @@ export default function VibeScreen() {
         {draft.unionMember ? (
           <View style={styles.unionChips}>
             {UNIONS.map((union) => (
-              <OnboardingChip
+              <DsChip
                 key={union}
                 label={t(`onboarding.union.${union}`)}
                 onPress={() => draft.setUnion(union)}
@@ -298,13 +305,12 @@ const styles = StyleSheet.create({
     aspectRatio: 3 / 4,
   },
   photoRemove: {
+    justifyContent: 'center',
     marginTop: DsSpace.xs,
-    paddingVertical: 6,
+    minHeight: DsLayout.minTouchTarget,
   },
   photoRemoveLabel: {
-    fontFamily: DsFontFamily.semibold,
-    fontSize: 13,
-    lineHeight: 18,
+    ...DsTypography.button,
   },
   photoHint: {
     textAlign: 'center',
@@ -313,49 +319,41 @@ const styles = StyleSheet.create({
     marginTop: DsSpace.md,
   },
   fieldLabel: {
-    fontFamily: DsFontFamily.semibold,
-    fontSize: 12,
-    letterSpacing: 0.4,
-    lineHeight: 16,
-    marginBottom: 6,
-    textTransform: 'uppercase',
+    ...DsTypography.caption,
+    marginBottom: DsSpace.xs,
   },
   input: {
-    borderRadius: DsRadius.md,
-    borderWidth: 1.5,
-    fontSize: 15,
-    minHeight: 48,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    ...DsTypography.input,
+    borderRadius: DsRadius.lg,
+    borderWidth: DsBorder.strong,
+    minHeight: DsLayout.fieldHeight,
+    paddingHorizontal: DsSpace.md,
+    paddingVertical: DsSpace.sm,
   },
   hint: {
-    fontSize: 12,
-    lineHeight: 16,
-    marginTop: 6,
+    ...DsTypography.caption,
+    marginTop: DsSpace.xs,
   },
   error: {
-    fontSize: 12,
-    lineHeight: 16,
-    marginTop: 6,
+    ...DsTypography.caption,
+    marginTop: DsSpace.xs,
   },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: DsSpace.sm,
     marginTop: DsSpace.lg,
   },
   gridCell: {
     flexBasis: '47%',
   },
   sectionLabel: {
-    fontFamily: DsFontFamily.bold,
-    fontSize: 15,
-    lineHeight: 20,
+    ...DsTypography.cardTitle,
     marginTop: DsSpace.lg,
   },
   segmented: {
     flexDirection: 'row',
-    gap: 8,
+    gap: DsSpace.xs,
     marginTop: DsSpace.sm,
   },
   segment: {
@@ -374,17 +372,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   unionLabel: {
-    fontFamily: DsFontFamily.semibold,
-    fontSize: 14,
-    lineHeight: 20,
+    ...DsTypography.button,
   },
   unionChips: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: DsSpace.xs,
     marginTop: DsSpace.sm,
   },
   cta: {
-    height: 52,
+    height: DsLayout.fieldHeight,
   },
 });

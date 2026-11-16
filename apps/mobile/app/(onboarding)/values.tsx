@@ -1,8 +1,8 @@
 import { useRouter } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
+import { DsChip } from '@/components/ds/primitives/DsChip';
 import { DsPillButton } from '@/components/ds/primitives/DsPillButton';
-import { DsFontFamily, DsSpace, getDsTheme } from '@/constants/design-system';
-import { OnboardingChip } from '@/features/onboarding/components/OnboardingChip';
+import { DsLayout, DsSpace, DsTypography, getDsTheme } from '@/constants/design-system';
 import { OnboardingScreen } from '@/features/onboarding/components/OnboardingScreen';
 import { OnboardingStepper } from '@/features/onboarding/components/OnboardingStepper';
 import { useOnboardingStore } from '@/features/onboarding/onboarding-store';
@@ -53,7 +53,7 @@ export default function ValuesScreen() {
       <View style={styles.countRow}>
         <Text
           accessibilityLiveRegion="polite"
-          style={[styles.count, { color: ds.color.accentPrimary }]}
+          style={[DsTypography.label, { color: ds.color.accentText }]}
           testID="values-count"
         >
           {t('onboarding.values.count', { count })}
@@ -62,7 +62,7 @@ export default function ValuesScreen() {
 
       <View style={styles.cloud}>
         {VALUE_IDS.map((id) => (
-          <OnboardingChip
+          <DsChip
             key={id}
             disabled={atMax && !draft.values.includes(id)}
             icon={VALUE_ICONS[id]}
@@ -95,19 +95,13 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     marginTop: DsSpace.sm,
   },
-  count: {
-    fontFamily: DsFontFamily.bold,
-    fontSize: 12,
-    fontVariant: ['tabular-nums'],
-    lineHeight: 16,
-  },
   cloud: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: DsSpace.xs,
     marginTop: DsSpace.xs,
   },
   cta: {
-    height: 52,
+    height: DsLayout.fieldHeight,
   },
 });

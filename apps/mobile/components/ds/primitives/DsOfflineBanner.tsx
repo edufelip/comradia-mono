@@ -1,7 +1,7 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
 import {
-  DsFontFamily,
+  DsIconSize,
   DsRadius,
   DsSpace,
   DsTypography,
@@ -31,7 +31,7 @@ export function DsOfflineBanner({ scheme, text, testID }: DsOfflineBannerProps) 
       accessibilityLabel={text}
       accessibilityRole="alert"
     >
-      <MaterialIcons color={theme.color.warning} name="cloud-off" size={18} />
+      <MaterialIcons color={theme.color.warning} name="cloud-off" size={DsIconSize.sm} />
       <Text style={[styles.text, { color: theme.color.warning }]}>{text}</Text>
     </View>
   );
@@ -40,16 +40,14 @@ export function DsOfflineBanner({ scheme, text, testID }: DsOfflineBannerProps) 
 const styles = StyleSheet.create({
   banner: {
     alignItems: 'center',
-    borderRadius: DsRadius.md,
+    borderRadius: DsRadius.sm,
     flexDirection: 'row',
     gap: DsSpace.sm,
     paddingHorizontal: DsSpace.md,
-    paddingVertical: 10,
+    paddingVertical: DsSpace.sm,
   },
   text: {
-    ...DsTypography.caption,
+    ...DsTypography.chip,
     flex: 1,
-    fontFamily: DsFontFamily.medium,
-    fontWeight: '500',
   },
 });

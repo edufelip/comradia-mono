@@ -4,6 +4,10 @@ import { join } from 'node:path';
 import type { ConfigContext, ExpoConfig } from 'expo/config';
 import { AndroidConfig, withAndroidManifest, type ConfigPlugin } from 'expo/config-plugins';
 
+// Expo's config loader only resolves local TypeScript imports with the extension; tsc objects to it.
+// @ts-expect-error TS5097
+import { getDsTheme } from './constants/design-system.ts';
+
 type AndroidManifest = Parameters<typeof AndroidConfig.Manifest.getMainApplicationOrThrow>[0];
 
 /** Expo owns the tint; explicitly prefer it over Firebase Messaging's library default. */
@@ -47,7 +51,41 @@ function firebaseFiles(variant: 'dev' | 'prod') {
   };
 }
 
-export default ({ config }: ConfigContext): ExpoConfig => {
+const light = getDsTheme('light').color;
+const dark = getDsTheme('dark').color;
+
+/**
+ * Native colors come from the design-system tokens (docs/design-system.md), so the splash screen
+ * hands over to the first screen without a color jump: canvas in each scheme, and the soft accent
+ * behind the Android adaptive icon.
+ */
+export function withDesignSystemColors(config: Partial<ExpoConfig>): Partial<ExpoConfig> {
+  return {
+    ...config,
+    android: {
+      ...config.android,
+      adaptiveIcon: {
+        ...config.android?.adaptiveIcon,
+        backgroundColor: light.accentPrimarySoft,
+      },
+    },
+    plugins: (config.plugins ?? []).map((plugin) =>
+      Array.isArray(plugin) && plugin[0] === 'expo-splash-screen'
+        ? [
+            plugin[0],
+            {
+              ...(plugin[1] as Record<string, unknown>),
+              backgroundColor: light.canvas,
+              dark: { backgroundColor: dark.canvas },
+            },
+          ]
+        : plugin,
+    ),
+  };
+}
+
+export default ({ config: baseConfig }: ConfigContext): ExpoConfig => {
+  const config = withDesignSystemColors(baseConfig);
   const variant = process.env.APP_VARIANT === 'prod' ? 'prod' : 'dev';
   const isDev = variant === 'dev';
   const files = firebaseFiles(variant);
@@ -113,7 +151,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       // Adds the Crashlytics Gradle plugin; without it the Android app crashes at startup
       // ("The Crashlytics build ID is missing") because the package is linked natively.
       '@react-native-firebase/crashlytics',
-      ['expo-notifications', { icon: './assets/images/notification-icon.png', color: '#C94143' }],
+      [
+        'expo-notifications',
+        { icon: './assets/images/notification-icon.png', color: light.accentPrimary },
+      ],
       // Photo library only: the camera and microphone keys and Android permissions stay out.
       [
         'expo-image-picker',

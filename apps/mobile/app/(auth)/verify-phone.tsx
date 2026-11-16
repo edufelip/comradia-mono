@@ -6,7 +6,7 @@ import { DsMotionPressable } from '@/components/ds/motion/DsMotionPressable';
 import { DsMotionView } from '@/components/ds/motion/DsMotionView';
 import { DsBackButton } from '@/components/ds/primitives/DsBackButton';
 import { DsPillButton } from '@/components/ds/primitives/DsPillButton';
-import { DsFontFamily, DsTypography, getDsTheme } from '@/constants/design-system';
+import { DsLayout, DsSpace, DsTypography, getDsTheme } from '@/constants/design-system';
 import { AuthError, type AuthErrorCode } from '@/features/auth/components/auth-error';
 import { CodeField } from '@/features/auth/components/code-field';
 import { formatBR, toE164BR } from '@/features/auth/phone';
@@ -102,7 +102,7 @@ export default function VerifyPhoneScreen() {
       <ScrollView
         contentContainerStyle={[
           styles.content,
-          { paddingBottom: insets.bottom + 24, paddingTop: insets.top + 12 },
+          { paddingBottom: insets.bottom + DsSpace.xl, paddingTop: insets.top + DsSpace.sm },
         ]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
@@ -115,14 +115,19 @@ export default function VerifyPhoneScreen() {
             testID="verify-back"
           />
 
-          <Text style={[styles.step, { color: ds.color.accentPrimary }]}>{t('verify.step')}</Text>
+          <Text style={[DsTypography.eyebrow, styles.step, { color: ds.color.accentText }]}>
+            {t('verify.step')}
+          </Text>
 
-          <Text accessibilityRole="header" style={[styles.title, { color: ds.color.textPrimary }]}>
+          <Text
+            accessibilityRole="header"
+            style={[DsTypography.display, styles.title, { color: ds.color.textPrimary }]}
+          >
             {t('verify.title')}
           </Text>
 
           <View style={styles.sentToRow}>
-            <Text style={[DsTypography.body, styles.sentTo, { color: ds.color.textSecondary }]}>
+            <Text style={[DsTypography.body, { color: ds.color.textSecondary }]}>
               {t('verify.sent_to', { phone: formatBR(phone) })}
             </Text>
             <DsMotionPressable
@@ -132,7 +137,7 @@ export default function VerifyPhoneScreen() {
               style={styles.edit}
               testID="verify-edit"
             >
-              <Text style={[styles.editText, { color: ds.color.accentPrimary }]}>
+              <Text style={[DsTypography.button, { color: ds.color.accentText }]}>
                 {t('verify.edit')}
               </Text>
             </DsMotionPressable>
@@ -202,57 +207,39 @@ const styles = StyleSheet.create({
   },
   content: {
     flexGrow: 1,
-    paddingHorizontal: 22,
+    paddingHorizontal: DsLayout.screenGutter,
   },
   step: {
-    fontFamily: DsFontFamily.mono,
-    fontSize: 10.5,
-    letterSpacing: 0.8,
-    lineHeight: 16,
-    marginTop: 20,
+    marginTop: DsSpace.lg,
   },
   title: {
-    fontFamily: DsFontFamily.bold,
-    fontSize: 34,
-    letterSpacing: -1.2,
-    lineHeight: 38,
-    marginTop: 8,
+    marginTop: DsSpace.xs,
   },
   sentToRow: {
-    gap: 2,
-    marginTop: 8,
-  },
-  sentTo: {
-    fontSize: 14,
-    lineHeight: 20,
+    gap: DsSpace.xxs,
+    marginTop: DsSpace.xs,
   },
   edit: {
     alignSelf: 'flex-start',
     justifyContent: 'center',
-    minHeight: 32,
-  },
-  editText: {
-    ...DsTypography.button,
-    fontSize: 13,
+    minHeight: DsLayout.minTouchTarget,
   },
   form: {
-    gap: 12,
-    marginTop: 26,
+    gap: DsSpace.sm,
+    marginTop: DsSpace.xl,
   },
   submit: {
-    height: 52,
+    height: DsLayout.fieldHeight,
   },
   resend: {
     alignItems: 'center',
     marginTop: 'auto',
-    paddingTop: 28,
+    paddingTop: DsSpace.xl,
   },
   resendWait: {
-    fontSize: 12.5,
-    lineHeight: 18,
     textAlign: 'center',
   },
   resendButton: {
-    minHeight: 44,
+    minHeight: DsLayout.minTouchTarget,
   },
 });

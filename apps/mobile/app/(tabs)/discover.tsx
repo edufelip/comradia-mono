@@ -12,17 +12,18 @@ import Animated, {
 } from 'react-native-reanimated';
 import { DsMotionPressable } from '@/components/ds/motion/DsMotionPressable';
 import { DsCard } from '@/components/ds/primitives/DsCard';
+import { DsEmptyState } from '@/components/ds/primitives/DsEmptyState';
 import { DsPillButton } from '@/components/ds/primitives/DsPillButton';
 import { DsScreen } from '@/components/ds/primitives/DsScreen';
 import { DsRadius, DsSpace, DsTypography, getDsTheme } from '@/constants/design-system';
 import { useSessionStore } from '@/features/auth/session-store';
-import { DiscoveryFilterPanel } from '@/features/discovery/DiscoveryFilterPanel';
 import {
   DEFAULT_DISCOVERY_FILTERS,
   matchesDiscoveryFilters,
   type DiscoveryFilters,
 } from '@/features/discovery/discovery-filters';
 import { useDiscoveryStore } from '@/features/discovery/discovery-store';
+import { DiscoveryFilterPanel } from '@/features/discovery/DiscoveryFilterPanel';
 import { ProfilePhoto } from '@/features/profile/ProfilePhoto';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTranslation } from '@/localization';
@@ -194,7 +195,7 @@ export default function DiscoverScreen() {
       <View style={styles.header}>
         <Text
           accessibilityRole="header"
-          style={[DsTypography.title, { color: ds.color.accentPrimary }]}
+          style={[DsTypography.title, { color: ds.color.accentText }]}
         >
           {t('discover.title')}
         </Text>
@@ -293,7 +294,7 @@ export default function DiscoverScreen() {
             </View>
 
             <View style={styles.valuesBlock}>
-              <Text style={[DsTypography.micro, { color: ds.color.accentPrimary }]}>
+              <Text style={[DsTypography.micro, { color: ds.color.accentText }]}>
                 {t('discover.values_label')}
               </Text>
               <View style={styles.valuesRow}>
@@ -311,7 +312,7 @@ export default function DiscoverScreen() {
             </View>
 
             <View style={[styles.promptBox, { backgroundColor: ds.color.surfaceMuted }]}>
-              <Text style={[DsTypography.micro, { color: ds.color.accentPrimary }]}>
+              <Text style={[DsTypography.micro, { color: ds.color.accentText }]}>
                 {t(`onboarding.prompt.${displayedCandidate.promptId}`)}
               </Text>
               <Text style={[DsTypography.body, { color: ds.color.textPrimary }]}>
@@ -356,23 +357,16 @@ export default function DiscoverScreen() {
           </DsCard>
         </Animated.View>
       ) : (
-        <DsCard scheme={scheme} style={styles.card}>
-          <Text style={[DsTypography.cardTitle, { color: ds.color.textPrimary }]}>
-            {t(hasFilteredEmpty ? 'discover.filters.empty_title' : 'discover.empty.title')}
-          </Text>
-          <Text style={[DsTypography.body, { color: ds.color.textSecondary }]}>
-            {t(hasFilteredEmpty ? 'discover.filters.empty_body' : 'discover.empty.body')}
-          </Text>
-          <DsPillButton
-            label={t(hasFilteredEmpty ? 'discover.filters.reset' : 'discover.empty.refresh')}
-            onPress={
-              hasFilteredEmpty ? () => applyFilters({ ...DEFAULT_DISCOVERY_FILTERS }) : reload
-            }
-            scheme={scheme}
-            testID="discover-refresh"
-            variant="primary"
-          />
-        </DsCard>
+        <DsEmptyState
+          actionLabel={t(hasFilteredEmpty ? 'discover.filters.reset' : 'discover.empty.refresh')}
+          actionTestID="discover-refresh"
+          body={t(hasFilteredEmpty ? 'discover.filters.empty_body' : 'discover.empty.body')}
+          onAction={
+            hasFilteredEmpty ? () => applyFilters({ ...DEFAULT_DISCOVERY_FILTERS }) : reload
+          }
+          scheme={scheme}
+          title={t(hasFilteredEmpty ? 'discover.filters.empty_title' : 'discover.empty.title')}
+        />
       )}
     </DsScreen>
   );
@@ -417,7 +411,7 @@ const styles = StyleSheet.create({
     paddingVertical: DsSpace.xxs,
   },
   promptBox: {
-    borderRadius: DsRadius.md,
+    borderRadius: DsRadius.sm,
     gap: DsSpace.xxs,
     padding: DsSpace.md,
   },

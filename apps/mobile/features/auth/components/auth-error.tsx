@@ -1,4 +1,4 @@
-import { StyleSheet, Text } from 'react-native';
+import { Text } from 'react-native';
 
 import { DsTypography, getDsTheme, type DsColorScheme } from '@/constants/design-system';
 import { useTranslation, type TranslationKey } from '@/localization';
@@ -28,17 +28,10 @@ export function AuthError({ code, scheme, testID }: AuthErrorProps) {
     <Text
       accessibilityLiveRegion="polite"
       accessibilityRole="alert"
-      style={[DsTypography.body, styles.text, { color: ds.color.danger }]}
+      style={[DsTypography.body, { color: ds.color.danger }]}
       testID={testID}
     >
       {t(authErrorKey(code))}
     </Text>
   );
 }
-
-const styles = StyleSheet.create({
-  text: {
-    fontSize: 13,
-    lineHeight: 18,
-  },
-});

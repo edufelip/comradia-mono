@@ -1,12 +1,19 @@
 import { useLayoutEffect, useRef, useState } from 'react';
-import { StyleSheet, Text } from 'react-native';
-import { DsMotionPressable } from '@/components/ds/motion/DsMotionPressable';
-import { DsMotionView } from '@/components/ds/motion/DsMotionView';
-import { DsFontFamily, getDsTheme, type DsColorScheme } from '@/constants/design-system';
+import { StyleSheet, Text, View } from 'react-native';
+import {
+  DsBorder,
+  DsRadius,
+  DsSpace,
+  DsTypography,
+  getDsTheme,
+  type DsColorScheme,
+} from '@/constants/design-system';
+import { DsMotionPressable } from '../motion/DsMotionPressable';
+import { DsMotionView } from '../motion/DsMotionView';
 
-type OnboardingOptionCardProps = {
+type DsSelectCardProps = {
   scheme: DsColorScheme;
-  testID: string;
+  testID?: string;
   /** Emoji shown in the tinted tile. */
   icon: string;
   /** The card's own colour: tints the tile and the selected border. */
@@ -14,15 +21,18 @@ type OnboardingOptionCardProps = {
   label: string;
   description: string;
   selected: boolean;
+  disabled?: boolean;
   onPress: () => void;
 };
 
+const TILE = 36;
+
 /**
- * The vibe card of S2 (`#tendGrid .tend`): icon tile, label and description.
- * Behaves as one radio option; the visible texts and the tinted accent carry the
- * selection, so colour alone is never the only signal.
+ * A selectable card for exclusive choices: icon tile, label and description. It behaves as
+ * one radio option whose spoken name is "label. description"; the tinted accent, border and
+ * the checked state carry the selection, so colour alone is never the only signal.
  */
-export function OnboardingOptionCard({
+export function DsSelectCard({
   scheme,
   testID,
   icon,
@@ -30,8 +40,9 @@ export function OnboardingOptionCard({
   label,
   description,
   selected,
+  disabled = false,
   onPress,
-}: OnboardingOptionCardProps) {
+}: DsSelectCardProps) {
   const ds = getDsTheme(scheme);
   const previousSelected = useRef(selected);
   const [selectionMotion, setSelectionMotion] = useState(false);
@@ -42,21 +53,36 @@ export function OnboardingOptionCard({
     setSelectionMotion(selected);
   }, [selected]);
 
-  const iconTile = <Text style={[styles.icon, { backgroundColor: `${accent}22` }]}>{icon}</Text>;
+  const iconTile = (
+    <View
+      aria-hidden
+      style={[
+        styles.tile,
+        { backgroundColor: disabled ? ds.color.disabledSurface : `${accent}22` },
+      ]}
+    >
+      <Text style={DsTypography.bodyLarge}>{icon}</Text>
+    </View>
+  );
 
   return (
     <DsMotionPressable
       aria-checked={selected}
       accessibilityLabel={`${label}. ${description}`}
       accessibilityRole="radio"
-      accessibilityState={{ checked: selected }}
+      accessibilityState={{ checked: selected, disabled }}
+      disabled={disabled}
       feedbackScale={0.985}
       onPress={onPress}
       style={[
         styles.card,
         {
-          backgroundColor: selected ? `${accent}22` : ds.color.surface,
-          borderColor: selected ? accent : ds.color.border,
+          backgroundColor: disabled
+            ? ds.color.disabledSurface
+            : selected
+              ? `${accent}22`
+              : ds.color.surface,
+          borderColor: disabled ? ds.color.disabledBorder : selected ? accent : ds.color.border,
         },
       ]}
       testID={testID}
@@ -64,7 +90,7 @@ export function OnboardingOptionCard({
       {selected && selectionMotion ? (
         <DsMotionView
           style={styles.iconMotion}
-          testID={`${testID}-selected-motion`}
+          testID={testID ? `${testID}-selected-motion` : undefined}
           variant="scale"
         >
           {iconTile}
@@ -72,43 +98,50 @@ export function OnboardingOptionCard({
       ) : (
         iconTile
       )}
-      <Text style={[styles.label, { color: ds.color.textPrimary }]}>{label}</Text>
-      <Text style={[styles.description, { color: ds.color.textSecondary }]}>{description}</Text>
+      <Text
+        style={[
+          DsTypography.label,
+          { color: disabled ? ds.color.disabledText : ds.color.textPrimary },
+        ]}
+      >
+        {label}
+      </Text>
+      <Text
+        style={[
+          DsTypography.caption,
+          styles.description,
+          { color: disabled ? ds.color.disabledText : ds.color.textSecondary },
+        ]}
+      >
+        {description}
+      </Text>
     </DsMotionPressable>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 20,
-    borderWidth: 1.5,
+    borderRadius: DsRadius.xxl,
+    borderWidth: DsBorder.strong,
     minHeight: 96,
     overflow: 'hidden',
-    padding: 14,
+    padding: DsSpace.md,
     width: '100%',
   },
-  icon: {
-    borderRadius: 11,
-    fontSize: 17,
-    height: 34,
-    lineHeight: 34,
-    marginBottom: 10,
+  tile: {
+    alignItems: 'center',
+    borderRadius: DsRadius.sm,
+    height: TILE,
+    justifyContent: 'center',
+    marginBottom: DsSpace.sm,
     overflow: 'hidden',
-    textAlign: 'center',
-    width: 34,
+    width: TILE,
   },
   iconMotion: {
     alignSelf: 'flex-start',
-    width: 34,
-  },
-  label: {
-    fontFamily: DsFontFamily.bold,
-    fontSize: 13.5,
-    lineHeight: 18,
+    width: TILE,
   },
   description: {
-    fontSize: 11,
-    lineHeight: 15,
-    marginTop: 2,
+    marginTop: DsSpace.xxs,
   },
 });

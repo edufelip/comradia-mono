@@ -11,7 +11,7 @@ import { DsMotionPressable } from '@/components/ds/motion/DsMotionPressable';
 import { DsMotionView } from '@/components/ds/motion/DsMotionView';
 import { DsBackButton } from '@/components/ds/primitives/DsBackButton';
 import { DsPillButton } from '@/components/ds/primitives/DsPillButton';
-import { DsFontFamily, DsRadius, DsTypography, getDsTheme } from '@/constants/design-system';
+import { DsLayout, DsRadius, DsSpace, DsTypography, getDsTheme } from '@/constants/design-system';
 import { AuthError, type AuthErrorCode } from '@/features/auth/components/auth-error';
 import { PhoneField } from '@/features/auth/components/phone-field';
 import { formatBR, toE164BR } from '@/features/auth/phone';
@@ -114,11 +114,14 @@ export default function RegisterScreen() {
 
   const heading = (
     <>
-      <Text style={[styles.step, { color: ds.color.accentPrimary }]}>
+      <Text style={[DsTypography.eyebrow, styles.step, { color: ds.color.accentText }]}>
         {isLogin ? t('auth.step_login') : t('auth.step')}
       </Text>
 
-      <Text accessibilityRole="header" style={[styles.title, { color: ds.color.textPrimary }]}>
+      <Text
+        accessibilityRole="header"
+        style={[DsTypography.display, styles.title, { color: ds.color.textPrimary }]}
+      >
         {isLogin ? t('auth.title_login') : t('auth.title')}
       </Text>
 
@@ -147,7 +150,7 @@ export default function RegisterScreen() {
       <ScrollView
         contentContainerStyle={[
           styles.content,
-          { paddingBottom: insets.bottom + 24, paddingTop: insets.top + 12 },
+          { paddingBottom: insets.bottom + DsSpace.xl, paddingTop: insets.top + DsSpace.sm },
         ]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
@@ -217,7 +220,7 @@ export default function RegisterScreen() {
 
           <View style={styles.divider}>
             <View style={[styles.dividerLine, { backgroundColor: ds.color.border }]} />
-            <Text style={[styles.dividerText, { color: ds.color.textTertiary }]}>
+            <Text style={[DsTypography.eyebrow, { color: ds.color.textTertiary }]}>
               {t('auth.or_phone')}
             </Text>
             <View style={[styles.dividerLine, { backgroundColor: ds.color.border }]} />
@@ -252,10 +255,10 @@ export default function RegisterScreen() {
         </View>
 
         <View style={styles.footer}>
-          <Text style={[styles.footerNote, { color: ds.color.textSecondary }]}>
+          <Text style={[DsTypography.caption, { color: ds.color.textSecondary }]}>
             {t('auth.privacy')}
           </Text>
-          <Text style={[styles.footerNote, { color: ds.color.textTertiary }]}>
+          <Text style={[DsTypography.caption, { color: ds.color.textSecondary }]}>
             {t('auth.terms')}
           </Text>
           <DsMotionPressable
@@ -265,7 +268,7 @@ export default function RegisterScreen() {
             style={styles.switchMode}
             testID="register-switch-mode"
           >
-            <Text style={[styles.switchModeText, { color: ds.color.accentPrimary }]}>
+            <Text style={[DsTypography.button, { color: ds.color.accentText }]}>
               {isLogin ? t('auth.switch_to_signup') : t('auth.switch_to_login')}
             </Text>
           </DsMotionPressable>
@@ -281,37 +284,27 @@ const styles = StyleSheet.create({
   },
   content: {
     flexGrow: 1,
-    paddingHorizontal: 22,
+    paddingHorizontal: DsLayout.screenGutter,
   },
   step: {
-    fontFamily: DsFontFamily.mono,
-    fontSize: 10.5,
-    letterSpacing: 0.8,
-    lineHeight: 16,
-    marginTop: 20,
+    marginTop: DsSpace.lg,
   },
   title: {
-    fontFamily: DsFontFamily.bold,
-    fontSize: 34,
-    letterSpacing: -1.2,
-    lineHeight: 38,
-    marginTop: 8,
+    marginTop: DsSpace.xs,
   },
   lede: {
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: 8,
+    marginTop: DsSpace.xs,
   },
   form: {
-    gap: 12,
-    marginTop: 26,
+    gap: DsSpace.sm,
+    marginTop: DsSpace.xl,
   },
   appleWrap: {
-    height: 46,
+    height: DsLayout.controlHeight,
     position: 'relative',
   },
   appleButton: {
-    height: 46,
+    height: DsLayout.controlHeight,
     width: '100%',
   },
   appleLoading: {
@@ -325,45 +318,30 @@ const styles = StyleSheet.create({
     top: 0,
   },
   googleButton: {
-    minHeight: 46,
+    minHeight: DsLayout.controlHeight,
   },
   divider: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: 10,
-    marginVertical: 2,
+    gap: DsSpace.sm,
+    marginVertical: DsSpace.xxs,
   },
   dividerLine: {
     flex: 1,
     height: StyleSheet.hairlineWidth,
   },
-  dividerText: {
-    fontFamily: DsFontFamily.mono,
-    fontSize: 9.5,
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
-  },
   sendButton: {
-    height: 52,
-    marginTop: 2,
+    height: DsLayout.fieldHeight,
+    marginTop: DsSpace.xxs,
   },
   footer: {
-    gap: 6,
+    gap: DsSpace.xs,
     marginTop: 'auto',
-    paddingTop: 28,
-  },
-  footerNote: {
-    fontFamily: DsFontFamily.body,
-    fontSize: 11.5,
-    lineHeight: 16,
+    paddingTop: DsSpace.xl,
   },
   switchMode: {
     alignSelf: 'flex-start',
-    minHeight: 44,
+    minHeight: DsLayout.minTouchTarget,
     justifyContent: 'center',
-  },
-  switchModeText: {
-    ...DsTypography.button,
-    fontSize: 13,
   },
 });

@@ -6,7 +6,15 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import { DsRadius, DsTypography, type DsColorScheme, getDsTheme } from '@/constants/design-system';
+import {
+  DsBorder,
+  DsLayout,
+  DsRadius,
+  DsSpace,
+  DsTypography,
+  type DsColorScheme,
+  getDsTheme,
+} from '@/constants/design-system';
 import { DsMotionPressable } from '../motion/DsMotionPressable';
 import type { ReactNode } from 'react';
 
@@ -63,7 +71,7 @@ export function DsPillButton({
       (selected
         ? isPrimary
           ? theme.color.onActionPrimary
-          : theme.color.accentPrimary
+          : theme.color.accentText
         : isPrimary
           ? theme.color.onActionPrimary
           : theme.color.textPrimary));
@@ -74,14 +82,14 @@ export function DsPillButton({
         return {
           backgroundColor: 'transparent',
           borderColor: theme.color.disabledBorder,
-          borderWidth: isOutline ? 1.5 : 0,
+          borderWidth: isOutline ? DsBorder.strong : 0,
         };
       }
 
       return {
         backgroundColor: theme.color.disabledSurface,
         borderColor: theme.color.disabledBorder,
-        borderWidth: 1,
+        borderWidth: DsBorder.hairline,
       };
     }
 
@@ -94,7 +102,7 @@ export function DsPillButton({
         : {
             backgroundColor: theme.color.accentPrimarySoft,
             borderColor: theme.color.accentPrimary,
-            borderWidth: 1.5,
+            borderWidth: DsBorder.strong,
           };
     }
 
@@ -108,7 +116,7 @@ export function DsPillButton({
       return {
         backgroundColor: 'transparent',
         borderColor: theme.color.borderStrong,
-        borderWidth: 1.5,
+        borderWidth: DsBorder.strong,
       };
     }
     if (isGhost) {
@@ -120,7 +128,7 @@ export function DsPillButton({
     return {
       backgroundColor: theme.color.surfaceMuted,
       borderColor: theme.color.surfaceMuted,
-      borderWidth: 1,
+      borderWidth: DsBorder.hairline,
     };
   };
 
@@ -180,32 +188,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: DsRadius.pill,
     flexDirection: 'row',
-    gap: 8,
+    gap: DsSpace.xs,
     justifyContent: 'center',
-    paddingHorizontal: 18,
+    paddingHorizontal: DsSpace.md,
   },
   buttonMd: {
-    minHeight: 46,
+    minHeight: DsLayout.controlHeight,
   },
   buttonSm: {
-    minHeight: 44,
+    minHeight: DsLayout.minTouchTarget,
   },
   buttonXs: {
-    minHeight: 44,
-    paddingHorizontal: 12,
+    minHeight: DsLayout.minTouchTarget,
+    paddingHorizontal: DsSpace.sm,
   },
   text: {
     ...DsTypography.button,
     textAlign: 'center',
   },
-  textMd: {
-    fontSize: 14,
-  },
-  textSm: {
-    fontSize: 14,
-  },
-  textXs: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
+  textMd: DsTypography.button,
+  textSm: DsTypography.button,
+  textXs: DsTypography.chip,
 });

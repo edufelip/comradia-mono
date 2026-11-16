@@ -8,7 +8,14 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { DsMotionView } from '@/components/ds/motion/DsMotionView';
-import { DsFontFamily, DsRadius, getDsTheme, type DsColorScheme } from '@/constants/design-system';
+import {
+  DsBorder,
+  DsRadius,
+  DsSpace,
+  DsTypography,
+  getDsTheme,
+  type DsColorScheme,
+} from '@/constants/design-system';
 import { DS_MOTION } from '@/constants/motion';
 
 const CODE_LENGTH = 6;
@@ -70,7 +77,7 @@ export function CodeField({ scheme, value, onChangeText, label, testID }: CodeFi
                   backgroundColor: isFilled ? ds.color.surfaceMuted : ds.color.surface,
                   borderColor:
                     isActive || isFilled ? ds.color.accentPrimary : ds.color.borderStrong,
-                  borderWidth: isActive ? 2 : 1,
+                  borderWidth: isActive ? DsBorder.strong : DsBorder.hairline,
                 },
               ]}
             >
@@ -116,28 +123,26 @@ const styles = StyleSheet.create({
   },
   boxes: {
     flexDirection: 'row',
-    gap: 8,
+    gap: DsSpace.xs,
     justifyContent: 'space-between',
   },
   box: {
     alignItems: 'center',
-    borderRadius: DsRadius.md,
+    borderRadius: DsRadius.sm,
     flex: 1,
     height: 58,
     justifyContent: 'center',
     maxWidth: 56,
   },
   digit: {
-    fontFamily: DsFontFamily.semibold,
-    fontSize: 24,
-    lineHeight: 30,
+    ...DsTypography.title,
     fontVariant: ['tabular-nums'],
   },
   input: {
     // Invisible but interactive: it owns the taps, the caret and the keyboard.
     bottom: 0,
+    ...DsTypography.title,
     color: 'transparent',
-    fontSize: 24,
     left: 0,
     position: 'absolute',
     right: 0,

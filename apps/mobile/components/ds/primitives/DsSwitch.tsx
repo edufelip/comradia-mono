@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -7,40 +7,55 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import { DsMotionPressable } from '@/components/ds/motion/DsMotionPressable';
-import { DsRadius, getDsTheme, type DsColorScheme } from '@/constants/design-system';
+import {
+  DsLayout,
+  DsRadius,
+  DsShadow,
+  DsSpace,
+  DsTypography,
+  getDsTheme,
+  type DsColorScheme,
+} from '@/constants/design-system';
 import { DS_MOTION } from '@/constants/motion';
+import { DsMotionPressable } from '../motion/DsMotionPressable';
 
-type OnboardingSwitchProps = {
+type DsSwitchProps = {
   scheme: DsColorScheme;
-  testID: string;
-  accessibilityLabel: string;
+  testID?: string;
   value: boolean;
   onValueChange: (value: boolean) => void;
+  /** Row label on the left. When set, the whole row is the target and the label is the name. */
+  label?: string;
+  /** Spoken name; defaults to `label`. One of the two is required. */
+  accessibilityLabel?: string;
+  disabled?: boolean;
 };
 
 const TRACK_WIDTH = 44;
 const TRACK_HEIGHT = 26;
 const THUMB = 20;
+const TRACK_PADDING = DsSpace.xxs;
+const TRAVEL = TRACK_WIDTH - THUMB - TRACK_PADDING * 2;
 
 /**
- * The union badge toggle from the chart (`.sw`). A small switch of our own rather than
- * RN's `Switch`: its web build paints the "on" thumb Material teal (`#009688`), and the
- * thumb colour of a checked switch cannot be themed from React Native. Role, checked
- * state and the spoken name stay the platform ones.
+ * A switch of our own rather than RN's `Switch`: its web build paints the "on" thumb Material
+ * teal (`#009688`), and the thumb colour of a checked switch cannot be themed from React
+ * Native. Role, checked state and the spoken name stay the platform ones.
  */
-export function OnboardingSwitch({
+export function DsSwitch({
   scheme,
   testID,
-  accessibilityLabel,
   value,
   onValueChange,
-}: OnboardingSwitchProps) {
+  label,
+  accessibilityLabel,
+  disabled = false,
+}: DsSwitchProps) {
   const ds = getDsTheme(scheme);
   const reduceMotion = useReducedMotion();
   const progress = useSharedValue(value ? 1 : 0);
   const thumbStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: progress.value * 18 }],
+    transform: [{ translateX: progress.value * TRAVEL }],
   }));
 
   useEffect(() => {
@@ -54,29 +69,43 @@ export function OnboardingSwitch({
         });
   }, [progress, reduceMotion, value]);
 
+  const trackColor = disabled
+    ? ds.color.disabledSurface
+    : value
+      ? ds.color.accentPrimary
+      : ds.color.disabledBorder;
+
   return (
     <DsMotionPressable
-      accessibilityLabel={accessibilityLabel}
+      accessibilityLabel={accessibilityLabel ?? label}
       accessibilityRole="switch"
-      accessibilityState={{ checked: value }}
+      accessibilityState={{ checked: value, disabled }}
       aria-checked={value}
+      disabled={disabled}
       feedbackScale={0.96}
       onPress={() => onValueChange(!value)}
-      style={styles.hitArea}
+      style={[styles.hitArea, label ? styles.row : null]}
       testID={testID}
     >
-      <View
-        style={[
-          styles.track,
-          { backgroundColor: value ? ds.color.accentPrimary : ds.color.disabledBorder },
-        ]}
-      >
+      {label ? (
+        <Text
+          style={[
+            DsTypography.button,
+            styles.label,
+            { color: disabled ? ds.color.disabledText : ds.color.textPrimary },
+          ]}
+        >
+          {label}
+        </Text>
+      ) : null}
+      <View style={[styles.track, { backgroundColor: trackColor }]}>
         <Animated.View
           style={[
             styles.thumb,
-            reduceMotion ? { transform: [{ translateX: value ? 18 : 0 }] } : thumbStyle,
+            { backgroundColor: ds.color.switchThumb },
+            reduceMotion ? { transform: [{ translateX: value ? TRAVEL : 0 }] } : thumbStyle,
           ]}
-          testID={`${testID}.thumb`}
+          testID={testID ? `${testID}.thumb` : undefined}
         />
       </View>
     </DsMotionPressable>
@@ -87,24 +116,28 @@ const styles = StyleSheet.create({
   hitArea: {
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 44,
-    minWidth: 44,
+    minHeight: DsLayout.minTouchTarget,
+    minWidth: DsLayout.minTouchTarget,
+  },
+  row: {
+    flexDirection: 'row',
+    gap: DsSpace.sm,
+    justifyContent: 'space-between',
+  },
+  label: {
+    flex: 1,
   },
   track: {
     borderRadius: DsRadius.pill,
     height: TRACK_HEIGHT,
     justifyContent: 'center',
-    paddingHorizontal: 3,
+    paddingHorizontal: TRACK_PADDING,
     width: TRACK_WIDTH,
   },
   thumb: {
-    backgroundColor: '#ffffff',
-    borderRadius: THUMB / 2,
+    ...DsShadow.thumb,
+    borderRadius: DsRadius.pill,
     height: THUMB,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
     width: THUMB,
   },
 });

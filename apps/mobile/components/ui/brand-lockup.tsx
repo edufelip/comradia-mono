@@ -1,7 +1,13 @@
 import { Image } from 'expo-image';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { DsTypography, type DsColorScheme, getDsTheme } from '@/constants/design-system';
+import {
+  DsRadius,
+  DsSpace,
+  DsTypography,
+  type DsColorScheme,
+  getDsTheme,
+} from '@/constants/design-system';
 import { useTranslation } from '@/localization';
 
 /** The Comradia mark with the wordmark beside it. */
@@ -23,7 +29,7 @@ export function BrandLockup({ scheme }: { scheme: DsColorScheme }) {
 }
 
 const styles = StyleSheet.create({
-  row: { alignItems: 'center', flexDirection: 'row', gap: 10 },
-  mark: { borderRadius: 8, height: 32, overflow: 'hidden', width: 32 },
+  row: { alignItems: 'center', flexDirection: 'row', gap: DsSpace.sm },
+  mark: { borderRadius: DsRadius.sm, height: 32, overflow: 'hidden', width: 32 },
   wordmark: { ...DsTypography.screenTitle },
 });

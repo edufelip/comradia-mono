@@ -1,3 +1,4 @@
+import { DsCategoryColor } from '@/constants/design-system';
 import type { ValueId, Vibe } from '@/features/profile/profile-schema';
 
 export const ONBOARDING_STEPS = 3;
@@ -10,11 +11,11 @@ type VibeVisual = { icon: string; color: string };
  * the label and description come from localization.
  */
 export const VIBE_VISUALS: Record<Vibe, VibeVisual> = {
-  outdoorsy: { icon: '🌿', color: '#2F8F5B' },
-  bookworm: { icon: '📚', color: '#B5523C' },
-  creative: { icon: '🎨', color: '#D92D3A' },
-  community: { icon: '🤝', color: '#8E1622' },
-  foodie: { icon: '🍜', color: '#E05A47' },
+  outdoorsy: { icon: '🌿', color: DsCategoryColor.forest },
+  bookworm: { icon: '📚', color: DsCategoryColor.brick },
+  creative: { icon: '🎨', color: DsCategoryColor.crimson },
+  community: { icon: '🤝', color: DsCategoryColor.wine },
+  foodie: { icon: '🍜', color: DsCategoryColor.coral },
 };
 
 /** Value chips keep the chart's emoji order (CAUSE_IC, in `VALUE_IDS` order). */

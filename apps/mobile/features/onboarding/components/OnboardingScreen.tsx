@@ -1,8 +1,16 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DsScreen } from '@/components/ds/primitives/DsScreen';
-import { DsFontFamily, DsSpace, getDsTheme, type DsColorScheme } from '@/constants/design-system';
-import { OnboardingProgress } from '@/features/onboarding/components/OnboardingProgress';
+import { DsStepProgress } from '@/components/ds/primitives/DsStepProgress';
+import {
+  DsLayout,
+  DsSpace,
+  DsTypography,
+  getDsTheme,
+  type DsColorScheme,
+} from '@/constants/design-system';
+import { ONBOARDING_STEPS } from '@/features/onboarding/visuals';
+import { useTranslation } from '@/localization';
 import type { ReactNode } from 'react';
 
 type OnboardingScreenProps = {
@@ -33,6 +41,7 @@ export function OnboardingScreen({
   testID,
 }: OnboardingScreenProps) {
   const ds = getDsTheme(scheme);
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
 
   return (
@@ -42,18 +51,33 @@ export function OnboardingScreen({
       keyboardDismissMode="on-drag"
       contentContainerStyle={[
         styles.content,
-        { paddingBottom: insets.bottom + 20, paddingTop: insets.top + 16 },
+        { paddingBottom: insets.bottom + DsSpace.lg, paddingTop: insets.top + DsSpace.md },
       ]}
       scheme={scheme}
       testID={testID}
       withTopInset={false}
     >
       <View>
-        <OnboardingProgress onBack={onBack} scheme={scheme} step={step} />
-        <Text accessibilityRole="header" style={[styles.title, { color: ds.color.textPrimary }]}>
+        <DsStepProgress
+          backLabel={t('onboarding.back')}
+          backTestID="onboarding-back"
+          label={t('onboarding.progress', { current: step, total: ONBOARDING_STEPS })}
+          onBack={onBack}
+          scheme={scheme}
+          step={step}
+          style={styles.progress}
+          testID="onboarding-progress"
+          total={ONBOARDING_STEPS}
+        />
+        <Text
+          accessibilityRole="header"
+          style={[DsTypography.display, { color: ds.color.textPrimary }]}
+        >
           {title}
         </Text>
-        <Text style={[styles.lede, { color: ds.color.textSecondary }]}>{lede}</Text>
+        <Text style={[DsTypography.body, styles.lede, { color: ds.color.textSecondary }]}>
+          {lede}
+        </Text>
         {children}
       </View>
 
@@ -65,18 +89,13 @@ export function OnboardingScreen({
 const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
-    paddingHorizontal: 22,
+    paddingHorizontal: DsLayout.screenGutter,
   },
-  title: {
-    fontFamily: DsFontFamily.bold,
-    fontSize: 30,
-    letterSpacing: -1,
-    lineHeight: 34,
+  progress: {
+    marginBottom: DsSpace.lg,
   },
   lede: {
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: 8,
+    marginTop: DsSpace.xs,
   },
   footer: {
     gap: DsSpace.xs,

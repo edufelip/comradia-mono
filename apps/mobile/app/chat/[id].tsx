@@ -172,7 +172,7 @@ export default function ChatScreen() {
 
         {shared.length > 0 ? (
           <DsCard scheme={scheme} style={styles.banner} variant="muted">
-            <Text style={[DsTypography.micro, { color: ds.color.accentPrimary }]}>
+            <Text style={[DsTypography.micro, { color: ds.color.accentText }]}>
               {t('chat.shared_label')}
             </Text>
             <View style={styles.valuesRow}>
@@ -424,8 +424,8 @@ const styles = StyleSheet.create({
   input: {
     borderRadius: DsRadius.pill,
     borderWidth: 1,
+    ...DsTypography.input,
     flex: 1,
-    fontSize: 14,
     minHeight: 46,
     paddingHorizontal: DsSpace.md,
   },

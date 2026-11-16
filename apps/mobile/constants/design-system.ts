@@ -18,6 +18,8 @@ export type DsTheme = {
     onActionPrimary: string;
     accentPrimaryHover: string;
     accentPrimarySoft: string;
+    /** Accent for text and icons on canvas, surface and soft fills (passes AA; `accentPrimary` is for fills and borders). */
+    accentText: string;
     accentWarm: string;
     accentWarmSoft: string;
     disabledSurface: string;
@@ -36,6 +38,8 @@ export type DsTheme = {
     accentCyan: string;
     accentCyanSoft: string;
     onAccent: string;
+    focusRing: string;
+    switchThumb: string;
     overlayNeutral: string;
     overlaySoft: string;
     overlayStrong: string;
@@ -57,22 +61,23 @@ const THEME_BY_SCHEME: Record<DsColorScheme, DsTheme> = {
       surfaceWarning: '#fff3e0',
       textPrimary: '#231214',
       textSecondary: '#7A5A5C',
-      textTertiary: '#9A7B7D',
+      textTertiary: '#866567',
       accentPrimary: '#D92D3A',
       actionPrimary: '#231214',
       onActionPrimary: '#ffffff',
       accentPrimaryHover: '#B8222E',
       accentPrimarySoft: '#FCE8E9',
+      accentText: '#B8222E',
       accentWarm: '#E05A47',
       accentWarmSoft: '#FCEEE8',
       disabledSurface: '#f0e8e6',
       disabledText: '#7A5A5C',
       disabledBorder: '#e8dfdc',
-      success: '#1f7a4c',
+      success: '#1b7447',
       successSoft: '#e3efe6',
-      warning: '#b45309',
+      warning: '#a04a07',
       warningSoft: '#ffedd5',
-      danger: '#D92D3A',
+      danger: '#C42431',
       dangerSoft: '#FCE8E9',
       dangerBorder: '#fecaca',
       readOnlyText: '#9a3412',
@@ -80,7 +85,9 @@ const THEME_BY_SCHEME: Record<DsColorScheme, DsTheme> = {
       borderStrong: '#d9cbca',
       accentCyan: '#06b6d4',
       accentCyanSoft: '#06b6d420',
-      onAccent: '#fbf6f4',
+      onAccent: '#ffffff',
+      focusRing: '#1f7a4c',
+      switchThumb: '#ffffff',
       overlayNeutral: 'rgba(35, 18, 20, 0.32)',
       overlaySoft: 'rgba(217, 45, 58, 0.35)',
       overlayStrong: 'rgba(217, 45, 58, 0.85)',
@@ -100,12 +107,13 @@ const THEME_BY_SCHEME: Record<DsColorScheme, DsTheme> = {
       surfaceWarning: '#3a2610',
       textPrimary: '#fbf6f4',
       textSecondary: '#c4a6a8',
-      textTertiary: '#9c8082',
+      textTertiary: '#a48a8c',
       accentPrimary: '#E05A47',
       actionPrimary: '#fbf6f4',
       onActionPrimary: '#181112',
       accentPrimaryHover: '#f27e6e',
       accentPrimarySoft: '#e05a4729',
+      accentText: '#f27e6e',
       accentWarm: '#f28a7c',
       accentWarmSoft: '#f28a7c29',
       disabledSurface: '#2e1e20',
@@ -115,7 +123,7 @@ const THEME_BY_SCHEME: Record<DsColorScheme, DsTheme> = {
       successSoft: '#16301f',
       warning: '#f59e0b',
       warningSoft: '#3a2610',
-      danger: '#ef4444',
+      danger: '#f87171',
       dangerSoft: '#7f1d1d66',
       dangerBorder: '#7f1d1d',
       readOnlyText: '#fdba74',
@@ -124,6 +132,8 @@ const THEME_BY_SCHEME: Record<DsColorScheme, DsTheme> = {
       accentCyan: '#22d3ee',
       accentCyanSoft: '#22d3ee29',
       onAccent: '#181112',
+      focusRing: '#4ade80',
+      switchThumb: '#ffffff',
       overlayNeutral: 'rgba(8, 8, 8, 0.48)',
       overlaySoft: 'rgba(224, 90, 71, 0.3)',
       overlayStrong: 'rgba(224, 90, 71, 0.7)',
@@ -136,11 +146,14 @@ const THEME_BY_SCHEME: Record<DsColorScheme, DsTheme> = {
 };
 
 export const DsRadius = {
+  /** Inputs, banners, skeleton bars, small tiles. */
   sm: 12,
-  md: 12,
+  /** Cards, fields, sheets. */
   lg: 16,
-  xl: 16,
-  pill: 22,
+  /** Large selectable cards. */
+  xxl: 20,
+  /** Buttons, chips, switch tracks, avatars, dots: always a full capsule or circle. */
+  pill: 9999,
 } as const;
 
 export const DsSpace = {
@@ -153,23 +166,92 @@ export const DsSpace = {
   xxl: 32,
 } as const;
 
+/** Layout constants shared by every screen. */
+export const DsLayout = {
+  /** Horizontal padding of a full-width screen on a phone. */
+  screenGutter: 22,
+  /** Smallest tappable area on any control (iOS HIG, Android and WCAG 2.5.8 all agree on ~44). */
+  minTouchTarget: 44,
+  /** Height of a primary control: pill button (`md`) and the like. */
+  controlHeight: 46,
+  /** Height of a text field row. */
+  fieldHeight: 52,
+  /** Width at which web switches from the phone to the tablet layout (and sheets to dialogs). */
+  breakpointTablet: 768,
+  /** Width at which web switches to the desktop layout. */
+  breakpointDesktop: 1024,
+} as const;
+
+/** Stroke widths for borders, dividers and focus rings. */
+export const DsBorder = {
+  hairline: 1,
+  /** Selectable controls (chips, option cards, outline buttons). */
+  strong: 1.5,
+  /** Keyboard focus ring on web. */
+  focus: 3,
+} as const;
+
+/** Icon glyph sizes. Icons come from `@expo/vector-icons` (MaterialIcons). */
+export const DsIconSize = {
+  sm: 18,
+  md: 20,
+  lg: 24,
+} as const;
+
+/** Only these Geist files are loaded (app/_layout.tsx): 400, 500, 700, plus Geist Mono 500. */
 export const DsFontFamily = {
-  display: 'Geist_700Bold',
-  bold: 'Geist_700Bold',
-  semibold: 'Geist_500Medium',
-  medium: 'Geist_500Medium',
   body: 'Geist_400Regular',
+  medium: 'Geist_500Medium',
+  bold: 'Geist_700Bold',
   mono: 'GeistMono_500Medium',
 } as const;
 
 const TABULAR: TextStyle['fontVariant'] = ['tabular-nums'];
 
 export const DsTypography: Record<
-  'title' | 'screenTitle' | 'cardTitle' | 'body' | 'caption' | 'button' | 'micro' | 'figure',
+  | 'hero'
+  | 'display'
+  | 'heading'
+  | 'title'
+  | 'screenTitle'
+  | 'cardTitle'
+  | 'bodyLarge'
+  | 'body'
+  | 'input'
+  | 'caption'
+  | 'button'
+  | 'chip'
+  | 'label'
+  | 'micro'
+  | 'eyebrow'
+  | 'figure',
   TextStyle
 > = {
+  /** The one large moment on a screen (match celebration). */
+  hero: {
+    fontFamily: DsFontFamily.bold,
+    fontSize: 40,
+    lineHeight: 44,
+    fontWeight: '700',
+    letterSpacing: -1.5,
+  },
+  /** Section and sheet headings. */
+  heading: {
+    fontFamily: DsFontFamily.bold,
+    fontSize: 20,
+    lineHeight: 26,
+    fontWeight: '700',
+  },
+  /** Onboarding and welcome headlines. */
+  display: {
+    fontFamily: DsFontFamily.bold,
+    fontSize: 30,
+    lineHeight: 34,
+    fontWeight: '700',
+    letterSpacing: -1,
+  },
   title: {
-    fontFamily: DsFontFamily.display,
+    fontFamily: DsFontFamily.bold,
     fontSize: 24,
     lineHeight: 30,
     fontWeight: '700',
@@ -186,9 +268,23 @@ export const DsTypography: Record<
     lineHeight: 22,
     fontWeight: '700',
   },
+  /** Longer reading text: chat messages, profile answers. */
+  bodyLarge: {
+    fontFamily: DsFontFamily.body,
+    fontSize: 16,
+    lineHeight: 24,
+    fontWeight: '400',
+  },
   body: {
     fontFamily: DsFontFamily.body,
     fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '400',
+  },
+  /** Text typed into a field. */
+  input: {
+    fontFamily: DsFontFamily.body,
+    fontSize: 15,
     lineHeight: 20,
     fontWeight: '400',
   },
@@ -204,6 +300,28 @@ export const DsTypography: Record<
     fontSize: 14,
     lineHeight: 20,
     fontWeight: '500',
+  },
+  /** Bold label of a selectable card or a field. */
+  label: {
+    fontFamily: DsFontFamily.bold,
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '700',
+  },
+  /** Label inside a chip or tag. */
+  chip: {
+    fontFamily: DsFontFamily.medium,
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '500',
+  },
+  /** Small uppercase mono label: step counters and section kickers. */
+  eyebrow: {
+    fontFamily: DsFontFamily.mono,
+    fontSize: 10.5,
+    lineHeight: 14,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
   },
   micro: {
     fontFamily: DsFontFamily.medium,
@@ -221,7 +339,7 @@ export const DsTypography: Record<
   },
 } as const;
 
-export const DsShadow: Record<'none' | 'soft' | 'floating', ViewStyle> = {
+export const DsShadow: Record<'none' | 'soft' | 'floating' | 'thumb', ViewStyle> = {
   none: {},
   soft: {},
   floating: {
@@ -231,7 +349,43 @@ export const DsShadow: Record<'none' | 'soft' | 'floating', ViewStyle> = {
     shadowOpacity: 0.12,
     shadowRadius: 24,
   },
+  /** The knob of a switch. */
+  thumb: {
+    elevation: 2,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+  },
 };
+
+/**
+ * Category accents: one fixed hue per onboarding vibe. They tint an icon tile and a selected
+ * border (as a `${accent}22` alpha suffix), so they are the same in light and dark. They
+ * are content colors, not status or brand roles; use `getDsTheme` for those.
+ */
+export const DsCategoryColor = {
+  forest: '#2F8F5B',
+  brick: '#B5523C',
+  crimson: '#D92D3A',
+  wine: '#8E1622',
+  coral: '#E05A47',
+} as const;
+
+/**
+ * Colors of the welcome illustrations (sun, avatars). They are artwork, not interface:
+ * they do not change with the color scheme, and skin tones are deliberately outside the
+ * interface palette. Everything else must come from `getDsTheme`.
+ */
+export const DsArt = {
+  sunCore: '#FFD9C7',
+  sunEdge: '#E05A47',
+  faces: [
+    { background: '#F5B08F', shirt: '#D92D3A', skin: '#8D5524' },
+    { background: '#FCE8E9', shirt: '#231214', skin: '#E0AC69' },
+    { background: '#FFD9C7', shirt: '#E05A47', skin: '#C68642' },
+  ],
+} as const;
 
 export function getDsTheme(scheme: DsColorScheme): DsTheme {
   return THEME_BY_SCHEME[scheme];

@@ -5,6 +5,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { DsMotionPressable } from '@/components/ds/motion/DsMotionPressable';
 import { DsMotionView } from '@/components/ds/motion/DsMotionView';
 import { DsCard } from '@/components/ds/primitives/DsCard';
+import { DsEmptyState } from '@/components/ds/primitives/DsEmptyState';
 import { DsPillButton } from '@/components/ds/primitives/DsPillButton';
 import { DsScreen } from '@/components/ds/primitives/DsScreen';
 import { DsRadius, DsSpace, DsTypography, getDsTheme } from '@/constants/design-system';
@@ -132,21 +133,15 @@ export default function MatchesScreen() {
           />
         </DsCard>
       ) : visibleMatches.length === 0 ? (
-        <DsCard scheme={scheme} style={styles.card} testID="matches-empty">
-          <Text style={[DsTypography.cardTitle, { color: ds.color.textPrimary }]}>
-            {t('matches.empty.title')}
-          </Text>
-          <Text style={[DsTypography.body, { color: ds.color.textSecondary }]}>
-            {t('matches.empty.body')}
-          </Text>
-          <DsPillButton
-            label={t('matches.empty.cta')}
-            onPress={() => router.navigate('/discover')}
-            scheme={scheme}
-            testID="matches-empty-discover"
-            variant="primary"
-          />
-        </DsCard>
+        <DsEmptyState
+          actionLabel={t('matches.empty.cta')}
+          actionTestID="matches-empty-discover"
+          body={t('matches.empty.body')}
+          onAction={() => router.navigate('/discover')}
+          scheme={scheme}
+          testID="matches-empty"
+          title={t('matches.empty.title')}
+        />
       ) : (
         visibleMatches.map((match) => {
           const shared = sharedValues(myValues, match.other.values)[0];
@@ -204,7 +199,7 @@ function MatchRow({ animate, match, onPress, scheme, shared }: MatchRowProps) {
             <Text style={[DsTypography.cardTitle, { color: ds.color.textPrimary }]}>
               {match.other.displayName}, {match.other.age}
             </Text>
-            <Text style={[DsTypography.caption, { color: ds.color.accentPrimary }]}>
+            <Text style={[DsTypography.caption, { color: ds.color.accentText }]}>
               {t(`onboarding.vibe.${match.other.vibe}`)}
             </Text>
           </View>

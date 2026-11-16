@@ -3,6 +3,8 @@ const { defineConfig } = require('eslint/config');
 const tsParser = require('@typescript-eslint/parser');
 const tsPlugin = require('@typescript-eslint/eslint-plugin');
 const expoConfig = require('eslint-config-expo/flat');
+const { rule: noRawColor } = require('./scripts/eslint/no-raw-color');
+const { rule: dsScale } = require('./scripts/eslint/ds-scale');
 
 const typedTypeScriptConfig = tsPlugin.configs['flat/recommended-type-checked'].map((config) => ({
   ...config,
@@ -45,6 +47,14 @@ module.exports = defineConfig([
       'expo/no-dynamic-env-var': 'warn',
       'react/display-name': 'warn',
     },
+  },
+  // Design-system guard: UI takes colors from getDsTheme(); the tokens themselves live in
+  // constants/ (not covered). See docs/design-system.md.
+  {
+    files: ['app/**/*.{ts,tsx}', 'features/**/*.{ts,tsx}', 'components/**/*.{ts,tsx}'],
+    ignores: ['**/*.test.{ts,tsx}'],
+    plugins: { comradia: { rules: { 'no-raw-color': noRawColor, 'ds-scale': dsScale } } },
+    rules: { 'comradia/no-raw-color': 'error', 'comradia/ds-scale': 'error' },
   },
   {
     files: ['**/*.{ts,tsx}'],

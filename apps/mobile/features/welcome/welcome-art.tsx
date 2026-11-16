@@ -9,7 +9,15 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import Svg, { Circle, Defs, Ellipse, G, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
-import { DsFontFamily, getDsTheme, type DsColorScheme } from '@/constants/design-system';
+import {
+  DsArt,
+  DsBorder,
+  DsRadius,
+  DsSpace,
+  DsTypography,
+  getDsTheme,
+  type DsColorScheme,
+} from '@/constants/design-system';
 import { DS_MOTION } from '@/constants/motion';
 
 const RAY_ANGLES = Array.from({ length: 16 }, (_, index) => index * 22.5);
@@ -43,11 +51,7 @@ const HEART_PATH =
 
 const THUMB_DRESS = 'M16 22c-6.6 0-12 4.3-12 10h24c0-5.7-5.4-10-12-10z';
 
-const FACES = [
-  { background: '#F5B08F', shirt: '#D92D3A', skin: '#8D5524' },
-  { background: '#FCE8E9', shirt: '#231214', skin: '#E0AC69' },
-  { background: '#FFD9C7', shirt: '#E05A47', skin: '#C68642' },
-] as const;
+const FACES = DsArt.faces;
 
 export function SunBurst({ size = 280 }: { size?: number }) {
   // useId() emits colons, which break the url(#…) reference inside SVG.
@@ -84,8 +88,8 @@ export function SunBurst({ size = 280 }: { size?: number }) {
       <Svg height="100%" viewBox="0 0 280 280" width="100%">
         <Defs>
           <RadialGradient cx="35%" cy="35%" id={gradientId} r="50%">
-            <Stop offset="0" stopColor="#FFD9C7" />
-            <Stop offset="1" stopColor="#E05A47" />
+            <Stop offset="0" stopColor={DsArt.sunCore} />
+            <Stop offset="1" stopColor={DsArt.sunEdge} />
           </RadialGradient>
         </Defs>
         <Circle cx={140} cy={140} fill={`url(#${gradientId})`} r={78} />
@@ -94,7 +98,7 @@ export function SunBurst({ size = 280 }: { size?: number }) {
         <Svg height="100%" viewBox="0 0 280 280" width="100%">
           {RAY_ANGLES.map((angle) => (
             <Rect
-              fill="#E05A47"
+              fill={DsArt.sunEdge}
               height={34}
               key={angle}
               opacity={0.45}
@@ -184,8 +188,10 @@ export function DateMapCard({
         </Svg>
       </View>
       <View style={styles.metaRow}>
-        <Text style={[styles.caption, { color: color.textPrimary }]}>{caption}</Text>
-        <Text style={[styles.places, { color: color.textSecondary }]}>{places}</Text>
+        <Text style={[DsTypography.chip, { color: color.textPrimary }]}>{caption}</Text>
+        <Text style={[DsTypography.eyebrow, styles.places, { color: color.textSecondary }]}>
+          {places}
+        </Text>
       </View>
     </View>
   );
@@ -235,49 +241,41 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   card: {
-    borderRadius: 24,
+    borderRadius: DsRadius.xxl,
     elevation: 3,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingHorizontal: DsSpace.sm,
+    paddingVertical: DsSpace.sm,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.12,
     shadowRadius: 16,
   },
   mapFrame: {
     aspectRatio: 320 / 130,
-    borderRadius: 16,
+    borderRadius: DsRadius.lg,
     overflow: 'hidden',
     width: '100%',
   },
   metaRow: {
     alignItems: 'center',
-    columnGap: 8,
+    columnGap: DsSpace.xs,
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    rowGap: 2,
-    paddingBottom: 2,
-    paddingHorizontal: 4,
-    paddingTop: 8,
-  },
-  caption: {
-    fontFamily: DsFontFamily.medium,
-    fontSize: 13,
-    fontWeight: '500',
+    rowGap: DsSpace.xxs,
+    paddingBottom: DsSpace.xxs,
+    paddingHorizontal: DsSpace.xxs,
+    paddingTop: DsSpace.xs,
   },
   places: {
     flexShrink: 0,
-    fontFamily: DsFontFamily.mono,
-    fontSize: 9.5,
-    letterSpacing: 0.8,
   },
   faces: {
     alignItems: 'center',
     flexDirection: 'row',
   },
   face: {
-    borderRadius: 999,
-    borderWidth: 2.5,
+    borderRadius: DsRadius.pill,
+    borderWidth: DsBorder.strong,
     height: 32,
     overflow: 'hidden',
     width: 32,

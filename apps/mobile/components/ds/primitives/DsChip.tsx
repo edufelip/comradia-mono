@@ -1,26 +1,37 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, type StyleProp, type ViewStyle } from 'react-native';
-import { DsMotionPressable } from '@/components/ds/motion/DsMotionPressable';
-import { DsMotionView } from '@/components/ds/motion/DsMotionView';
-import { DsRadius, getDsTheme, type DsColorScheme } from '@/constants/design-system';
+import {
+  DsBorder,
+  DsLayout,
+  DsRadius,
+  DsSpace,
+  DsTypography,
+  getDsTheme,
+  type DsColorScheme,
+} from '@/constants/design-system';
+import { DsMotionPressable } from '../motion/DsMotionPressable';
+import { DsMotionView } from '../motion/DsMotionView';
 
-type OnboardingChipProps = {
+type DsChipProps = {
   scheme: DsColorScheme;
-  testID: string;
+  testID?: string;
   label: string;
   /** Emoji shown before the label, hidden from the spoken name. */
   icon?: string;
   selected: boolean;
   /** E.g. an unselected value chip once five are chosen. */
   disabled?: boolean;
-  /** Value chips are checkboxes; looking-for, union and prompt chips are radios. */
+  /** Multi-select chips are checkboxes (default); single-select chips are radios. */
   role?: 'checkbox' | 'radio';
   onPress: () => void;
   style?: StyleProp<ViewStyle>;
 };
 
-/** A pill chip from the chart's `.cause`, `.union-list button` and prompt picker. */
-export function OnboardingChip({
+/**
+ * A selectable pill. Selected = accent fill with `onAccent` text; disabled uses the
+ * disabled tokens. The accessible name is the label alone, so the emoji stays decoration.
+ */
+export function DsChip({
   scheme,
   testID,
   label,
@@ -30,7 +41,7 @@ export function OnboardingChip({
   role = 'checkbox',
   onPress,
   style,
-}: OnboardingChipProps) {
+}: DsChipProps) {
   const ds = getDsTheme(scheme);
   const previousSelected = useRef(selected);
   const [selectionMotion, setSelectionMotion] = useState(false);
@@ -57,7 +68,7 @@ export function OnboardingChip({
       ? ds.color.onAccent
       : ds.color.textPrimary;
   const labelContent = (
-    <Text style={[styles.text, { color }]}>{icon ? `${icon} ${label}` : label}</Text>
+    <Text style={[DsTypography.chip, { color }]}>{icon ? `${icon} ${label}` : label}</Text>
   );
 
   return (
@@ -74,7 +85,7 @@ export function OnboardingChip({
     >
       {/* The emoji is decoration; `accessibilityLabel` above is the spoken name. */}
       {selected && selectionMotion ? (
-        <DsMotionView testID={`${testID}-selected-motion`} variant="scale">
+        <DsMotionView testID={testID ? `${testID}-selected-motion` : undefined} variant="scale">
           {labelContent}
         </DsMotionView>
       ) : (
@@ -88,15 +99,11 @@ const styles = StyleSheet.create({
   chip: {
     alignItems: 'center',
     borderRadius: DsRadius.pill,
-    borderWidth: 1.5,
+    borderWidth: DsBorder.strong,
     flexDirection: 'row',
     justifyContent: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  text: {
-    fontSize: 13,
-    fontWeight: '600',
-    lineHeight: 18,
+    minHeight: DsLayout.minTouchTarget,
+    paddingHorizontal: DsSpace.md,
+    paddingVertical: DsSpace.xs,
   },
 });

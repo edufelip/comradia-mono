@@ -16,13 +16,14 @@
     "format": "prettier --no-error-on-unmatched-pattern --write \"app/**/*.{ts,tsx}\" \"features/**/*.{ts,tsx}\" \"scripts/**/*.{js,mjs,ts}\" \"tests/**/*.{js,mjs,ts,tsx}\" \"*.{js,mjs,json,ts}\"",
     "format:check": "prettier --no-error-on-unmatched-pattern --check \"app/**/*.{ts,tsx}\" \"features/**/*.{ts,tsx}\" \"scripts/**/*.{js,mjs,ts}\" \"tests/**/*.{js,mjs,ts,tsx}\" \"*.{js,mjs,json,ts}\"",
     "test": "yarn test:unit",
-    "test:unit": "bash scripts/testing/run-unit-tests.sh constants/**/*.test.ts features/**/*.test.ts localization/**/*.test.ts services/**/*.test.ts",
+    "test:unit": "bash scripts/testing/run-unit-tests.sh constants/**/*.test.ts features/**/*.test.ts localization/**/*.test.ts scripts/design-system/**/*.test.ts scripts/eslint/**/*.test.ts services/**/*.test.ts",
     "test:component": "jest --config jest.component.config.cjs",
     "test:component:coverage": "jest --config jest.component.config.cjs --coverage",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:native": "maestro test .maestro",
     "test:all": "yarn typecheck && yarn lint && yarn test && yarn test:component:coverage && yarn test:e2e",
+    "ds:specimen": "tsx scripts/design-system/build-specimen.ts",
     "test:atlas": "node scripts/atlas/run.mjs"
   },
   "dependencies": {

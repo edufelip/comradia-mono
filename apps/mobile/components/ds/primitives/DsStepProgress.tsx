@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -7,50 +7,66 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import { DsBackButton } from '@/components/ds/primitives/DsBackButton';
 import {
-  DsFontFamily,
   DsRadius,
   DsSpace,
+  DsTypography,
   getDsTheme,
   type DsColorScheme,
 } from '@/constants/design-system';
 import { DS_MOTION } from '@/constants/motion';
-import { ONBOARDING_STEPS } from '@/features/onboarding/visuals';
-import { useTranslation } from '@/localization';
+import { DsBackButton } from './DsBackButton';
 
-type OnboardingProgressProps = {
+type DsStepProgressProps = {
   scheme: DsColorScheme;
   /** 1-based step being shown; the segments before it are filled. */
   step: number;
+  /** Number of segments. */
+  total: number;
+  /** Already localized, e.g. "Step 2 of 3". It is the spoken progress; the bar is decorative. */
+  label: string;
   onBack?: () => void;
+  /** Localized name of the back button; required with `onBack`. */
+  backLabel?: string;
+  /** Test id of the label; the filling segment is `${testID}-motion`. */
+  testID?: string;
+  backTestID?: string;
+  style?: StyleProp<ViewStyle>;
 };
 
 /**
- * The `ob-top` row of the onboarding steps: optional back button, "Step n of 3"
- * and one segment per step. Step 1 is the first signed-in screen, so it has no
- * back button.
+ * A step counter with one segment per step and an optional back button. The label is a
+ * prop so the primitive has no i18n dependency.
  */
-export function OnboardingProgress({ scheme, step, onBack }: OnboardingProgressProps) {
-  const { t } = useTranslation();
+export function DsStepProgress({
+  scheme,
+  step,
+  total,
+  label,
+  onBack,
+  backLabel,
+  testID,
+  backTestID,
+  style,
+}: DsStepProgressProps) {
   const ds = getDsTheme(scheme);
   return (
-    <View style={styles.row}>
+    <View style={[styles.row, style]}>
       {onBack ? (
         <DsBackButton
-          accessibilityLabel={t('onboarding.back')}
+          accessibilityLabel={backLabel}
           onPress={onBack}
           scheme={scheme}
-          testID="onboarding-back"
+          testID={backTestID}
         />
       ) : null}
 
       <View style={styles.track}>
-        <Text style={[styles.label, { color: ds.color.textTertiary }]} testID="onboarding-progress">
-          {t('onboarding.progress', { current: step, total: ONBOARDING_STEPS })}
+        <Text style={[DsTypography.eyebrow, { color: ds.color.textTertiary }]} testID={testID}>
+          {label}
         </Text>
         <View aria-hidden style={styles.segments}>
-          {Array.from({ length: ONBOARDING_STEPS }, (_, index) => (
+          {Array.from({ length: total }, (_, index) => (
             <View
               key={index}
               style={[
@@ -61,7 +77,12 @@ export function OnboardingProgress({ scheme, step, onBack }: OnboardingProgressP
                 },
               ]}
             >
-              {index === step - 1 ? <ProgressFill color={ds.color.accentPrimary} /> : null}
+              {index === step - 1 ? (
+                <ProgressFill
+                  color={ds.color.accentPrimary}
+                  testID={testID ? `${testID}-motion` : undefined}
+                />
+              ) : null}
             </View>
           ))}
         </View>
@@ -70,7 +91,7 @@ export function OnboardingProgress({ scheme, step, onBack }: OnboardingProgressP
   );
 }
 
-function ProgressFill({ color }: { color: string }) {
+function ProgressFill({ color, testID }: { color: string; testID?: string }) {
   const reduceMotion = useReducedMotion();
   const progress = useSharedValue(reduceMotion ? 1 : 0);
   const animatedStyle = useAnimatedStyle(() => ({
@@ -89,7 +110,7 @@ function ProgressFill({ color }: { color: string }) {
   return (
     <Animated.View
       style={[StyleSheet.absoluteFillObject, { transformOrigin: 'left center' }, animatedStyle]}
-      testID="onboarding-progress-motion"
+      testID={testID}
     >
       <View style={[StyleSheet.absoluteFillObject, { backgroundColor: color }]} />
     </Animated.View>
@@ -101,22 +122,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     gap: DsSpace.sm,
-    marginBottom: DsSpace.lg,
   },
   track: {
     flex: 1,
-    gap: 6,
-  },
-  label: {
-    fontFamily: DsFontFamily.mono,
-    fontSize: 10.5,
-    letterSpacing: 0.8,
-    lineHeight: 14,
-    textTransform: 'uppercase',
+    gap: DsSpace.xs,
   },
   segments: {
     flexDirection: 'row',
-    gap: 6,
+    gap: DsSpace.xs,
   },
   segment: {
     borderRadius: DsRadius.pill,
