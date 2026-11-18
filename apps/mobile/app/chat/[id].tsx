@@ -67,6 +67,7 @@ export default function ChatScreen() {
   const contentHeight = useRef(0);
   const scrollIntent = useRef<ReturnType<typeof scrollIntentFor>>('none');
   const previousMessages = useRef<ChatMessage[]>([]);
+  const latestMessageId = messages.at(-1)?.id;
 
   const other = match?.other;
   // Their card is unreadable when they blocked me: show the conversation closed, without
@@ -119,6 +120,17 @@ export default function ChatScreen() {
     }
     previousMessages.current = messages;
   }, [messages]);
+
+  useLayoutEffect(() => {
+    if (!latestMessageId) return;
+    // At the live query limit, a new message can replace an old one without a resize.
+    const frame = requestAnimationFrame(() => {
+      if (scrollIntent.current !== 'latest') return;
+      scrollIntent.current = 'none';
+      scrollRef.current?.scrollToEnd({ animated: false });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [latestMessageId]);
 
   const send = async () => {
     if (!uid || !canSend) return;

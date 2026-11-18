@@ -197,6 +197,8 @@ describe('ChatScreen', () => {
   });
 
   it('keeps the visible position when earlier messages prepend', async () => {
+    // Drive the resize before the animation-frame fallback, as a native layout can.
+    jest.spyOn(globalThis, 'requestAnimationFrame').mockReturnValue(0);
     signIn();
     const matchId = await seedMatch();
     fakeBackend.state.messages.set(

@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { seedLike, signUpWithPhone, uidForPhone } from './support/firebase';
+import { seedLike, seedMessage, signUpWithPhone, uidForPhone } from './support/firebase';
 import { completeOnboarding } from './support/onboarding';
 
 const docs = 'http://127.0.0.1:8089/v1/projects/demo-comradia/databases/(default)/documents';
@@ -58,4 +58,12 @@ test('loading earlier history preserves the current chat position', async ({ pag
   await expect(oldest).toBeVisible();
   await expect(anchor).toBeInViewport();
   await expect(newest).not.toBeInViewport();
+
+  // The live query replaces one single-line message with another at its page limit.
+  const viewport = page.getByTestId('chat-messages');
+  const height = await viewport.evaluate((view) => view.scrollHeight);
+  await seedMessage(matchId, other, 'A new message');
+  await expect(anchor).toHaveCount(0);
+  await expect.poll(() => viewport.evaluate((view) => view.scrollHeight)).toBe(height);
+  await expect(page.getByText('A new message')).toBeInViewport();
 });
