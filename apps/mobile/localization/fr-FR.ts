@@ -249,6 +249,7 @@ export const frFR: Record<TranslationKey, string> = {
   'blocked.unblock.confirm': 'Débloquer',
   'blocked.unblock.cancel': 'Annuler',
   'profile.sign_out': 'Se déconnecter',
+  'profile.sign_out.error': 'Impossible de vous déconnecter. Réessayez.',
   'profile.age': '{age}',
   'profile.delete_account': 'Supprimer mon compte',
   'profile.delete.title': 'Supprimer votre compte ?',
