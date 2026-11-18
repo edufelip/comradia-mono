@@ -70,10 +70,13 @@ import { BackendError, toBackendError } from './errors';
 import { phoneFailureSummary } from './phone-diagnostics';
 import {
   cachedProfile,
+  chatMatch,
   collectDiscoveryCandidates,
   invalidateDisappearedProfiles,
+  isPermissionDenied,
   mapWithConcurrency,
   matchIdFor,
+  matchRow,
   MESSAGE_MAX,
   MESSAGE_PAGE_SIZE,
   otherUid,
@@ -138,11 +141,13 @@ const photoUrls = new Map<string, Promise<string>>();
 const profiles = new Map<string, Promise<Record<string, unknown> | null>>();
 const matchProfileIds = new Map<string, Set<string>>();
 
+async function readProfileData(uid: string): Promise<Record<string, unknown> | null> {
+  const snapshot = await getDoc(doc(db, 'profiles', uid));
+  return snapshot.data() ?? null;
+}
+
 function cachedProfileRead(uid: string): Promise<Record<string, unknown> | null> {
-  return cachedProfile(profiles, uid, async () => {
-    const snapshot = await getDoc(doc(db, 'profiles', uid));
-    return snapshot.data() ?? null;
-  });
+  return cachedProfile(profiles, uid, () => readProfileData(uid));
 }
 
 function trackMatchProfiles(uid: string, docs: Snapshot[]): void {
@@ -182,20 +187,15 @@ function epochMs(value: unknown): number {
   return Date.now();
 }
 
-/** My matches, newest first. A match whose other profile is gone is skipped. */
+/** My matches, newest first. A match whose other card is unreadable (they blocked me) or
+ *  gone is skipped; the denial is never cached, so a later snapshot retries the card. */
 async function loadMatches(uid: string, docs: Snapshot[]): Promise<Match[]> {
   const rows = await Promise.all(
-    docs.map(async (match) => {
-      const otherId = otherUid(match.id, uid);
-      const data = await cachedProfileRead(otherId);
-      return data
-        ? {
-            id: match.id,
-            other: { id: otherId, ...toPublicProfile(data) },
-            createdAt: epochMs(match.data().createdAt),
-          }
-        : null;
-    }),
+    docs.map((match) =>
+      matchRow(uid, match.id, epochMs(match.data().createdAt), () =>
+        cachedProfileRead(otherUid(match.id, uid)),
+      ),
+    ),
   );
   // Sorted on the device so the query needs no composite index (users + createdAt).
   return rows.filter((row): row is Match => row !== null).sort((a, b) => b.createdAt - a.createdAt);
@@ -498,14 +498,10 @@ export const backend: Backend = {
       const snapshot = await getDoc(doc(db, 'matches', matchId));
       const match = snapshot.data();
       if (!match) return null;
-      const otherId = otherUid(matchId, uid);
-      const data = await cachedProfileRead(otherId);
-      if (!data) return null;
-      return {
-        id: matchId,
-        other: { id: otherId, ...toPublicProfile(data) },
-        createdAt: epochMs(match.createdAt),
-      };
+      // Recheck profile access for a direct match read, including when a chat regains focus.
+      return chatMatch(uid, matchId, epochMs(match.createdAt), () =>
+        readProfileData(otherUid(matchId, uid)),
+      );
     }),
 
   onMessages: (matchId, listener, onError) =>
@@ -639,10 +635,14 @@ export const backend: Backend = {
   listBlocked: (uid) =>
     run(async () => {
       const mine = await getDocs(collection(db, 'users', uid, 'blocks'));
-      // A missing profile means the person deleted their account: the screen shows a fallback.
+      // A missing profile means the person deleted their account: the screen shows a
+      // fallback. A denied one means they blocked me too: same fallback, same privacy.
       return Promise.all(
         mine.docs.map(async (d: Snapshot) => {
-          const profile = await cachedProfileRead(d.id);
+          const profile = await cachedProfileRead(d.id).catch((error: unknown) => {
+            if (!isPermissionDenied(error)) throw error;
+            return null;
+          });
           return {
             id: d.id,
             displayName: profile ? String(profile.displayName) : null,

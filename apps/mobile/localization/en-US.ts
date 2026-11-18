@@ -238,6 +238,7 @@ export const enUS = {
   'blocked.unblock.confirm': 'Unblock',
   'blocked.unblock.cancel': 'Cancel',
   'profile.sign_out': 'Sign out',
+  'profile.sign_out.error': "We couldn't sign you out. Try again.",
   'profile.age': '{age}',
   'profile.delete_account': 'Delete my account',
   'profile.delete.title': 'Delete your account?',

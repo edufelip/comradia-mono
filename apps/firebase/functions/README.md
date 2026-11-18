@@ -37,13 +37,11 @@ seven days using the `notificationDispatches.expireAt` Firestore TTL override. N
 triggers ignore events older than six days so an expired marker cannot allow a stale retry to
 send again. The marker is claimed before token lookup and the external FCM request, so a later
 failure can lose the notification when a trigger retry sees the existing marker. This is an
-intentional at-most-once tradeoff to avoid duplicate pushes. The registration set is read once
-after the claim and refreshed once immediately before sending, preserving token-revocation
-checks without a query for every locale. Tokens are grouped by locale;
-only locales with registrations are sent, and blocks, account/profile existence and match
-membership are checked once immediately before the recipient's first FCM call. Invalid FCM
-registrations are removed. A safety change after that database check can still race a send
-already in flight.
+intentional at-most-once tradeoff to avoid duplicate pushes. After the claim, the function reads
+registrations once per recipient and groups them by locale. It checks blocks, account/profile
+existence and match membership immediately before the recipient's first FCM call. Invalid FCM
+registrations are removed. A revocation after the registration read or a safety change after the
+final database check can still race the FCM call.
 
 ## Deploying
 

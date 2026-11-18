@@ -17,8 +17,8 @@ import { useBlockedUids } from '@/features/safety/use-blocked-uids';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTranslation } from '@/localization';
 import { backend } from '@/services/backend';
+import { matchHasCard, type CardMatch } from '@/services/backend/types';
 import type { ValueId } from '@/features/profile/profile-schema';
-import type { Match } from '@/services/backend/types';
 
 /**
  * S9. Every mutual like, newest first, straight from Firestore. Opening the tab first
@@ -44,7 +44,11 @@ export default function MatchesScreen() {
   });
 
   const isLoading = status === 'idle' || status === 'loading';
-  const visibleMatches = matches.filter((match) => !blockedUids.includes(match.other.id));
+  // The list never carries an id-only match (the backend skips denied cards); the guard
+  // only narrows the type.
+  const visibleMatches: CardMatch[] = matches.filter(
+    (match): match is CardMatch => matchHasCard(match) && !blockedUids.includes(match.other.id),
+  );
 
   useLayoutEffect(() => {
     const key = uid ?? '';
@@ -168,7 +172,7 @@ export default function MatchesScreen() {
 
 type MatchRowProps = {
   animate: boolean;
-  match: Match;
+  match: CardMatch;
   onPress: () => void;
   scheme: 'light' | 'dark';
   shared: ValueId | undefined;

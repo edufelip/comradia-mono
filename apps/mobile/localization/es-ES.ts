@@ -243,6 +243,7 @@ export const esES: Record<TranslationKey, string> = {
   'blocked.unblock.confirm': 'Desbloquear',
   'blocked.unblock.cancel': 'Cancelar',
   'profile.sign_out': 'Cerrar sesión',
+  'profile.sign_out.error': 'No pudimos cerrar tu sesión. Inténtalo de nuevo.',
   'profile.age': '{age}',
   'profile.delete_account': 'Eliminar mi cuenta',
   'profile.delete.title': '¿Eliminar tu cuenta?',

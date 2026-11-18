@@ -1,3 +1,4 @@
+import type { Match } from './types';
 import type { DiscoveryProfile, PublicProfile } from '@/features/profile/profile-schema';
 
 const PROFILE_KEYS = [
@@ -82,6 +83,12 @@ export async function mapWithConcurrency<T>(
   await Promise.all(workers);
 }
 
+/** True when Firestore denied the read: the document's owner blocked the caller (rules). */
+export function isPermissionDenied(error: unknown): boolean {
+  const code = (error as { code?: unknown } | null)?.code;
+  return code === 'permission-denied' || code === 'firestore/permission-denied';
+}
+
 /** Returns one cached profile request per uid for the lifetime of the adapter session. */
 export function cachedProfile<T>(
   cache: Map<string, Promise<T | null>>,
@@ -91,13 +98,55 @@ export function cachedProfile<T>(
   const cached = cache.get(uid);
   if (cached) return cached;
   const request = read().catch((error: unknown) => {
-    const code = (error as { code?: unknown } | null)?.code;
-    if (code === 'permission-denied' || code === 'firestore/permission-denied') return null;
+    // Never cache a failure: a denial is a state (they blocked me) that an unblock ends,
+    // and other errors get another attempt. The callers decide what a denial means.
     cache.delete(uid);
     throw error;
   });
   cache.set(uid, request);
   return request;
+}
+
+/** One row of the Matches list: null when the other card is unreadable or gone. */
+export async function matchRow(
+  uid: string,
+  matchId: string,
+  createdAtMs: number,
+  readOtherProfile: () => Promise<Record<string, unknown> | null>,
+): Promise<Match | null> {
+  const otherId = otherUid(matchId, uid);
+  let data: Record<string, unknown> | null;
+  try {
+    data = await readOtherProfile();
+  } catch (error) {
+    // They blocked me: hide the row. The denial is not cached, so a later snapshot (after
+    // an unblock) reads the card again.
+    if (!isPermissionDenied(error)) throw error;
+    return null;
+  }
+  if (!data) return null;
+  return { id: matchId, other: { id: otherId, ...toPublicProfile(data) }, createdAt: createdAtMs };
+}
+
+/** One match for the chat: id-only when the other card is unreadable — they blocked me. */
+export async function chatMatch(
+  uid: string,
+  matchId: string,
+  createdAtMs: number,
+  readOtherProfile: () => Promise<Record<string, unknown> | null>,
+): Promise<Match | null> {
+  const otherId = otherUid(matchId, uid);
+  let data: Record<string, unknown> | null;
+  try {
+    data = await readOtherProfile();
+  } catch (error) {
+    // The rules deny their card, not the conversation: it stays open to read, closed to
+    // write, and shows nothing about them beyond the uid the match id already carries.
+    if (!isPermissionDenied(error)) throw error;
+    return { id: matchId, other: { id: otherId, hidden: true }, createdAt: createdAtMs };
+  }
+  if (!data) return null;
+  return { id: matchId, other: { id: otherId, ...toPublicProfile(data) }, createdAt: createdAtMs };
 }
 
 /** Removes cached partner cards for matches no longer present in a live snapshot. */

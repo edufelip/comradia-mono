@@ -14,7 +14,7 @@ import { ProfilePhoto } from '@/features/profile/ProfilePhoto';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTranslation } from '@/localization';
 import { backend } from '@/services/backend';
-import type { Match } from '@/services/backend/types';
+import { matchHasCard, type CardMatch } from '@/services/backend/types';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 type MatchStatus = 'loading' | 'ready' | 'not_found' | 'error';
@@ -36,7 +36,7 @@ export default function MatchScreen() {
   const uid = useSessionStore((state) => state.user?.uid);
   const myProfile = useSessionStore((state) => state.profile);
   const [status, setStatus] = useState<MatchStatus>('loading');
-  const [match, setMatch] = useState<Match | null>(null);
+  const [match, setMatch] = useState<CardMatch | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [celebratingMatchId, setCelebratingMatchId] = useState<string | null>(null);
   const [cancelledCelebrationId, setCancelledCelebrationId] = useState<string | null>(null);
@@ -57,7 +57,8 @@ export default function MatchScreen() {
       .getMatch(uid, id)
       .then((found) => {
         if (!active) return;
-        if (!found) {
+        // An id-only match means they blocked me: there is nothing to celebrate.
+        if (!found || !matchHasCard(found)) {
           setStatus('not_found');
           return;
         }

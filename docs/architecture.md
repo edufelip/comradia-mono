@@ -141,10 +141,10 @@ Web reads its Firebase config from `EXPO_PUBLIC_FIREBASE_API_KEY`, `_AUTH_DOMAIN
 ## Firebase Functions
 
 Functions use Node 22 and Firebase Functions v2 for Firestore notification and match-cleanup
-triggers. Notifications claim a per-recipient marker before reading tokens, refresh token
-registrations once before sending, group active tokens by locale, and check live account, match
-membership and mirrored block state once before the first send. Markers expire after seven days;
-notification triggers ignore events older than six days. The Firebase Auth user-deleted trigger recursively removes private user
+triggers. Notifications claim a per-recipient marker before reading tokens. They read registrations
+once, group them by locale, and recheck live accounts, match membership and mirrored blocks before
+the first send to that recipient. Markers expire after seven days. Notification triggers ignore
+events older than six days. The Firebase Auth user-deleted trigger recursively removes private user
 data, relationship documents, matches and portrait objects, including accounts already partly
 cleaned up by the client. A Storage finalize trigger in `us-east1` rejects non-JPEG portraits
 and keeps each account to at most three unreferenced/active photo objects. These triggers have

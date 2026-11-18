@@ -269,35 +269,22 @@ export function createNotificationDispatcher(
 
       // A failure after this claim (including a token lookup failure) can lose this push;
       // retries see the marker and stop. This is the at-most-once duplicate-delivery tradeoff.
+      // Read the current registrations once after claiming the event. A token revoked after
+      // this snapshot can still race the external FCM send.
       const tokens = await store.listPushTokens(recipientUid);
       if (tokens.length === 0) continue;
-
-      // Keep one pre-send registration refresh: it closes the revocation window between the
-      // initial lookup and sending, without repeating the same collection query per locale.
-      const currentTokens = await store.listPushTokens(recipientUid);
-      const currentById = new Map(currentTokens.map((token) => [token.id, token]));
-      const activeTokens = tokens.flatMap(({ id, token }) => {
-        const current = currentById.get(id);
-        return current?.token === token ? [current] : [];
-      });
-      if (activeTokens.length === 0) continue;
 
       const tokensByLocale = new Map<NotificationLocale, PushTokenRegistration[]>(
         NOTIFICATION_LOCALES.map((locale) => [locale, []]),
       );
-      for (const token of activeTokens) tokensByLocale.get(notificationLocale(token.locale))?.push(token);
+      for (const token of tokens) tokensByLocale.get(notificationLocale(token.locale))?.push(token);
 
-      let safetyChecked = false;
-      chunks: for (const locale of NOTIFICATION_LOCALES) {
+      // Recheck live membership, account and block state before the recipient's first send.
+      if (!await store.isDispatchAllowed(claimInput)) continue;
+      for (const locale of NOTIFICATION_LOCALES) {
         const localeTokens = tokensByLocale.get(locale) ?? [];
         for (let start = 0; start < localeTokens.length; start += MAX_TOKENS_PER_FCM_CALL) {
           const chunk = localeTokens.slice(start, start + MAX_TOKENS_PER_FCM_CALL);
-          // The marker was claimed before reads. Recheck live membership, account and block
-          // state once immediately before this recipient's first external send.
-          if (!safetyChecked) {
-            safetyChecked = true;
-            if (!await store.isDispatchAllowed(claimInput)) break chunks;
-          }
           let result: FcmSendResult;
           try {
             result = await sender.sendEachForMulticast({

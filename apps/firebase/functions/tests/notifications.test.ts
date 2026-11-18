@@ -155,7 +155,7 @@ describe('match and message notification dispatch', () => {
     assert.equal(sender.messages.length, 0);
   });
 
-  it('rechecks both mirrored block paths inside the dispatch claim', async () => {
+  it('rechecks both mirrored block paths after reading the registrations', async () => {
     for (const blocker of [0, 1] as const) {
       const { users, matchId } = await fixture();
       await seedToken(users[0], `block-test-${randomUUID()}`);
@@ -177,35 +177,31 @@ describe('match and message notification dispatch', () => {
     }
   });
 
-  it('does not send a token revoked after the first registration read', async () => {
+  it('does not send a token revoked after claiming the event and before reading registrations', async () => {
     const { users, matchId } = await fixture();
-    const token = `revoked-between-reads-${randomUUID()}`;
+    const token = `revoked-before-read-${randomUUID()}`;
     const tokenId = await seedToken(users[1], token);
     const store = new FirestoreNotificationStore(firestore);
-    const listTokens = store.listPushTokens.bind(store);
-    let calls = 0;
-    store.listPushTokens = async (uid) => {
-      const registrations = await listTokens(uid);
-      calls += 1;
-      if (calls === 1) {
-        await firestore.doc(`users/${uid}/pushTokens/${tokenId}`).delete();
-      }
-      return registrations;
+    const claimDispatch = store.claimDispatch.bind(store);
+    store.claimDispatch = async (input) => {
+      const claim = await claimDispatch(input);
+      assert.equal(claim, 'claimed');
+      await firestore.doc(`users/${input.recipientUid}/pushTokens/${tokenId}`).delete();
+      return claim;
     };
     const sender = new RecordingSender();
     const dispatch = createNotificationDispatcher(store, sender);
 
     await dispatch(createdEvent(matchId, {
-      eventId: 'revoked-token-not-sent',
+      eventId: 'revoked-before-read',
       type: 'message',
       senderUid: users[0],
     }));
 
     assert.equal(sender.messages.length, 0);
-    assert.equal(calls, 2);
   });
 
-  it('reads a Portuguese recipient token at most twice and checks dispatch safety once', async () => {
+  it('reads a Portuguese recipient token once and checks dispatch safety once', async () => {
     const { users, matchId } = await fixture();
     const tokenId = createHash('sha256').update('single-locale-cost-token').digest('hex');
     await firestore.doc(`users/${users[1]}/pushTokens/${tokenId}`).set({
@@ -237,8 +233,7 @@ describe('match and message notification dispatch', () => {
 
     assert.equal(sender.messages.length, 1);
     assert.equal(sender.messages[0]?.notification?.title, 'Nova mensagem');
-    assert.ok(listCalls <= 2);
-    assert.equal(listCalls, 2);
+    assert.equal(listCalls, 1);
     assert.equal(safetyCalls, 1);
   });
 

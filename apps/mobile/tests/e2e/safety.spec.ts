@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import { expectPathname } from './support/app';
-import { signUpWithPhone, uidForPhone } from './support/firebase';
+import { seedMessage, signUpWithPhone, uidForPhone } from './support/firebase';
 import { completeOnboarding } from './support/onboarding';
 
 // Must match apps/firebase/firebase.json and services/backend/config.ts.
@@ -253,6 +253,21 @@ async function signInAgainIfSignedOut(page: Page, digits: string): Promise<void>
   }
 }
 
+async function openChatFromUrl(page: Page, matchId: string, digits: string): Promise<void> {
+  await page.goto(`/chat/${matchId}`);
+  await expect
+    .poll(async () => {
+      if ((await chat(page).count()) > 0) return 'chat';
+      if ((await page.getByTestId('welcome-cta-start').count()) > 0) return 'welcome';
+      return 'loading';
+    })
+    .not.toBe('loading');
+  if ((await chat(page).count()) === 0) {
+    await signUpWithPhone(page, digits);
+    await page.goto(`/chat/${matchId}`);
+  }
+}
+
 test.describe('safety', () => {
   test('reporting a card from Discover blocks the person and keeps them out of the deck', async ({
     page,
@@ -373,18 +388,7 @@ test.describe('safety', () => {
     await expect.poll(() => docStatus(`blocks/${other.uid}/by/${uid}`)).toBe(200);
 
     // Reopening the conversation by URL shows it closed: messages stay, the composer goes.
-    await page.goto(`/chat/${matchId}`);
-    await expect
-      .poll(async () => {
-        if ((await chat(page).count()) > 0) return 'chat';
-        if ((await page.getByTestId('welcome-cta-start').count()) > 0) return 'welcome';
-        return 'loading';
-      })
-      .not.toBe('loading');
-    if ((await chat(page).count()) === 0) {
-      await signUpWithPhone(page, digits);
-      await page.goto(`/chat/${matchId}`);
-    }
+    await openChatFromUrl(page, matchId, digits);
 
     await expect(chat(page).getByTestId('chat-closed')).toBeVisible();
     await expect(chat(page).getByTestId('chat-input')).toHaveCount(0);
@@ -392,6 +396,93 @@ test.describe('safety', () => {
 
     // The block closes the chat on the other side too: their writes are denied by the rules.
     expect(await sendMessageAs(other.idToken, matchId, other.uid, 'Are you there?')).toBe(403);
+  });
+
+  test('opening a chat while the other person blocks you keeps its messages readable', async ({
+    page,
+  }) => {
+    const e164 = await signUpWithPhone(page);
+    const uid = await uidForPhone(e164);
+    await completeOnboarding(page, { name: `Rosa ${e164.slice(-8)}` });
+
+    const other = await createRestUser();
+    const otherName = `Bruno ${e164.slice(-8)}`;
+    await seedProfile(other.uid, otherName);
+    const matchId = await seedMutualMatch(uid, other.uid);
+    const message = 'See you at the market.';
+    await seedMessage(matchId, other.uid, message);
+    const createdAt = { timestampValue: new Date().toISOString() };
+    await Promise.all([
+      writeDoc(`users/${other.uid}/blocks/${uid}`, { createdAt }),
+      writeDoc(`blocks/${uid}/by/${other.uid}`, { createdAt }),
+    ]);
+
+    await openChatFromUrl(page, matchId, e164.replace('+55', ''));
+    await expect(chat(page).getByTestId('chat-closed')).toBeVisible();
+    await expect(chat(page).getByText(message)).toBeVisible();
+    await expect(chat(page).getByTestId('chat-input')).toHaveCount(0);
+    await expect(chat(page).getByRole('heading', { name: otherName })).toHaveCount(0);
+  });
+
+  test('refocusing a chat hides a previously viewed profile after an incoming block', async ({
+    page,
+  }) => {
+    const e164 = await signUpWithPhone(page);
+    const uid = await uidForPhone(e164);
+    await completeOnboarding(page, { name: `Rosa ${e164.slice(-8)}` });
+
+    const other = await createRestUser();
+    const otherName = `Bruno ${e164.slice(-8)}`;
+    await seedProfile(other.uid, otherName);
+    const matchId = await seedMutualMatch(uid, other.uid);
+    await page.getByRole('tab', { name: /Matches/ }).click();
+    await matches(page).getByTestId(`match-row-${matchId}`).click();
+    const heading = chat(page).getByRole('heading', { name: otherName });
+    await expect(heading).toBeVisible();
+    await chat(page).getByTestId('chat-safety').click();
+    await expectPathname(page, `/safety/${other.uid}`);
+
+    const createdAt = { timestampValue: new Date().toISOString() };
+    await Promise.all([
+      writeDoc(`users/${other.uid}/blocks/${uid}`, { createdAt }),
+      writeDoc(`blocks/${uid}/by/${other.uid}`, { createdAt }),
+    ]);
+    await page.getByTestId('safety-close').click();
+    await expect(chat(page).getByTestId('chat-closed')).toBeVisible();
+    await expect(heading).toHaveCount(0);
+  });
+
+  test('a match becomes visible again when the other person unblocks you', async ({ page }) => {
+    const e164 = await signUpWithPhone(page);
+    const uid = await uidForPhone(e164);
+    await completeOnboarding(page, { name: `Rosa ${e164.slice(-8)}` });
+
+    const other = await createRestUser();
+    const otherName = `Bruno ${e164.slice(-8)}`;
+    await seedProfile(other.uid, otherName);
+    const matchId = await seedMutualMatch(uid, other.uid);
+    const blockPaths = [`users/${other.uid}/blocks/${uid}`, `blocks/${uid}/by/${other.uid}`];
+    await Promise.all(
+      blockPaths.map((path) =>
+        writeDoc(path, { createdAt: { timestampValue: new Date().toISOString() } }),
+      ),
+    );
+
+    const matchesTab = page.getByRole('tab', { name: /Matches/ });
+    const row = matches(page).getByTestId(`match-row-${matchId}`);
+    await matchesTab.click();
+    await expect(matches(page).getByTestId('matches-empty')).toBeVisible();
+    await expect(row).toHaveCount(0);
+
+    await page.getByRole('tab', { name: /Discover/ }).click();
+    await expectPathname(page, '/discover');
+    await Promise.all(blockPaths.map(deleteDoc));
+    await matchesTab.click();
+    await expect(row).toBeVisible();
+
+    await row.click();
+    await expect(chat(page).getByRole('heading', { name: otherName })).toBeVisible();
+    await expect(chat(page).getByTestId('chat-input')).toBeVisible();
   });
 
   test('deleting the account removes it everywhere, and cancel deletes nothing', async ({

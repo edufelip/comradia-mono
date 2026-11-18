@@ -2,11 +2,14 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   cachedProfile,
+  chatMatch,
   collectDiscoveryCandidates,
   filterDiscovery,
   invalidateDisappearedProfiles,
+  isPermissionDenied,
   mapWithConcurrency,
   matchIdFor,
+  matchRow,
   otherUid,
   processQueryPages,
   reconcileLikePairs,
@@ -171,18 +174,28 @@ describe('collectDiscoveryCandidates resume', () => {
 });
 
 describe('cachedProfile', () => {
-  it('reuses an in-flight profile request and treats permission denial as missing', async () => {
+  it('shares one in-flight read, then retries after a failure instead of caching it', async () => {
     const cache = new Map<string, Promise<string | null>>();
     let reads = 0;
+    const deny = Object.assign(new Error('blocked'), { code: 'permission-denied' });
     const read = async () => {
       reads += 1;
-      throw Object.assign(new Error('blocked'), { code: 'permission-denied' });
+      if (reads === 1) throw deny;
+      return 'card';
     };
     const first = cachedProfile(cache, 'blocked-user', read);
     const second = cachedProfile(cache, 'blocked-user', read);
-    assert.equal(await first, null);
-    assert.equal(await second, null);
+    // The denied read is a state (they blocked me), not a fact: it rejects, un-caches
+    // itself, and a later attempt — after they unblock — reads again.
+    await assert.rejects(first, (thrown: unknown) => thrown === deny);
+    await assert.rejects(second, (thrown: unknown) => thrown === deny);
     assert.equal(reads, 1);
+    assert.equal(cache.has('blocked-user'), false);
+    assert.equal(await cachedProfile(cache, 'blocked-user', read), 'card');
+    assert.equal(reads, 2);
+    // A successful read stays cached for the session.
+    assert.equal(await cachedProfile(cache, 'blocked-user', read), 'card');
+    assert.equal(reads, 2);
   });
 
   it('drops failed non-permission reads so a later attempt can retry', async () => {
@@ -193,6 +206,62 @@ describe('cachedProfile', () => {
       }),
     );
     assert.equal(cache.has('user'), false);
+  });
+});
+
+describe('isPermissionDenied', () => {
+  it('recognizes the web and native Firestore denial codes', () => {
+    assert.equal(isPermissionDenied(Object.assign(new Error('x'), { code: 'permission-denied' })), true);
+    assert.equal(
+      isPermissionDenied(Object.assign(new Error('x'), { code: 'firestore/permission-denied' })),
+      true,
+    );
+    assert.equal(isPermissionDenied(Object.assign(new Error('x'), { code: 'unavailable' })), false);
+    assert.equal(isPermissionDenied(new Error('permission-denied')), false);
+    assert.equal(isPermissionDenied(null), false);
+  });
+});
+
+describe('matchRow and chatMatch', () => {
+  const createdAt = 1_700_000_000_000;
+  const denied = () => {
+    throw Object.assign(new Error('blocked'), { code: 'permission-denied' });
+  };
+
+  it('hides a Matches row whose card is denied, without failing the list', async () => {
+    const row = await matchRow('a', 'a_b', createdAt, denied);
+    assert.equal(row, null);
+  });
+
+  it('returns null when the other profile is genuinely gone', async () => {
+    assert.equal(await matchRow('a', 'a_b', createdAt, async () => null), null);
+    assert.equal(await chatMatch('a', 'a_b', createdAt, async () => null), null);
+  });
+
+  it('lets other read errors fail the caller', async () => {
+    const offline = async () => {
+      throw new Error('offline');
+    };
+    await assert.rejects(matchRow('a', 'a_b', createdAt, offline), { message: 'offline' });
+    await assert.rejects(chatMatch('a', 'a_b', createdAt, offline), { message: 'offline' });
+  });
+
+  it('builds the full card for a readable profile', async () => {
+    const expected = {
+      id: 'a_b',
+      other: { id: 'b', ...CARD },
+      createdAt,
+    };
+    assert.deepEqual(await matchRow('a', 'a_b', createdAt, async () => CARD), expected);
+    assert.deepEqual(await chatMatch('a', 'a_b', createdAt, async () => CARD), expected);
+  });
+
+  it('builds an id-only match for the chat when they blocked me', async () => {
+    assert.deepEqual(await chatMatch('a', 'a_b', createdAt, denied), {
+      id: 'a_b',
+      other: { id: 'b', hidden: true },
+      createdAt,
+    });
   });
 });
 

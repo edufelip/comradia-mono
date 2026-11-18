@@ -249,6 +249,7 @@ export const deDE: Record<TranslationKey, string> = {
   'blocked.unblock.confirm': 'Entblocken',
   'blocked.unblock.cancel': 'Abbrechen',
   'profile.sign_out': 'Abmelden',
+  'profile.sign_out.error': 'Du konntest nicht abgemeldet werden. Versuch es erneut.',
   'profile.age': '{age}',
   'profile.delete_account': 'Mein Konto löschen',
   'profile.delete.title': 'Dein Konto löschen?',
