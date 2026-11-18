@@ -300,8 +300,8 @@ The same code exports to the web (`expo export --platform web`).
 
 - **Tokens mirror the app.** The `:root` variables in `styles.css` copy `design-system.ts` (`--canvas`, `--surface`, `--text-primary`, `--text-secondary`, `--text-tertiary`, `--accent`, `--accent-text`, `--accent-hover`, `--on-accent`, `--action`, `--on-action`, `--border`, `--border-strong`, `--focus-ring`). Change a value in the app first, then here. The dark scheme follows `prefers-color-scheme`.
 - **Geist is self-hosted** in `apps/website/fonts/` (SIL OFL license included), so the page makes no third-party requests. Weights 400, 500, 700.
-- **Components** use the same shapes: capsule buttons and inputs (`--radius-pill`), 1 pt `--border-strong` field outline, accent for the eyebrow and the sign-up button, dark `--action` for the header button.
-- `--accent` is for fills and borders; text in the accent color (eyebrow, status) uses `--accent-text`, as in the app.
+- The header link uses `--radius-pill` and `--action`.
+- `--accent` is for fills and borders. The eyebrow and early-access note use `--accent-text`, as in the app.
 - Same rules: visible focus ring, 44 pt-class touch targets, text contrast, no motion beyond a state change, works at 320 px.
 
 ## Changing the system
