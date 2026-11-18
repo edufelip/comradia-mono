@@ -166,11 +166,13 @@ const photoUrls = new Map<string, Promise<string>>();
 const profiles = new Map<string, Promise<Record<string, unknown> | null>>();
 const matchProfileIds = new Map<string, Set<string>>();
 
+async function readProfileData(uid: string): Promise<Record<string, unknown> | null> {
+  const snapshot = await getDoc(doc(db, 'profiles', uid));
+  return snapshot.data() ?? null;
+}
+
 function cachedProfileRead(uid: string): Promise<Record<string, unknown> | null> {
-  return cachedProfile(profiles, uid, async () => {
-    const snapshot = await getDoc(doc(db, 'profiles', uid));
-    return snapshot.data() ?? null;
-  });
+  return cachedProfile(profiles, uid, () => readProfileData(uid));
 }
 
 function trackMatchProfiles(uid: string, docs: Snapshot[]): void {
@@ -475,9 +477,9 @@ export const backend: Backend = {
       const snapshot = await getDoc(doc(db, 'matches', matchId));
       const match = snapshot.data();
       if (!match) return null;
-      // Their card is denied when they blocked me: the chat opens closed and identity-free.
+      // Recheck profile access for a direct match read, including when a chat regains focus.
       return chatMatch(uid, matchId, epochMs(match.createdAt), () =>
-        cachedProfileRead(otherUid(matchId, uid)),
+        readProfileData(otherUid(matchId, uid)),
       );
     }),
 

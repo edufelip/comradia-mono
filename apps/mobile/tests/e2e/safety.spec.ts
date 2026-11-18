@@ -424,6 +424,34 @@ test.describe('safety', () => {
     await expect(chat(page).getByRole('heading', { name: otherName })).toHaveCount(0);
   });
 
+  test('refocusing a chat hides a previously viewed profile after an incoming block', async ({
+    page,
+  }) => {
+    const e164 = await signUpWithPhone(page);
+    const uid = await uidForPhone(e164);
+    await completeOnboarding(page, { name: `Rosa ${e164.slice(-8)}` });
+
+    const other = await createRestUser();
+    const otherName = `Bruno ${e164.slice(-8)}`;
+    await seedProfile(other.uid, otherName);
+    const matchId = await seedMutualMatch(uid, other.uid);
+    await page.getByRole('tab', { name: /Matches/ }).click();
+    await matches(page).getByTestId(`match-row-${matchId}`).click();
+    const heading = chat(page).getByRole('heading', { name: otherName });
+    await expect(heading).toBeVisible();
+    await chat(page).getByTestId('chat-safety').click();
+    await expectPathname(page, `/safety/${other.uid}`);
+
+    const createdAt = { timestampValue: new Date().toISOString() };
+    await Promise.all([
+      writeDoc(`users/${other.uid}/blocks/${uid}`, { createdAt }),
+      writeDoc(`blocks/${uid}/by/${other.uid}`, { createdAt }),
+    ]);
+    await page.getByTestId('safety-close').click();
+    await expect(chat(page).getByTestId('chat-closed')).toBeVisible();
+    await expect(heading).toHaveCount(0);
+  });
+
   test('a match becomes visible again when the other person unblocks you', async ({ page }) => {
     const e164 = await signUpWithPhone(page);
     const uid = await uidForPhone(e164);
