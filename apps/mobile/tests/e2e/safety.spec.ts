@@ -394,6 +394,39 @@ test.describe('safety', () => {
     expect(await sendMessageAs(other.idToken, matchId, other.uid, 'Are you there?')).toBe(403);
   });
 
+  test('a match becomes visible again when the other person unblocks you', async ({ page }) => {
+    const e164 = await signUpWithPhone(page);
+    const uid = await uidForPhone(e164);
+    await completeOnboarding(page, { name: `Rosa ${e164.slice(-8)}` });
+
+    const other = await createRestUser();
+    const otherName = `Bruno ${e164.slice(-8)}`;
+    await seedProfile(other.uid, otherName);
+    const matchId = await seedMutualMatch(uid, other.uid);
+    const blockPaths = [`users/${other.uid}/blocks/${uid}`, `blocks/${uid}/by/${other.uid}`];
+    await Promise.all(
+      blockPaths.map((path) =>
+        writeDoc(path, { createdAt: { timestampValue: new Date().toISOString() } }),
+      ),
+    );
+
+    const matchesTab = page.getByRole('tab', { name: /Matches/ });
+    const row = matches(page).getByTestId(`match-row-${matchId}`);
+    await matchesTab.click();
+    await expect(matches(page).getByTestId('matches-empty')).toBeVisible();
+    await expect(row).toHaveCount(0);
+
+    await page.getByRole('tab', { name: /Discover/ }).click();
+    await expectPathname(page, '/discover');
+    await Promise.all(blockPaths.map(deleteDoc));
+    await matchesTab.click();
+    await expect(row).toBeVisible();
+
+    await row.click();
+    await expect(chat(page).getByRole('heading', { name: otherName })).toBeVisible();
+    await expect(chat(page).getByTestId('chat-input')).toBeVisible();
+  });
+
   test('deleting the account removes it everywhere, and cancel deletes nothing', async ({
     page,
   }) => {
