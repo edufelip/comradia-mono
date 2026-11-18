@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { MESSAGE_PAGE_SIZE } from '@/services/backend/shared';
 import type { Backend, ChatMessage, Match, Unsubscribe } from '@/services/backend/types';
@@ -10,7 +11,9 @@ export type ChatStatus = 'idle' | 'loading' | 'ready' | 'not_found' | 'error';
 
 /**
  * S10: reads the match once (name and shared values for the header) and then follows its
- * messages, oldest first, until the screen unmounts.
+ * messages, oldest first, until the screen unmounts. Regaining focus reloads the match: a
+ * card the rules denied (they blocked me) is never cached, so an unblock must get a fresh
+ * read for the header and the composer to come back.
  */
 export function useChat(backend: ChatBackend, uid: string | undefined, matchId: string) {
   const [status, setStatus] = useState<ChatStatus>('idle');
@@ -21,29 +24,50 @@ export function useChat(backend: ChatBackend, uid: string | undefined, matchId: 
   const [loadingEarlier, setLoadingEarlier] = useState(false);
   const [earlierFailed, setEarlierFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  const seenMountFocus = useRef(false);
+  const conversationKey = useRef<string | null>(null);
 
   const retry = useCallback(() => setAttempt((value) => value + 1), []);
+
+  // The mount run below already loads once; only a regained focus reloads.
+  useFocusEffect(
+    useCallback(() => {
+      if (!seenMountFocus.current) {
+        seenMountFocus.current = true;
+        return;
+      }
+      setAttempt((value) => value + 1);
+    }, []),
+  );
 
   useEffect(() => {
     if (!uid) return;
     let active = true;
     let unsubscribe: Unsubscribe | undefined;
-    setStatus('loading');
-    setMessages([]);
-    setOlderMessages([]);
-    setOlderPageWasFull(false);
-    setLoadingEarlier(false);
-    setEarlierFailed(false);
+    const key = `${uid}:${matchId}`;
+    if (conversationKey.current !== key) {
+      // Only a different conversation starts empty; a focus reload keeps what is on screen.
+      conversationKey.current = key;
+      setMatch(null);
+      setStatus('loading');
+      setMessages([]);
+      setOlderMessages([]);
+      setOlderPageWasFull(false);
+      setLoadingEarlier(false);
+      setEarlierFailed(false);
+    } else {
+      setStatus((current) => (current === 'error' ? 'loading' : current));
+    }
 
     backend
       .getMatch(uid, matchId)
       .then((found) => {
         if (!active) return;
+        setMatch(found);
         if (!found) {
           setStatus('not_found');
           return;
         }
-        setMatch(found);
         unsubscribe = backend.onMessages(
           matchId,
           (list) => {

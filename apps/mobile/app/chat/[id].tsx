@@ -11,6 +11,7 @@ import { DsScreen } from '@/components/ds/primitives/DsScreen';
 import { useDsKeyboardOverlap } from '@/components/ds/primitives/useDsKeyboard';
 import { DsRadius, DsSpace, DsTypography, getDsTheme } from '@/constants/design-system';
 import { useSessionStore } from '@/features/auth/session-store';
+import { chatScrollAction, scrollIntentFor } from '@/features/chat/chat-scroll';
 import { useChat } from '@/features/chat/use-chat';
 import { sharedValues } from '@/features/matches/shared-values';
 import { ProfilePhoto } from '@/features/profile/ProfilePhoto';
@@ -19,6 +20,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTranslation } from '@/localization';
 import { backend } from '@/services/backend';
 import { MESSAGE_MAX } from '@/services/backend/shared';
+import type { ChatMessage } from '@/services/backend/types';
 
 /**
  * S10. One conversation: the shared values pinned at the top, every message live from
@@ -60,12 +62,21 @@ export default function ChatScreen() {
   // The composer sits at the screen's bottom: lift it by the keyboard height (0 on web,
   // where the browser resizes the viewport itself), else keep it above the safe area.
   const keyboardOverlap = useDsKeyboardOverlap(rootRef);
+  // Where the viewport sits, and why the message content is about to change size.
+  const scrollOffset = useRef(0);
+  const contentHeight = useRef(0);
+  const scrollIntent = useRef<ReturnType<typeof scrollIntentFor>>('none');
+  const previousMessages = useRef<ChatMessage[]>([]);
 
-  const shared = sharedValues(myProfile?.values, match?.other.values ?? []);
+  const other = match?.other;
+  // Their card is unreadable when they blocked me: show the conversation closed, without
+  // a name, portrait or values — only the uid the match id already carries.
+  const otherCard = other && 'displayName' in other ? other : null;
+  const shared = sharedValues(myProfile?.values, otherCard?.values ?? []);
   const canSend = draft.trim().length > 0 && !sending;
   // A block on either side closes the conversation: the messages stay readable, the
   // composer goes away.
-  const closed = match ? blockedUids.includes(match.other.id) : false;
+  const closed = other ? !otherCard || blockedUids.includes(other.id) : false;
 
   useLayoutEffect(() => {
     if (!isFocused || status !== 'ready') {
@@ -99,6 +110,16 @@ export default function ChatScreen() {
     }
   }, [id, isFocused, messages, status, uid]);
 
+  // The scroll intent must be decided per message-list change only: an unrelated re-render
+  // between the change and its layout event must not overwrite it.
+  useLayoutEffect(() => {
+    const intent = scrollIntentFor(previousMessages.current, messages);
+    if (intent === 'latest' || (intent === 'anchor' && scrollIntent.current !== 'latest')) {
+      scrollIntent.current = intent;
+    }
+    previousMessages.current = messages;
+  }, [messages]);
+
   const send = async () => {
     if (!uid || !canSend) return;
     setSending(true);
@@ -131,10 +152,10 @@ export default function ChatScreen() {
             scheme={scheme}
             testID="chat-back"
           />
-          {match ? (
+          {otherCard ? (
             <ProfilePhoto
-              name={match.other.displayName}
-              path={match.other.photoPath}
+              name={otherCard.displayName}
+              path={otherCard.photoPath}
               scheme={scheme}
               shape="circle"
               style={{ width: 40 }}
@@ -146,21 +167,19 @@ export default function ChatScreen() {
               accessibilityRole="header"
               style={[DsTypography.cardTitle, { color: ds.color.textPrimary }]}
             >
-              {match ? match.other.displayName : t('chat.title')}
+              {otherCard ? otherCard.displayName : t('chat.title')}
             </Text>
-            {match ? (
+            {otherCard ? (
               <Text style={[DsTypography.caption, { color: ds.color.textSecondary }]}>
-                {match.other.age} · {t(`onboarding.vibe.${match.other.vibe}`)}
+                {otherCard.age} · {t(`onboarding.vibe.${otherCard.vibe}`)}
               </Text>
             ) : null}
           </View>
-          {match ? (
+          {other ? (
             <DsPillButton
               fullWidth={false}
               label={t('chat.safety')}
-              onPress={() =>
-                router.push(`/safety/${match.other.id}?context=chat&match=${match.id}`)
-              }
+              onPress={() => router.push(`/safety/${other.id}?context=chat&match=${match.id}`)}
               scheme={scheme}
               size="xs"
               style={styles.headerAction}
@@ -190,9 +209,29 @@ export default function ChatScreen() {
         <ScrollView
           contentContainerStyle={styles.messages}
           keyboardShouldPersistTaps="handled"
-          // Newest message visible on load, on arrival and after sending.
-          onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}
+          onContentSizeChange={(_width, height) => {
+            const action = chatScrollAction({
+              height,
+              intent: scrollIntent.current,
+              offset: scrollOffset.current,
+              previousHeight: contentHeight.current,
+            });
+            // One change of the message list consumes one intent.
+            scrollIntent.current = 'none';
+            contentHeight.current = height;
+            if (action.kind === 'latest') {
+              // Newest message visible on load, on arrival and after sending.
+              scrollRef.current?.scrollToEnd({ animated: false });
+            } else if (action.kind === 'anchor') {
+              // Older messages prepended above: keep what is on screen where it is.
+              scrollRef.current?.scrollTo({ y: action.y, animated: false });
+            }
+          }}
+          onScroll={(event) => {
+            scrollOffset.current = event.nativeEvent.contentOffset.y;
+          }}
           ref={scrollRef}
+          scrollEventThrottle={16}
           style={styles.scroll}
           testID="chat-messages"
         >

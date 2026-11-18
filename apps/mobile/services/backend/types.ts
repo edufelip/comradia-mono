@@ -39,14 +39,28 @@ export type ReportInput = {
   context: ReportContext;
 };
 
+/**
+ * The other side of a match: their public card, or only their uid when they blocked me —
+ * the rules deny their profile then, so nothing else about them may be shown.
+ */
+export type MatchOther = DiscoveryProfile | { id: string; hidden: true };
+
+/** A match whose other side is a readable card (narrow with `matchHasCard`). */
+export type CardMatch = Match & { other: DiscoveryProfile };
+
 /** A mutual like. `id` is the two uids sorted and joined by `_` (see `matchIdFor`). */
 export type Match = {
   id: string;
   /** The other person's public card. */
-  other: DiscoveryProfile;
+  other: MatchOther;
   /** Epoch milliseconds. */
   createdAt: number;
 };
+
+/** Type guard: the match carries the other person's readable card, not the id-only form. */
+export function matchHasCard(match: Match): match is CardMatch {
+  return 'displayName' in match.other;
+}
 
 export type ChatMessage = {
   id: string;
