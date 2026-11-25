@@ -374,7 +374,7 @@ it('shows recorded transactions, the weekly goal and an unseen level without int
     pathname: '/conquista/[id]',
     params: { id: 'new-level' },
   });
-  await fireEvent.press(screen.getByRole('button', { name: 'Close', exact: true }));
+  await fireEvent.press(screen.getByRole('button', { name: /^Close$/ }));
   expect(mockBack).toHaveBeenCalledTimes(1);
 });
 
