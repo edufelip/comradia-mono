@@ -287,11 +287,11 @@ Gamification plan · comradia-mono · 21 Nov 2026
 
 - **When it shows**: On iOS and Android only (not web), and only when all of these hold: at least 14 days since it was last shown; at least 7 days since the first sign-in on this device; at least one match; no celebration or full-screen moment in this session; and the person has never tapped Avaliar.
 
-- **Avaliar**: Calls StoreReview.requestReview() from expo-store-review (NEW dependency, not in package.json today). It opens the system review sheet (StoreKit on iOS, Play In-App Review on Android). The banner never shows again after this tap.
-
-- **Agora não**: Hides the banner and starts a new 14-day wait.
-
-- **"Already rated"**: The app can't know. Both APIs return nothing about whether a sheet appeared or a rating was sent. The closest signal is the Avaliar tap, so that tap is what stops the banner for good. iOS also shows its sheet at most 3 times a year and may show nothing at all.
+- **Avaliar**: Opens the configured public App Store review or Google Play listing once. Apple
+  and Google both recommend a direct store link for an explicit button. Supply
+  `EXPO_PUBLIC_COMRADIA_APP_STORE_URL` and `EXPO_PUBLIC_COMRADIA_PLAY_STORE_URL` in store
+  builds. The banner stays hidden until its platform has a valid listing. The app stores the
+  tap on the device and never reads whether a rating was left.
 
 - **Storage**: On the device, in AsyncStorage, under a per-user key, following the comradia.push.enabled.<uid> pattern in features/notifications/notifications.native.ts. PROPOSED key: comradia.rating.v1.<uid>, holding lastShownAt and ratedTapAt. No Firestore write and no rules change. Reinstalling the app clears it.
 

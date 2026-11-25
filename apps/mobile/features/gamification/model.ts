@@ -93,6 +93,7 @@ export type GamProjection = {
   /** The highest lifetimeNet ever seen; the level derives from this and never drops. */
   levelHighWaterMark: number;
   levelId: GamLevelId;
+  levels?: Array<{ id: GamLevelId; name: string; threshold: number }>;
   streak: GamStreakState;
   quest: GamQuestState;
   updatedAt: GamTimestamp;

@@ -31,6 +31,7 @@ const IDENTICAL_BY_DESIGN = new Set<TranslationKey>([
   'onboarding.values.weight_value',
   'onboarding.starter.answer_count',
   'profile.age',
+  'gam.toast', // Signed quantity followed by the Cravos brand name.
   'match.names', // Names joined by an ampersand are valid in several locales.
 ]);
 

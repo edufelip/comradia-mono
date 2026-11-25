@@ -122,3 +122,43 @@ export async function signUpWithPhone(page: Page, nationalDigits = uniquePhone()
     .not.toBe('/verify-phone');
   return e164;
 }
+
+export async function seedCravos(uid: string): Promise<void> {
+  const now = { timestampValue: new Date().toISOString() };
+  const integer = (value: number) => ({ integerValue: String(value) });
+  await writeDoc(`gamification/${uid}`, {
+    balance: integer(160),
+    lifetimeNet: integer(310),
+    levelHighWaterMark: integer(310),
+    levelId: { stringValue: 'flor' },
+    updatedAt: now,
+    streak: {
+      mapValue: {
+        fields: {
+          currentWeeks: integer(2),
+          recordWeeks: integer(4),
+          pauseBank: integer(1),
+          qualifiedThisWeek: { booleanValue: true },
+          pausedUntil: { nullValue: null },
+        },
+      },
+    },
+    quest: {
+      mapValue: {
+        fields: {
+          questId: { nullValue: null },
+          weekStart: { stringValue: '2026-11-23' },
+          target: integer(0),
+          progress: integer(0),
+          completedAt: { nullValue: null },
+        },
+      },
+    },
+  });
+  await writeDoc(`gamification/${uid}/achievements/faisca`, {
+    tier: integer(0),
+    unlockedAt: now,
+    status: { stringValue: 'unlocked' },
+    updatedAt: now,
+  });
+}

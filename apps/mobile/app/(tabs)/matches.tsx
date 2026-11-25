@@ -10,9 +10,12 @@ import { DsPillButton } from '@/components/ds/primitives/DsPillButton';
 import { DsScreen } from '@/components/ds/primitives/DsScreen';
 import { DsRadius, DsSpace, DsTypography, getDsTheme } from '@/constants/design-system';
 import { useSessionStore } from '@/features/auth/session-store';
+import { useGamification } from '@/features/gamification/provider';
+import { StreakCard } from '@/features/gamification/StreakCard';
 import { sharedValues } from '@/features/matches/shared-values';
 import { useMatches } from '@/features/matches/use-matches';
 import { ProfilePhoto } from '@/features/profile/ProfilePhoto';
+import { RatingBanner, useRatingBanner } from '@/features/store-rating/RatingBanner';
 import { useBlockedUids } from '@/features/safety/use-blocked-uids';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTranslation } from '@/localization';
@@ -31,6 +34,7 @@ export default function MatchesScreen() {
   const ds = getDsTheme(scheme);
   const { t } = useTranslation();
   const router = useRouter();
+  const { member } = useGamification();
   const isFocused = useIsFocused();
   const uid = useSessionStore((state) => state.user?.uid);
   const myValues = useSessionStore((state) => state.profile?.values);
@@ -49,6 +53,8 @@ export default function MatchesScreen() {
   const visibleMatches: CardMatch[] = matches.filter(
     (match): match is CardMatch => matchHasCard(match) && !blockedUids.includes(match.other.id),
   );
+
+  const rating = useRatingBanner(uid, isFocused, visibleMatches.length, Boolean(member?.streak));
 
   useLayoutEffect(() => {
     const key = uid ?? '';
@@ -112,6 +118,12 @@ export default function MatchesScreen() {
           {t('matches.subtitle')}
         </Text>
       </View>
+
+      {rating ? (
+        <RatingBanner scheme={scheme} rating={rating} />
+      ) : (
+        member?.streak && <StreakCard scheme={scheme} streak={member.streak} />
+      )}
 
       {isLoading ? (
         <DsCard scheme={scheme}>

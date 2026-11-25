@@ -40,6 +40,7 @@ export default defineConfig({
         BROWSER: 'none',
         EXPO_NO_TELEMETRY: '1',
         EXPO_PUBLIC_FIREBASE_EMULATOR_HOST: '127.0.0.1',
+        EXPO_PUBLIC_E2E_GAMIFICATION: process.env.E2E_GAMIFICATION === '1' ? 'true' : 'false',
       },
       stdout: 'ignore',
     },

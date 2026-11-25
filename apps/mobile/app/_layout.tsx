@@ -12,6 +12,9 @@ import { DS_MOTION } from '@/constants/motion';
 import { SessionErrorView } from '@/features/auth/session-error-view';
 import { useSessionStore } from '@/features/auth/session-store';
 import { useSessionSync } from '@/features/auth/use-session-sync';
+import { CelebrationBridge } from '@/features/gamification/CelebrationBridge';
+import { GamificationProvider } from '@/features/gamification/provider';
+import { RatingSessionBridge } from '@/features/store-rating/RatingBanner';
 import { PushNotificationBridge } from '@/features/notifications/PushNotificationBridge';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { LocaleProvider } from '@/localization/locale-context';
@@ -19,7 +22,9 @@ import { LocaleProvider } from '@/localization/locale-context';
 export default function RootLayout() {
   return (
     <LocaleProvider>
-      <RootLayoutContent />
+      <GamificationProvider>
+        <RootLayoutContent />
+      </GamificationProvider>
     </LocaleProvider>
   );
 }
@@ -104,6 +109,8 @@ function RootLayoutContent() {
               }}
             />
             <Stack.Screen name="chat/[id]" />
+            <Stack.Screen name="cravos" />
+            <Stack.Screen name="conquista/[id]" options={{ presentation: 'fullScreenModal' }} />
             <Stack.Screen name="blocked" />
             <Stack.Screen
               name="safety/[uid]"
@@ -115,6 +122,8 @@ function RootLayoutContent() {
           </Stack.Protected>
         </Stack>
       )}
+      <RatingSessionBridge />
+      <CelebrationBridge />
       <PushNotificationBridge />
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
     </ThemeProvider>

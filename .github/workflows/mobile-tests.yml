@@ -64,6 +64,10 @@ jobs:
       - run: yarn test:e2e
         env:
           CI: '1'
+      - run: yarn test:e2e tests/e2e/gamification.spec.ts --project=iphone-chromium --project=iphone-webkit --workers=1
+        env:
+          CI: '1'
+          E2E_GAMIFICATION: '1'
       - if: failure()
         uses: actions/upload-artifact@v4
         with:

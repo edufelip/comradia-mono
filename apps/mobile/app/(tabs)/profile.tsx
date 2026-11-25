@@ -9,6 +9,8 @@ import { DsPillButton } from '@/components/ds/primitives/DsPillButton';
 import { DsScreen } from '@/components/ds/primitives/DsScreen';
 import { DsRadius, DsSpace, DsTypography, getDsTheme } from '@/constants/design-system';
 import { useSessionStore } from '@/features/auth/session-store';
+import { ProgramSettings } from '@/features/gamification/ProgramSettings';
+import { useGamification } from '@/features/gamification/provider';
 import { NotificationSettings } from '@/features/notifications/NotificationSettings';
 import { useNotificationSettings } from '@/features/notifications/use-notification-settings';
 import { pickPhoto } from '@/features/profile/pick-photo';
@@ -37,6 +39,7 @@ export default function ProfileScreen() {
   const isFocusedRef = useRef(isFocused);
   isFocusedRef.current = isFocused;
   const router = useRouter();
+  const { uiEnabled: cravosEnabled, member: cravosMember } = useGamification();
   const [editingUid, setEditingUid] = useState<string | null>(null);
   useEffect(() => {
     setEditingUid(null);
@@ -265,6 +268,27 @@ export default function ProfileScreen() {
             ) : null}
           </DsCard>
 
+          {cravosEnabled && (
+            <DsCard scheme={scheme} style={styles.card}>
+              <Text
+                accessibilityRole="header"
+                style={[DsTypography.cardTitle, { color: ds.color.textPrimary }]}
+              >
+                {t('gam.wallet')}
+              </Text>
+              <Text style={[DsTypography.body, { color: ds.color.textSecondary }]}>
+                {t('gam.balance_label', { count: Math.max(cravosMember?.balance ?? 0, 0) })}
+              </Text>
+              <DsPillButton
+                label={t('gam.view_wallet')}
+                scheme={scheme}
+                variant="secondary"
+                testID="gam-wallet-link"
+                onPress={() => router.push('/cravos')}
+              />
+            </DsCard>
+          )}
+
           <DsCard scheme={scheme} style={styles.card}>
             <Text style={[DsTypography.micro, { color: ds.color.accentText }]}>
               {t('discover.values_label')}
@@ -397,6 +421,7 @@ export default function ProfileScreen() {
         </Text>
       ) : null}
 
+      <ProgramSettings scheme={scheme} />
       <DsPillButton
         label={t('profile.sign_out')}
         loading={signingOut}

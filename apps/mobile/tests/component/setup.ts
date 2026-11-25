@@ -21,7 +21,15 @@ jest.mock(
 jest.mock('react-native-reanimated', () => require('./mocks/reanimated'));
 jest.mock('react-native-reanimated/mock', () => require('./mocks/reanimated'));
 
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
+);
+
 // Firebase never loads in this layer; every screen talks to the in-memory fake.
+jest.mock('@/services/gamification', () => ({
+  gamificationClient: { watchFlags: () => () => {} },
+}));
+
 jest.mock('@/services/backend', () => ({
   backend: require('./mocks/backend').fakeBackend.backend,
 }));
