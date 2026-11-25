@@ -17,6 +17,11 @@
   ],
   "fieldOverrides": [
     {
+      "collectionGroup": "counters",
+      "fieldPath": "releaseAt",
+      "indexes": [{ "order": "ASCENDING", "queryScope": "COLLECTION_GROUP" }]
+    },
+    {
       "collectionGroup": "notificationDispatches",
       "fieldPath": "expireAt",
       "ttl": true,

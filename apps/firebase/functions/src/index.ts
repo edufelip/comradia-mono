@@ -110,3 +110,13 @@ export const cleanupOnMatchDeleted = onDocumentDeleted(
     await cleanupDeletedMatch(getFirestore(app), event.params.matchId, event.data.get('users'));
   },
 );
+
+export {
+  gamCloseWeek,
+  gamOnBlockCreated,
+  gamOnMatchCreated,
+  gamOnMatchDeleted,
+  gamOnMessageCreated,
+  gamOnProfileWritten,
+  gamOnReportWritten,
+} from './gamification/engine/functions';

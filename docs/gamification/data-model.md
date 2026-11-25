@@ -8,7 +8,7 @@ files that a parity test keeps equal:
   the server-only ones.
 
 `apps/firebase/tests/gamification-parity.test.ts` fails when the constant lists drift.
-Timestamps are ISO 8601 UTC strings; dates are `YYYY-MM-DD`, as in the spec's examples.
+Instants are Firestore timestamps. Calendar dates use `YYYY-MM-DD`.
 The initial rule set is `apps/firebase/functions/src/gamification/seed/ruleset-v1.json`,
 validated by `apps/firebase/functions/src/gamification/ruleset.ts`.
 
