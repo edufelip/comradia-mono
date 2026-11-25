@@ -1,9 +1,10 @@
-import { initializeApp } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getApp, initializeApp } from 'firebase-admin/app';
+import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
 import { getStorage } from 'firebase-admin/storage';
 import { logger } from 'firebase-functions';
 import * as functions from 'firebase-functions/v1';
+import { onCall } from 'firebase-functions/v2/https';
 import { onDocumentCreated, onDocumentDeleted } from 'firebase-functions/v2/firestore';
 import { onObjectFinalized } from 'firebase-functions/v2/storage';
 import {
@@ -17,6 +18,25 @@ import { cleanupDeletedAccount, FirebaseAccountCleanupStore } from './account-cl
 import { isEventOlderThan } from './event-age';
 import { enforcePhotoCap, FirebasePhotoCapStore } from './photo-cap';
 export { notifyOnReportCreated } from './report-alert';
+
+// Cravos admin callables (docs/gamification/admin.md). App Check is enforced on the
+// platform side (enforceAppCheck: true) and gamAdminActor checks auth + the gamAdmin
+// custom claim; every write appends to gamAudit.
+import { gamAdminActor, type GamAdminActor } from './gamification/admin/guard';
+import { gamFlags } from './gamification/admin/flags';
+import { adjustmentAppend, adjustmentApprove, ledgerLookup } from './gamification/admin/ledger';
+import {
+  approvePublish,
+  approveRollback,
+  auditList,
+  createDraft,
+  getRuleSet,
+  listRuleSets,
+  requestPublish,
+  requestRollback,
+  updateDraft,
+} from './gamification/admin/rulesets';
+import { simulateFromStore } from './gamification/admin/simulate';
 
 const DATABASE_REGION = 'southamerica-east1';
 const app = initializeApp();
@@ -120,3 +140,39 @@ export {
   gamOnProfileWritten,
   gamOnReportWritten,
 } from './gamification/engine/functions';
+// ---------------------------------------------------------------------------
+// Cravos admin callables (spec §9; docs/gamification/admin.md). Every callable: App Check
+// enforced (invalid tokens are rejected before the handler), auth + gamAdmin claim, and
+// every write appends to gamAudit.
+// ---------------------------------------------------------------------------
+
+const GAM_ADMIN_CALLABLE_OPTIONS = { region: DATABASE_REGION, enforceAppCheck: true } as const;
+
+/** Wraps a Cravos admin handler: one auth gate, one Firestore, region + App Check. */
+function gamAdminCallable<Return>(
+  handler: (firestore: Firestore, actor: GamAdminActor, data: unknown) => Promise<Return>,
+) {
+  return onCall(GAM_ADMIN_CALLABLE_OPTIONS, async (request) => {
+    const actor = gamAdminActor(request.auth);
+    return handler(getFirestore(app), actor, request.data);
+  });
+}
+
+export const gamListRuleSets = gamAdminCallable(listRuleSets);
+export const gamGetRuleSet = gamAdminCallable(getRuleSet);
+export const gamCreateDraft = gamAdminCallable(createDraft);
+export const gamUpdateDraft = gamAdminCallable(updateDraft);
+export const gamRequestPublish = gamAdminCallable(requestPublish);
+export const gamApprovePublish = gamAdminCallable(approvePublish);
+export const gamRequestRollback = gamAdminCallable(requestRollback);
+export const gamApproveRollback = gamAdminCallable(approveRollback);
+export const gamSimulate = gamAdminCallable(simulateFromStore);
+export const gamLedgerLookup = gamAdminCallable(ledgerLookup);
+export const gamAdjustmentAppend = gamAdminCallable(adjustmentAppend);
+export const gamAdjustmentApprove = gamAdminCallable(adjustmentApprove);
+export const gamAuditList = gamAdminCallable(auditList);
+
+export const gamGetFlags = onCall(GAM_ADMIN_CALLABLE_OPTIONS, async (request) => {
+  gamAdminActor(request.auth);
+  return gamFlags(getApp());
+});
