@@ -18,9 +18,13 @@ and easing:
 | `fast`     |   120 ms | Press feedback and small acknowledgements |
 | `standard` |   220 ms | Content and state transitions             |
 | `slow`     |   360 ms | Larger transitions                        |
+| `countUp`  |   600 ms | A number counting to its final value      |
+| `celebrate`|   900 ms | A one-shot celebration (confetti)          |
 
 Use the shared cubic ease-out curve `[0.16, 1, 0.3, 1]`. Do not use spring or
-elastic bounce for these controls.
+elastic bounce for these controls. The Cravos celebration moments (count-up,
+medal entrance) use `Easing.out(Easing.cubic)`, the same curve as the heart in
+`MatchCelebration`, per the gamification spec.
 
 ## `DsMotionView`
 
@@ -63,6 +67,25 @@ selection state. `DsBackButton` and the default `DsIconButton` keep their
 existing visual dimensions; their hit slop preserves a 44-point target while
 the feedback scales the pressed visual.
 
+## Celebration moments (Cravos)
+
+The gamification moments celebrate a result and never block the task
+(`docs/gamification/README.md` §12). All of them show the end state at once
+under Reduce Motion.
+
+| Moment | Motion | Timing | Reduced motion |
+| ----- | ----- | ------ | -------------- |
+| Points toast (`DsRewardToast`) | `DsNotice` reveal; title counts up; ten petals leave the flower | 220 in · `countUp` 600 count · 700 petals · 5 s hold · 120 out | Static toast, final number, no petals |
+| Streak progress (`DsProgressRing`) | Ring arc fills from the top | `slow` 360 | Closed ring at once |
+| Level progress (`DsProgressBar`) | Fill scales from the left edge | `slow` 360 | Final width at once |
+| Balance count (`DsCountUp`) | Number eases from the last seen value | `countUp` 600, `Easing.out(cubic)` | Final value at once; the spoken label is always final |
+| Achievement unlock (`DsMedal`, `DsConfetti`) | Medal settles like the `MatchCelebration` heart (scale 0.62 → 1, y −10 → 0); 40 confetti pieces rise and fade | 360 medal · `celebrate` 900 confetti | Static medal, no confetti |
+
+The toast never takes focus from the composer: it has no action buttons, it
+auto-dismisses after 5 s, and its close button plays the same 120 ms exit.
+Confetti never flashes (opacity only fades) and renders nothing at all under
+Reduce Motion.
+
 ## Coverage
 
 | Surface                                                     | Motion behavior                                             | Reduced motion / lifecycle                                                                                 |
@@ -75,6 +98,11 @@ the feedback scales the pressed visual.
 | Welcome `SunBurst`                                          | One 2.88-second ease-out ray turn                           | No turn under reduced motion; the finite animation is cancelled on unmount                                 |
 | `DsSkeletonCard`                                            | Existing loading pulse                                      | Existing `AccessibilityInfo` check removes the pulse for reduced motion; currently not used by app screens |
 | `DsCard`, `DsScreen`, `DsBlobBackground`, `DsOfflineBanner` | Static layout, background, or status surface                | No motion to suppress                                                                                      |
+| `DsProgressBar`, `DsProgressRing`                           | Fill eases in over `slow` 360 ms                            | End state at once; timing cancelled on unmount                                                             |
+| `DsCountUp`                                                 | Number counts up over `countUp` 600 ms, `Easing.out(cubic)` | Final value at once; the spoken label is always the final value                                            |
+| `DsMedal`                                                   | Static drawing; the unlock screen animates it                | No motion of its own                                                                                      |
+| `DsConfetti`                                                | 40 pieces rise and fade over `celebrate` 900 ms             | Renders nothing; the animation is cancelled on unmount                                                   |
+| `DsRewardToast`                                             | Notice reveal, count-up, ten petals over 700 ms            | Static toast with the final number; no petals                                                             |
 
 The shared design-system primitives do not currently contain choice cards,
 chips, or a toggle component. Those controls live in feature folders and should
@@ -90,3 +118,6 @@ selected, and switch accessibility states.
   cleanup.
 - `tests/component/welcome-art.test.tsx` covers the one-shot sun turn and its
   reduced-motion alternative.
+- `tests/component/ds-reward-primitives.test.tsx` covers the Cravos motion
+  surfaces: bar, ring, count-up, confetti and the reward toast, each with its
+  reduced-motion path.
