@@ -255,6 +255,27 @@ small.err{color:var(--c-danger);display:flex;gap:6px;align-items:center}
 .phone-foot{margin-top:auto;padding-top:16px}.phone-foot .pill{width:100%}
 @media (max-width:640px){.type-row{grid-template-columns:1fr;gap:4px}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+h4{font-size:13px;line-height:18px;font-weight:700;margin:20px 0 6px;color:var(--c-text-primary)}
+.kv-demo{display:flex;flex-direction:column;gap:8px;max-width:280px}
+.kv-demo b{color:var(--c-text-primary)}
+.reward-bar{height:8px;border-radius:var(--r-pill);background:var(--c-surface-muted);overflow:hidden}
+.reward-bar>b{display:block;height:100%;border-radius:var(--r-pill);background:var(--c-accent-primary)}
+.reward-ring{position:relative;width:64px;height:64px}
+.reward-ring svg{transform:rotate(-90deg)}
+.reward-ring span{position:absolute;inset:0;display:grid;place-items:center;font:700 13px/18px 'Geist',sans-serif;color:var(--c-text-primary)}
+.medals{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;margin:8px 0}
+.medal-figure{display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--c-text-primary)}
+.medal-figure.locked{opacity:.4}
+.medal-art{position:relative}
+.medal-glyph{position:absolute;inset:0;display:grid;place-items:center}
+.confetti-demo{position:relative;width:280px;height:120px;border:1px dashed var(--c-border-strong);border-radius:var(--r-lg);overflow:hidden;margin:8px 0}
+.confetti-demo i{position:absolute;border-radius:2px}
+.notice.reward{display:flex;gap:12px;align-items:flex-start;position:relative;max-width:380px}
+.notice-icon{flex:none;width:24px;height:24px;color:var(--c-accent-text)}
+.notice-content{display:flex;flex-direction:column;gap:8px;flex:1;min-width:0;padding-right:24px}
+.notice-content b{font:700 16px/22px 'Geist',sans-serif;color:var(--c-text-primary)}
+.reward-close{all:unset;position:absolute;top:9px;right:8px;width:44px;height:44px;display:grid;place-items:center;border-radius:var(--r-pill);color:var(--c-text-secondary);cursor:pointer}
+.reward-close:focus-visible{outline:3px solid var(--c-accent-primary);outline-offset:-3px}
 </style>
 </head>
 <body>
@@ -481,7 +502,7 @@ small.err{color:var(--c-danger);display:flex;gap:6px;align-items:center}
       <p>Green: 4.5:1 or more (AA text). Amber: 3:1 to 4.5:1, large or bold text and UI only. Red: below 3:1.</p>
       <table class="contrast"><thead><tr><th>Pair</th><th>Light</th><th>Dark</th></tr></thead><tbody><tr><td><code>textPrimary</code> on <code>canvas</code><br /><small>Body and headings</small></td><td class="pass">16.77:1</td><td class="pass">17.37:1</td></tr><tr><td><code>textPrimary</code> on <code>surface</code><br /><small>Text on a card</small></td><td class="pass">17.98:1</td><td class="pass">16.22:1</td></tr><tr><td><code>textSecondary</code> on <code>canvas</code><br /><small>Supporting text</small></td><td class="pass">5.69:1</td><td class="pass">8.31:1</td></tr><tr><td><code>textSecondary</code> on <code>surfaceMuted</code><br /><small>Supporting text on a muted fill</small></td><td class="pass">5.34:1</td><td class="pass">7.08:1</td></tr><tr><td><code>textTertiary</code> on <code>canvas</code><br /><small>Hints, placeholders, step counters</small></td><td class="pass">4.81:1</td><td class="pass">5.85:1</td></tr><tr><td><code>textTertiary</code> on <code>surfaceMuted</code><br /><small>Hints on a muted fill</small></td><td class="pass">4.52:1</td><td class="pass">4.98:1</td></tr><tr><td><code>accentText</code> on <code>canvas</code><br /><small>Accent text and links</small></td><td class="pass">5.93:1</td><td class="pass">7.08:1</td></tr><tr><td><code>accentText</code> on <code>surface</code><br /><small>Accent text on a card</small></td><td class="pass">6.35:1</td><td class="pass">6.61:1</td></tr><tr><td><code>accentPrimary</code> on <code>canvas</code><br /><small>Accent fills, borders and icons (3:1 needed)</small></td><td class="warn">4.47:1</td><td class="pass">5.07:1</td></tr><tr><td><code>onActionPrimary</code> on <code>actionPrimary</code><br /><small>Primary button label</small></td><td class="pass">17.98:1</td><td class="pass">17.37:1</td></tr><tr><td><code>onAccent</code> on <code>accentPrimary</code><br /><small>Label on an accent fill (chip, accent button)</small></td><td class="pass">4.79:1</td><td class="pass">5.07:1</td></tr><tr><td><code>success</code> on <code>canvas</code><br /><small>Success text</small></td><td class="pass">5.39:1</td><td class="pass">10.69:1</td></tr><tr><td><code>danger</code> on <code>canvas</code><br /><small>Error text</small></td><td class="pass">5.38:1</td><td class="pass">6.73:1</td></tr><tr><td><code>warning</code> on <code>warningSoft</code><br /><small>Offline banner</small></td><td class="pass">5.27:1</td><td class="pass">6.68:1</td></tr><tr><td><code>focusRing</code> on <code>canvas</code><br /><small>Keyboard focus ring (3:1 needed)</small></td><td class="pass">4.96:1</td><td class="pass">10.69:1</td></tr></tbody></table>
       <h3>Fixed palettes (same in both themes)</h3>
-      <div class="swatches"><div class="swatch"><div class="chip-color" style="background:#2F8F5B"></div><code>DsCategoryColor.forest</code><small>#2F8F5B</small></div><div class="swatch"><div class="chip-color" style="background:#B5523C"></div><code>DsCategoryColor.brick</code><small>#B5523C</small></div><div class="swatch"><div class="chip-color" style="background:#D92D3A"></div><code>DsCategoryColor.crimson</code><small>#D92D3A</small></div><div class="swatch"><div class="chip-color" style="background:#8E1622"></div><code>DsCategoryColor.wine</code><small>#8E1622</small></div><div class="swatch"><div class="chip-color" style="background:#E05A47"></div><code>DsCategoryColor.coral</code><small>#E05A47</small></div><div class="swatch"><div class="chip-color" style="background:#F5B08F"></div><code>DsArt.faces[0].background</code><small>#F5B08F</small></div><div class="swatch"><div class="chip-color" style="background:#D92D3A"></div><code>DsArt.faces[0].shirt</code><small>#D92D3A</small></div><div class="swatch"><div class="chip-color" style="background:#8D5524"></div><code>DsArt.faces[0].skin</code><small>#8D5524</small></div><div class="swatch"><div class="chip-color" style="background:#FCE8E9"></div><code>DsArt.faces[1].background</code><small>#FCE8E9</small></div><div class="swatch"><div class="chip-color" style="background:#231214"></div><code>DsArt.faces[1].shirt</code><small>#231214</small></div><div class="swatch"><div class="chip-color" style="background:#E0AC69"></div><code>DsArt.faces[1].skin</code><small>#E0AC69</small></div><div class="swatch"><div class="chip-color" style="background:#FFD9C7"></div><code>DsArt.faces[2].background</code><small>#FFD9C7</small></div><div class="swatch"><div class="chip-color" style="background:#E05A47"></div><code>DsArt.faces[2].shirt</code><small>#E05A47</small></div><div class="swatch"><div class="chip-color" style="background:#C68642"></div><code>DsArt.faces[2].skin</code><small>#C68642</small></div></div>
+      <div class="swatches"><div class="swatch"><div class="chip-color" style="background:#2F8F5B"></div><code>DsCategoryColor.forest</code><small>#2F8F5B</small></div><div class="swatch"><div class="chip-color" style="background:#B5523C"></div><code>DsCategoryColor.brick</code><small>#B5523C</small></div><div class="swatch"><div class="chip-color" style="background:#D92D3A"></div><code>DsCategoryColor.crimson</code><small>#D92D3A</small></div><div class="swatch"><div class="chip-color" style="background:#8E1622"></div><code>DsCategoryColor.wine</code><small>#8E1622</small></div><div class="swatch"><div class="chip-color" style="background:#E05A47"></div><code>DsCategoryColor.coral</code><small>#E05A47</small></div><div class="swatch"><div class="chip-color" style="background:#F5B08F"></div><code>DsArt.faces[0].background</code><small>#F5B08F</small></div><div class="swatch"><div class="chip-color" style="background:#D92D3A"></div><code>DsArt.faces[0].shirt</code><small>#D92D3A</small></div><div class="swatch"><div class="chip-color" style="background:#8D5524"></div><code>DsArt.faces[0].skin</code><small>#8D5524</small></div><div class="swatch"><div class="chip-color" style="background:#FCE8E9"></div><code>DsArt.faces[1].background</code><small>#FCE8E9</small></div><div class="swatch"><div class="chip-color" style="background:#231214"></div><code>DsArt.faces[1].shirt</code><small>#231214</small></div><div class="swatch"><div class="chip-color" style="background:#E0AC69"></div><code>DsArt.faces[1].skin</code><small>#E0AC69</small></div><div class="swatch"><div class="chip-color" style="background:#FFD9C7"></div><code>DsArt.faces[2].background</code><small>#FFD9C7</small></div><div class="swatch"><div class="chip-color" style="background:#E05A47"></div><code>DsArt.faces[2].shirt</code><small>#E05A47</small></div><div class="swatch"><div class="chip-color" style="background:#C68642"></div><code>DsArt.faces[2].skin</code><small>#C68642</small></div><div class="swatch"><div class="chip-color" style="background:#B5703F"></div><code>DsAchievementTier.bronze.base</code><small>#B5703F</small></div><div class="swatch"><div class="chip-color" style="background:#d6b095"></div><code>DsAchievementTier.bronze.rimLight</code><small>#d6b095</small></div><div class="swatch"><div class="chip-color" style="background:#7b4c2b"></div><code>DsAchievementTier.bronze.rimDark</code><small>#7b4c2b</small></div><div class="swatch"><div class="chip-color" style="background:#f8f1ec"></div><code>DsAchievementTier.bronze.face.light</code><small>#f8f1ec</small></div><div class="swatch"><div class="chip-color" style="background:#3a251f"></div><code>DsAchievementTier.bronze.face.dark</code><small>#3a251f</small></div><div class="swatch"><div class="chip-color" style="background:#704527"></div><code>DsAchievementTier.bronze.glyphInk.light</code><small>#704527</small></div><div class="swatch"><div class="chip-color" style="background:#cfa282"></div><code>DsAchievementTier.bronze.glyphInk.dark</code><small>#cfa282</small></div><div class="swatch"><div class="chip-color" style="background:#8C97A3"></div><code>DsAchievementTier.silver.base</code><small>#8C97A3</small></div><div class="swatch"><div class="chip-color" style="background:#c0c6cc"></div><code>DsAchievementTier.silver.rimLight</code><small>#c0c6cc</small></div><div class="swatch"><div class="chip-color" style="background:#5f676f"></div><code>DsAchievementTier.silver.rimDark</code><small>#5f676f</small></div><div class="swatch"><div class="chip-color" style="background:#f4f5f6"></div><code>DsAchievementTier.silver.face.light</code><small>#f4f5f6</small></div><div class="swatch"><div class="chip-color" style="background:#342b2f"></div><code>DsAchievementTier.silver.face.dark</code><small>#342b2f</small></div><div class="swatch"><div class="chip-color" style="background:#575e65"></div><code>DsAchievementTier.silver.glyphInk.light</code><small>#575e65</small></div><div class="swatch"><div class="chip-color" style="background:#b4bbc3"></div><code>DsAchievementTier.silver.glyphInk.dark</code><small>#b4bbc3</small></div><div class="swatch"><div class="chip-color" style="background:#C9961E"></div><code>DsAchievementTier.gold.base</code><small>#C9961E</small></div><div class="swatch"><div class="chip-color" style="background:#e1c583"></div><code>DsAchievementTier.gold.rimLight</code><small>#e1c583</small></div><div class="swatch"><div class="chip-color" style="background:#896614"></div><code>DsAchievementTier.gold.rimDark</code><small>#896614</small></div><div class="swatch"><div class="chip-color" style="background:#faf5e9"></div><code>DsAchievementTier.gold.face.light</code><small>#faf5e9</small></div><div class="swatch"><div class="chip-color" style="background:#3e2b1a"></div><code>DsAchievementTier.gold.face.dark</code><small>#3e2b1a</small></div><div class="swatch"><div class="chip-color" style="background:#7d5d13"></div><code>DsAchievementTier.gold.glyphInk.light</code><small>#7d5d13</small></div><div class="swatch"><div class="chip-color" style="background:#dcbb6d"></div><code>DsAchievementTier.gold.glyphInk.dark</code><small>#dcbb6d</small></div></div>
     </section>
   
     <section id="type">
@@ -575,6 +596,10 @@ small.err{color:var(--c-danger);display:flex;gap:6px;align-items:center}
         <div class="motion-track"><span class="motion-dot" style="--d:220ms"></span></div></div>
       <div class="motion-row"><code>slow</code><small>360 ms</small>
         <div class="motion-track"><span class="motion-dot" style="--d:360ms"></span></div></div>
+      <div class="motion-row"><code>countUp</code><small>600 ms</small>
+        <div class="motion-track"><span class="motion-dot" style="--d:600ms"></span></div></div>
+      <div class="motion-row"><code>celebrate</code><small>900 ms</small>
+        <div class="motion-track"><span class="motion-dot" style="--d:900ms"></span></div></div>
     </section>
   
     <section id="components">
@@ -648,6 +673,181 @@ small.err{color:var(--c-danger);display:flex;gap:6px;align-items:center}
 
       <h3>DsSkeletonCard</h3>
       <div class="card skeleton" aria-label="Loading"><i class="bar t"></i><i class="bar"></i><i class="bar s"></i></div>
+      
+      <h3>Cravos reward moments</h3>
+      <div class="row wrap">
+        <div class="kv-demo">
+          <b>DsProgressBar</b>
+          <div class="reward-bar" role="progressbar" aria-valuemin="0" aria-valuemax="2500" aria-valuenow="1240" aria-label="Progresso até Jardim"><b style="width:49.6%"></b></div>
+          <small>8 pt pill, surfaceMuted track, accent fill; eases in over 360 ms.</small>
+        </div>
+        <div class="kv-demo">
+          <b>DsProgressRing</b>
+          <div class="reward-ring">
+            <svg aria-hidden="true" viewBox="0 0 64 64" width="64" height="64">
+              <circle cx="32" cy="32" r="27" fill="none" style="stroke:var(--c-surface-muted)" stroke-width="6"/>
+              <circle cx="32" cy="32" r="27" fill="none" style="stroke:var(--c-accent-primary)" stroke-width="6" stroke-linecap="round" stroke-dasharray="169.65" stroke-dashoffset="42.41"/>
+            </svg>
+            <span>5/6</span>
+          </div>
+          <small>Decorative streak ring; the card copy announces the streak.</small>
+        </div>
+        <div class="kv-demo">
+          <b>DsCountUp</b>
+          <div style="font-family:'Geist', system-ui, sans-serif;font-size:32px;line-height:38px;font-weight:700">1.240</div>
+          <small>Counts from the last seen value over 600 ms (tabular digits, final value spoken).</small>
+        </div>
+      </div>
+
+      <h4>DsMedal · light face</h4>
+      <div class="medals"><div class="medal-figure">
+    <div class="medal-art" style="width:56px;height:56px">
+      <svg aria-hidden="true" viewBox="0 0 132 132" width="56" height="56">
+        <defs>
+          <linearGradient id="specimen-medal-bronze-light-rim" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#d6b095"/><stop offset=".5" stop-color="#B5703F"/><stop offset="1" stop-color="#7b4c2b"/>
+          </linearGradient>
+          <linearGradient id="specimen-medal-bronze-light-bevel" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#7b4c2b"/><stop offset="1" stop-color="#d6b095"/>
+          </linearGradient>
+        </defs>
+        <circle cx="66" cy="66" r="62" fill="url(#specimen-medal-bronze-light-rim)"/>
+        <circle cx="66" cy="66" r="51" fill="url(#specimen-medal-bronze-light-bevel)"/>
+        <circle cx="66" cy="66" r="48" fill="#f8f1ec"/>
+        <path d="M30 44 A42 42 0 0 1 88 24" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+      <span class="medal-glyph" style="color:#704527"><svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 22a9 9 0 0 0 9-9 9 9 0 0 0-9 9zM5.6 10.25a2.5 2.5 0 0 0 3.92 2.06l-.02.19a2.5 2.5 0 0 0 5 0l-.02-.19c.4.28.89.44 1.42.44a2.5 2.5 0 0 0 2.5-2.5c0-1-.59-1.85-1.43-2.25.84-.4 1.43-1.25 1.43-2.25a2.5 2.5 0 0 0-3.92-2.06l.02-.19a2.5 2.5 0 0 0-5 0l.02.19c-.4-.28-.89-.44-1.42-.44a2.5 2.5 0 0 0-2.5 2.5c0 1 .59 1.85 1.43 2.25-.84.4-1.43 1.25-1.43 2.25zM12 5.5a2.5 2.5 0 0 1 0 5 2.5 2.5 0 0 1 0-5zM3 13a9 9 0 0 0 9 9 9 9 0 0 0-9-9z"/></svg></span>
+    </div>
+    <figcaption><code>bronze</code></figcaption>
+  </div><div class="medal-figure">
+    <div class="medal-art" style="width:56px;height:56px">
+      <svg aria-hidden="true" viewBox="0 0 132 132" width="56" height="56">
+        <defs>
+          <linearGradient id="specimen-medal-silver-light-rim" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#c0c6cc"/><stop offset=".5" stop-color="#8C97A3"/><stop offset="1" stop-color="#5f676f"/>
+          </linearGradient>
+          <linearGradient id="specimen-medal-silver-light-bevel" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#5f676f"/><stop offset="1" stop-color="#c0c6cc"/>
+          </linearGradient>
+        </defs>
+        <circle cx="66" cy="66" r="62" fill="url(#specimen-medal-silver-light-rim)"/>
+        <circle cx="66" cy="66" r="51" fill="url(#specimen-medal-silver-light-bevel)"/>
+        <circle cx="66" cy="66" r="48" fill="#f4f5f6"/>
+        <path d="M30 44 A42 42 0 0 1 88 24" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+      <span class="medal-glyph" style="color:#575e65"><svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/></svg></span>
+    </div>
+    <figcaption><code>silver</code></figcaption>
+  </div><div class="medal-figure">
+    <div class="medal-art" style="width:56px;height:56px">
+      <svg aria-hidden="true" viewBox="0 0 132 132" width="56" height="56">
+        <defs>
+          <linearGradient id="specimen-medal-gold-light-rim" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#e1c583"/><stop offset=".5" stop-color="#C9961E"/><stop offset="1" stop-color="#896614"/>
+          </linearGradient>
+          <linearGradient id="specimen-medal-gold-light-bevel" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#896614"/><stop offset="1" stop-color="#e1c583"/>
+          </linearGradient>
+        </defs>
+        <circle cx="66" cy="66" r="62" fill="url(#specimen-medal-gold-light-rim)"/>
+        <circle cx="66" cy="66" r="51" fill="url(#specimen-medal-gold-light-bevel)"/>
+        <circle cx="66" cy="66" r="48" fill="#faf5e9"/>
+        <path d="M30 44 A42 42 0 0 1 88 24" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+      <span class="medal-glyph" style="color:#7d5d13"><svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 1 3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg></span>
+    </div>
+    <figcaption><code>gold</code></figcaption>
+  </div><div class="medal-figure locked">
+    <div class="medal-art" style="width:56px;height:56px">
+      <svg aria-hidden="true" viewBox="0 0 132 132" width="56" height="56">
+        <defs>
+          <linearGradient id="specimen-medal-bronze-light-rim" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#d6b095"/><stop offset=".5" stop-color="#B5703F"/><stop offset="1" stop-color="#7b4c2b"/>
+          </linearGradient>
+          <linearGradient id="specimen-medal-bronze-light-bevel" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#7b4c2b"/><stop offset="1" stop-color="#d6b095"/>
+          </linearGradient>
+        </defs>
+        <circle cx="66" cy="66" r="62" fill="url(#specimen-medal-bronze-light-rim)"/>
+        <circle cx="66" cy="66" r="51" fill="url(#specimen-medal-bronze-light-bevel)"/>
+        <circle cx="66" cy="66" r="48" fill="#f8f1ec"/>
+        <path d="M30 44 A42 42 0 0 1 88 24" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+      <span class="medal-glyph" style="color:#704527"><svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/></svg></span>
+    </div>
+    <figcaption><code>bronze</code></figcaption>
+  </div></div>
+      <h4>DsMedal · dark face</h4>
+      <div class="medals"><div class="medal-figure">
+    <div class="medal-art" style="width:56px;height:56px">
+      <svg aria-hidden="true" viewBox="0 0 132 132" width="56" height="56">
+        <defs>
+          <linearGradient id="specimen-medal-bronze-dark-rim" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#d6b095"/><stop offset=".5" stop-color="#B5703F"/><stop offset="1" stop-color="#7b4c2b"/>
+          </linearGradient>
+          <linearGradient id="specimen-medal-bronze-dark-bevel" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#7b4c2b"/><stop offset="1" stop-color="#d6b095"/>
+          </linearGradient>
+        </defs>
+        <circle cx="66" cy="66" r="62" fill="url(#specimen-medal-bronze-dark-rim)"/>
+        <circle cx="66" cy="66" r="51" fill="url(#specimen-medal-bronze-dark-bevel)"/>
+        <circle cx="66" cy="66" r="48" fill="#3a251f"/>
+        <path d="M30 44 A42 42 0 0 1 88 24" fill="none" stroke="#ffffff" stroke-opacity="0.12" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+      <span class="medal-glyph" style="color:#cfa282"><svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 22a9 9 0 0 0 9-9 9 9 0 0 0-9 9zM5.6 10.25a2.5 2.5 0 0 0 3.92 2.06l-.02.19a2.5 2.5 0 0 0 5 0l-.02-.19c.4.28.89.44 1.42.44a2.5 2.5 0 0 0 2.5-2.5c0-1-.59-1.85-1.43-2.25.84-.4 1.43-1.25 1.43-2.25a2.5 2.5 0 0 0-3.92-2.06l.02-.19a2.5 2.5 0 0 0-5 0l.02.19c-.4-.28-.89-.44-1.42-.44a2.5 2.5 0 0 0-2.5 2.5c0 1 .59 1.85 1.43 2.25-.84.4-1.43 1.25-1.43 2.25zM12 5.5a2.5 2.5 0 0 1 0 5 2.5 2.5 0 0 1 0-5zM3 13a9 9 0 0 0 9 9 9 9 0 0 0-9-9z"/></svg></span>
+    </div>
+    <figcaption><code>bronze</code></figcaption>
+  </div><div class="medal-figure">
+    <div class="medal-art" style="width:56px;height:56px">
+      <svg aria-hidden="true" viewBox="0 0 132 132" width="56" height="56">
+        <defs>
+          <linearGradient id="specimen-medal-silver-dark-rim" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#c0c6cc"/><stop offset=".5" stop-color="#8C97A3"/><stop offset="1" stop-color="#5f676f"/>
+          </linearGradient>
+          <linearGradient id="specimen-medal-silver-dark-bevel" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#5f676f"/><stop offset="1" stop-color="#c0c6cc"/>
+          </linearGradient>
+        </defs>
+        <circle cx="66" cy="66" r="62" fill="url(#specimen-medal-silver-dark-rim)"/>
+        <circle cx="66" cy="66" r="51" fill="url(#specimen-medal-silver-dark-bevel)"/>
+        <circle cx="66" cy="66" r="48" fill="#342b2f"/>
+        <path d="M30 44 A42 42 0 0 1 88 24" fill="none" stroke="#ffffff" stroke-opacity="0.12" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+      <span class="medal-glyph" style="color:#b4bbc3"><svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/></svg></span>
+    </div>
+    <figcaption><code>silver</code></figcaption>
+  </div><div class="medal-figure">
+    <div class="medal-art" style="width:56px;height:56px">
+      <svg aria-hidden="true" viewBox="0 0 132 132" width="56" height="56">
+        <defs>
+          <linearGradient id="specimen-medal-gold-dark-rim" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#e1c583"/><stop offset=".5" stop-color="#C9961E"/><stop offset="1" stop-color="#896614"/>
+          </linearGradient>
+          <linearGradient id="specimen-medal-gold-dark-bevel" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#896614"/><stop offset="1" stop-color="#e1c583"/>
+          </linearGradient>
+        </defs>
+        <circle cx="66" cy="66" r="62" fill="url(#specimen-medal-gold-dark-rim)"/>
+        <circle cx="66" cy="66" r="51" fill="url(#specimen-medal-gold-dark-bevel)"/>
+        <circle cx="66" cy="66" r="48" fill="#3e2b1a"/>
+        <path d="M30 44 A42 42 0 0 1 88 24" fill="none" stroke="#ffffff" stroke-opacity="0.12" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+      <span class="medal-glyph" style="color:#dcbb6d"><svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 1 3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg></span>
+    </div>
+    <figcaption><code>gold</code></figcaption>
+  </div></div>
+
+      <h4>DsConfetti</h4>
+      <div class="confetti-demo" aria-hidden="true"><i style="left:110px;top:20px;width:4px;height:6px;background:var(--c-accent-primary);transform:rotate(0deg)"></i><i style="left:140px;top:57px;width:5px;height:7px;background:var(--c-accent-warm);transform:rotate(47deg)"></i><i style="left:72px;top:24px;width:6px;height:8px;background:#C9961E;transform:rotate(94deg)"></i><i style="left:180px;top:61px;width:4px;height:9px;background:var(--c-success);transform:rotate(141deg)"></i><i style="left:67px;top:28px;width:5px;height:6px;background:var(--c-accent-cyan);transform:rotate(188deg)"></i><i style="left:178px;top:65px;width:6px;height:7px;background:var(--c-accent-primary);transform:rotate(235deg)"></i><i style="left:106px;top:32px;width:4px;height:8px;background:var(--c-accent-warm);transform:rotate(282deg)"></i><i style="left:141px;top:69px;width:5px;height:9px;background:#C9961E;transform:rotate(329deg)"></i><i style="left:165px;top:36px;width:6px;height:6px;background:var(--c-success);transform:rotate(16deg)"></i><i style="left:102px;top:73px;width:4px;height:7px;background:var(--c-accent-cyan);transform:rotate(63deg)"></i><i style="left:207px;top:40px;width:5px;height:8px;background:var(--c-accent-primary);transform:rotate(110deg)"></i><i style="left:95px;top:77px;width:6px;height:9px;background:var(--c-accent-warm);transform:rotate(157deg)"></i><i style="left:208px;top:44px;width:4px;height:6px;background:#C9961E;transform:rotate(204deg)"></i><i style="left:131px;top:81px;width:5px;height:7px;background:var(--c-success);transform:rotate(251deg)"></i></div>
+      <small>40 pieces rise and fade over 900 ms from the origin; nothing under Reduce Motion.</small>
+
+      <h4>DsRewardToast</h4>
+      <div class="notice tone-info reward" role="status">
+        <span class="notice-icon" aria-hidden="true"><svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 22a9 9 0 0 0 9-9 9 9 0 0 0-9 9zM5.6 10.25a2.5 2.5 0 0 0 3.92 2.06l-.02.19a2.5 2.5 0 0 0 5 0l-.02-.19c.4.28.89.44 1.42.44a2.5 2.5 0 0 0 2.5-2.5c0-1-.59-1.85-1.43-2.25.84-.4 1.43-1.25 1.43-2.25a2.5 2.5 0 0 0-3.92-2.06l.02-.19a2.5 2.5 0 0 0-5 0l.02.19c-.4-.28-.89-.44-1.42-.44a2.5 2.5 0 0 0-2.5 2.5c0 1 .59 1.85 1.43 2.25-.84.4-1.43 1.25-1.43 2.25zM12 5.5a2.5 2.5 0 0 1 0 5 2.5 2.5 0 0 1 0-5zM3 13a9 9 0 0 0 9 9 9 9 0 0 0-9-9z"/></svg></span>
+        <div class="notice-content"><b>+30 Cravos</b><small>Conversa iniciada com Maya</small></div>
+        <button class="reward-close" type="button" aria-label="Fechar aviso"><svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
+      </div>
+      <small>DsNotice overlay with the flower glyph, a DsCountUp title, ten petals behind the flower and the close button on the title line.</small>
     </section>
   
     <section id="patterns">
