@@ -215,3 +215,15 @@ export type GamRedemption = {
   createdAt: GamTimestamp;
   fulfilledAt: GamTimestamp | null;
 };
+
+/** A server-authorized redemption failure. */
+export type GamRedeemFailureReason =
+  | 'not_eligible_age'
+  | 'not_eligible_level'
+  | 'open_report'
+  | 'insufficient_balance'
+  | 'out_of_stock'
+  | 'disabled';
+export type GamRedeemResult =
+  | { ok: true; redemptionId: string; code: string | null }
+  | { ok: false; reason: GamRedeemFailureReason };
