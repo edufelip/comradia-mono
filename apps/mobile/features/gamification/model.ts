@@ -3,10 +3,14 @@
 // apps/firebase/tests/gamification-parity.test.ts fails when the two copies drift.
 // Paths and who may write them: docs/gamification/data-model.md.
 //
-// Timestamps are ISO 8601 UTC strings and dates are YYYY-MM-DD, as in the spec's own
-// examples. Pure TypeScript: no React, no Firebase imports.
+// Instants are Firestore Timestamps (GamTimestamp); calendar dates are YYYY-MM-DD strings. Pure TypeScript: no React, no Firebase imports.
 
 /** What a ledger entry does to the balance. `adjust` is signed either way; see GamLedgerEntry. */
+/** A Firestore Timestamp as both client SDKs expose it (the repo stores instants as
+ *  Timestamps, as firestore.rules expects for `seenAt`). Kept structural so this file stays
+ *  free of Firebase imports. Calendar dates (YYYY-MM-DD) stay strings. */
+export type GamTimestamp = { toMillis(): number };
+
 export const GAM_LEDGER_KINDS = [
   'earn',
   'clawback',
@@ -91,7 +95,7 @@ export type GamProjection = {
   levelId: GamLevelId;
   streak: GamStreakState;
   quest: GamQuestState;
-  updatedAt: string;
+  updatedAt: GamTimestamp;
 };
 
 /** One week counts after a message in any match, the weekly quest, or a prompt answer
@@ -106,7 +110,7 @@ export type GamStreakState = {
   /** Unused pause slots (1 / 2 / 3 banked by level). */
   pauseBank: number;
   /** ISO date up to which "Pausar" froze the streak (at most 12 weeks), or null. */
-  pausedUntil: string | null;
+  pausedUntil: GamTimestamp | null;
 };
 
 /** Progress on this week's quest, from the active rule set. */
@@ -118,7 +122,7 @@ export type GamQuestState = {
   progress: number;
   target: number;
   /** ISO timestamp of the quest.completed event, or null while open. */
-  completedAt: string | null;
+  completedAt: GamTimestamp | null;
 };
 
 /**
@@ -138,13 +142,13 @@ export type GamLedgerEntry = {
   ruleSetVersion: number;
   source: { event: string; path: string; eventId: string };
   /** Present on earns once redemption is on: this entry's Cravos expire with the lot. */
-  lot?: { expiresAt: string };
+  lot?: { expiresAt: GamTimestamp };
   actor: 'system' | 'admin';
   /** Present when actor is 'admin'. */
   actorUid?: string;
   /** Required on adjustments; shown on the wallet's "Ajuste" rows. */
   reason?: string;
-  createdAt: string;
+  createdAt: GamTimestamp;
 };
 
 /** gamification/{uid}/celebrations/{id}: how the client learns what was earned. The
@@ -158,9 +162,9 @@ export type GamCelebration = {
   /** 0-based index into the achievement's tiers. */
   achievementTier?: number;
   levelId?: GamLevelId;
-  createdAt: string;
+  createdAt: GamTimestamp;
   /** Set by the owner to clear the celebration; written through the rules' only allow. */
-  seenAt: string | null;
+  seenAt: GamTimestamp | null;
 };
 
 /** gamification/{uid}/achievements/{achievementId}: one doc per earned achievement.
@@ -168,18 +172,18 @@ export type GamCelebration = {
 export type GamUserAchievement = {
   /** Highest tier reached: 0 bronze, 1 silver, 2 gold. */
   tier: number;
-  unlockedAt: string;
+  unlockedAt: GamTimestamp;
   status: 'unlocked' | 'lapsed';
-  updatedAt: string;
+  updatedAt: GamTimestamp;
 };
 
 /** gamification/{uid}/lots/{id}: one earn's Cravos as a FIFO, expiring lot. Spending
  *  takes the oldest lot first; expiry writes an `expire` ledger entry. */
 export type GamLot = {
   amount: number;
-  earnedAt: string;
+  earnedAt: GamTimestamp;
   /** 12 months after earnedAt. The wallet warns 30 days before. */
-  expiresAt: string;
+  expiresAt: GamTimestamp;
   /** The ledger entry this lot came from. */
   sourceLedgerId: string;
 };
@@ -208,6 +212,6 @@ export type GamRedemption = {
   redeemEntryIds: string[];
   /** The partner code once fulfilled; null while pending, stays null on failure. */
   code: string | null;
-  createdAt: string;
-  fulfilledAt: string | null;
+  createdAt: GamTimestamp;
+  fulfilledAt: GamTimestamp | null;
 };

@@ -2,7 +2,12 @@
 // apps/mobile/features/gamification/model.ts. The engine deploys without the mobile
 // app, so the shared constants and document shapes are duplicated here;
 // apps/firebase/tests/gamification-parity.test.ts fails when the two copies drift.
-// Everything in this file is pure TypeScript: no Firebase imports.
+// Pure TypeScript apart from the type-only Timestamp import.
+import type { Timestamp } from 'firebase-admin/firestore';
+
+/** Instants are Firestore Timestamps (repo convention; firestore.rules checks `seenAt is
+ *  timestamp`). Calendar dates (YYYY-MM-DD) stay strings. */
+export type GamTimestamp = Timestamp;
 
 export const GAM_LEDGER_KINDS = [
   'earn',
@@ -68,7 +73,7 @@ export type GamAchievementId = GamAchievement['id'];
 
 // ---------------------------------------------------------------------------
 // Client-visible document shapes (paths and writers: docs/gamification/data-model.md).
-// Timestamps are ISO 8601 UTC strings; dates are YYYY-MM-DD.
+// Instants are Firestore Timestamps (GamTimestamp); calendar dates are YYYY-MM-DD strings.
 // ---------------------------------------------------------------------------
 
 /** gamification/{uid}: the projection the engine rebuilds from the ledger. */
@@ -79,7 +84,7 @@ export type GamProjection = {
   levelId: GamLevelId;
   streak: GamStreakState;
   quest: GamQuestState;
-  updatedAt: string;
+  updatedAt: GamTimestamp;
 };
 
 export type GamStreakState = {
@@ -87,7 +92,7 @@ export type GamStreakState = {
   recordWeeks: number;
   qualifiedThisWeek: boolean;
   pauseBank: number;
-  pausedUntil: string | null;
+  pausedUntil: GamTimestamp | null;
 };
 
 export type GamQuestState = {
@@ -95,7 +100,7 @@ export type GamQuestState = {
   weekStart: string;
   progress: number;
   target: number;
-  completedAt: string | null;
+  completedAt: GamTimestamp | null;
 };
 
 /** gamification/{uid}/ledger/{idempotencyKey}: append-only. */
@@ -106,11 +111,11 @@ export type GamLedgerEntry = {
   ruleId: string;
   ruleSetVersion: number;
   source: { event: string; path: string; eventId: string };
-  lot?: { expiresAt: string };
+  lot?: { expiresAt: GamTimestamp };
   actor: 'system' | 'admin';
   actorUid?: string;
   reason?: string;
-  createdAt: string;
+  createdAt: GamTimestamp;
 };
 
 /** gamification/{uid}/celebrations/{id}: the owner may update only `seenAt`. */
@@ -121,23 +126,23 @@ export type GamCelebration = {
   achievementId?: GamAchievementId;
   achievementTier?: number;
   levelId?: GamLevelId;
-  createdAt: string;
-  seenAt: string | null;
+  createdAt: GamTimestamp;
+  seenAt: GamTimestamp | null;
 };
 
 /** gamification/{uid}/achievements/{achievementId}. */
 export type GamUserAchievement = {
   tier: number;
-  unlockedAt: string;
+  unlockedAt: GamTimestamp;
   status: 'unlocked' | 'lapsed';
-  updatedAt: string;
+  updatedAt: GamTimestamp;
 };
 
 /** gamification/{uid}/lots/{id}. */
 export type GamLot = {
   amount: number;
-  earnedAt: string;
-  expiresAt: string;
+  earnedAt: GamTimestamp;
+  expiresAt: GamTimestamp;
   sourceLedgerId: string;
 };
 
@@ -160,8 +165,8 @@ export type GamRedemption = {
   cravos: number;
   redeemEntryIds: string[];
   code: string | null;
-  createdAt: string;
-  fulfilledAt: string | null;
+  createdAt: GamTimestamp;
+  fulfilledAt: GamTimestamp | null;
 };
 
 // ---------------------------------------------------------------------------
@@ -181,7 +186,7 @@ export type GamEvent = {
   pairKey?: string;
   source: string;
   eventId: string;
-  at: string;
+  at: GamTimestamp;
 };
 
 /** Documents whose creation can take Cravos back (spec §4 clawback column). */
@@ -302,7 +307,7 @@ export type GamRuleSet = {
 export type GamCounterDoc = { count: number; updatedAt: string };
 
 /** Same collection, bucket `hold:{ruleId}:{sourceId}`: an award waiting out its hold. */
-export type GamHoldDoc = { amount: number; releaseAt: string; updatedAt: string };
+export type GamHoldDoc = { amount: number; releaseAt: GamTimestamp; updatedAt: string };
 
 /** gamAudit/{id}: who changed what, when, and why. Admin callables append. */
 export type GamAuditEntry = {
@@ -312,11 +317,11 @@ export type GamAuditEntry = {
   target?: string;
   /** Required on adjustments over 500 Cravos. */
   secondApprover?: string;
-  createdAt: string;
+  createdAt: GamTimestamp;
 };
 
 /** gamConfig/active: the single active rule-set pointer; rollback re-points it. */
-export type GamConfig = { ruleSetId: string; publishedAt: string; publishedBy: string };
+export type GamConfig = { ruleSetId: string; publishedAt: GamTimestamp; publishedBy: string };
 
 /** gamAdjustments/{id}: a signed adjustment, awaiting a second approver when over 500. */
 export type GamAdjustmentDoc = {
@@ -326,7 +331,7 @@ export type GamAdjustmentDoc = {
   raisedBy: string;
   secondApproverUid?: string;
   status: 'pending' | 'applied' | 'rejected';
-  createdAt: string;
+  createdAt: GamTimestamp;
 };
 
 /** gamMetrics/{day}: anonymized daily totals only; nothing member-identifying. */
