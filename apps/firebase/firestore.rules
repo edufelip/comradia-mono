@@ -269,5 +269,50 @@ service cloud.firestore {
         allow delete: if isInMatch(matchId) && resource.data.from == request.auth.uid;
       }
     }
+
+    // Cravos gamification (docs/gamification/README.md §8, docs/gamification/data-model.md).
+    // The projection and its ledger, celebrations, lots and achievements are readable by
+    // the owner alone; every write comes from Functions via the Admin SDK, which bypasses
+    // these rules. counters/{bucket} and any other nested path stay denied (server only).
+    match /gamification/{uid} {
+      allow get: if isOwner(uid);
+
+      // Append-only; the document id is the idempotency key.
+      match /ledger/{entryId} {
+        allow read: if isOwner(uid);
+      }
+
+      // The one client write the program allows: acknowledging a celebration. Only the
+      // seenAt field may change, and only to the server time of the request.
+      match /celebrations/{celebrationId} {
+        allow read: if isOwner(uid);
+        allow update: if isOwner(uid)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['seenAt'])
+          && request.resource.data.seenAt is timestamp
+          && request.resource.data.seenAt == request.time;
+      }
+
+      match /lots/{lotId} {
+        allow read: if isOwner(uid);
+      }
+
+      match /achievements/{achievementId} {
+        allow read: if isOwner(uid);
+      }
+    }
+
+    // The redemption catalog: any signed-in member may browse it; the redeem callable
+    // (with App Check) is the only writer.
+    match /catalog/{itemId} {
+      allow read: if signedIn();
+    }
+
+    // A member's own redemption receipt, created by the redeem callable.
+    match /redemptions/{redemptionId} {
+      allow get: if signedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    // gamRuleSets, gamConfig, gamAudit, gamAdjustments, gamShadow and gamMetrics have no
+    // match block on purpose: the default deny keeps them server-only.
   }
 }
