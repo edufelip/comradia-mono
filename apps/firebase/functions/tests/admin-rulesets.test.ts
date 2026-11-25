@@ -109,15 +109,16 @@ describe('drafting', () => {
     assert.equal(ruleSet.parentVersion, 4);
   });
 
-  it('refuses to draft when nothing is active and no source is given', async () => {
+  it('drafts from the bundled rules when nothing is active', async () => {
     const active = await listRuleSets(firestore, ADMIN_A, {});
     const savedActive = active.active;
     if (savedActive) await firestore.doc('gamConfig/active').delete();
     try {
-      await assert.rejects(
-        () => createDraft(firestore, ADMIN_A, {}),
-        (error: unknown) => httpsErrorCode(error) === 'failed-precondition',
-      );
+      const created = await createDraft(firestore, ADMIN_A, {});
+      const { ruleSet } = await getRuleSet(firestore, ADMIN_A, { ruleSetId: created.id });
+      assert.equal(ruleSet.parentVersion, 1);
+      assert.equal(ruleSet.status, 'draft');
+      assert.ok(ruleSet.version > 1);
     } finally {
       if (savedActive) {
         await firestore.doc('gamConfig/active').set({

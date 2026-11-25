@@ -1,7 +1,7 @@
 // gamAudit is the only place the admin's actions live: every write callable appends one
 // entry, and the publish/rollback request-approve pairs below are read back from it, so
 // the two-person rule is enforced from data the server wrote, never from client state.
-import { FieldValue, Timestamp, type DocumentReference, type Firestore } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp, type DocumentReference, type Firestore, type Transaction } from 'firebase-admin/firestore';
 import type { GamAuditEntry } from '../model';
 
 export const AUDIT_ACTIONS = {
@@ -18,8 +18,6 @@ export const AUDIT_ACTIONS = {
 } as const;
 
 export type GamAuditEntryRead = Omit<GamAuditEntry, 'createdAt'> & { createdAt: Timestamp };
-
-const AUDIT_SCAN_LIMIT = 100;
 
 export function auditEntryFields(entry: Omit<GamAuditEntry, 'createdAt'>): Record<string, unknown> {
   return {
@@ -56,23 +54,12 @@ function readAuditEntry(id: string, data: { [field: string]: unknown }): GamAudi
   };
 }
 
-/**
- * The newest audit entry that targets `target` (any action). The publish and rollback
- * approvals use it twice: the newest entry must be the request itself — any later edit
- * invalidates it — and the request's actor must differ from the approver.
- *
- * shortcut: scans the newest 100 gamAudit entries instead of a composite
- * (target ==, createdAt desc) index; fine while the log is in the hundreds — add the
- * index when it outgrows that.
- */
+/** Read the approval request within the same transaction that moves the active pointer. */
 export async function latestAuditForTarget(
-  firestore: Firestore,
-  target: string,
+  firestore: Firestore, target: string, tx: Transaction,
 ): Promise<GamAuditEntryRead | null> {
-  const snaps = await firestore.collection('gamAudit').orderBy('createdAt', 'desc').limit(AUDIT_SCAN_LIMIT).get();
-  for (const snap of snaps.docs) {
-    if (snap.get('target') !== target) continue;
-    return readAuditEntry(snap.id, snap.data());
-  }
-  return null;
+  const { docs } = await tx.get(firestore.collection('gamAudit')
+    .where('target', '==', target).orderBy('createdAt', 'desc').limit(1));
+  const latest = docs[0];
+  return latest === undefined ? null : readAuditEntry(latest.id, latest.data());
 }

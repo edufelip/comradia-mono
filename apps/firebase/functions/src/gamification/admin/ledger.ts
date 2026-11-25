@@ -7,9 +7,11 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { FieldValue, Timestamp, type Firestore, type Transaction } from 'firebase-admin/firestore';
 import { HttpsError } from 'firebase-functions/v2/https';
-import { GAM_LEDGER_KINDS, type GamAdjustmentDoc, type GamLedgerEntry, type GamLedgerKind, type GamProjection } from '../model';
-import { highWaterMark, levelForHighWaterMark } from '../level-for-lifetime';
-import { appendAudit, AUDIT_ACTIONS } from './audit';
+import { GAM_LEDGER_KINDS, type GamAdjustmentDoc, type GamLedgerEntry, type GamLedgerKind, type GamProjection, type GamRuleSet } from '../model';
+import { highWaterMark, levelFromRules } from '../level-for-lifetime';
+import { FirestoreRuleSetLoader } from '../engine/ruleset-loader';
+import { parseProjection } from '../engine/store';
+import { auditEntryFields, AUDIT_ACTIONS } from './audit';
 import { isRecord, reqInt, reqRecord, reqString } from './request';
 import type { GamAdminActor } from './guard';
 
@@ -27,6 +29,7 @@ type GamLedgerEntryWrite = Omit<GamLedgerEntry, 'createdAt'> & { createdAt: Fiel
 type GamAdjustmentWrite = Omit<GamAdjustmentDoc, 'createdAt'> & { createdAt: FieldValue };
 /** Projection fields an adjustment may fold; `streak` and `quest` are engine-owned. */
 type GamProjectionAdjustUpdate = {
+  levels: GamRuleSet['levels'];
   balance: number;
   lifetimeNet: number;
   levelHighWaterMark: number;
@@ -37,15 +40,6 @@ type GamProjectionAdjustUpdate = {
 /** Pseudonymized id for screens and screenshots (spec §9's `demo-7f3a` shape). */
 export function memberDisplayId(uid: string): string {
   return `demo-${createHash('sha256').update(uid).digest('hex').slice(0, 4)}`;
-}
-
-async function readActiveRuleSetVersion(firestore: Firestore): Promise<number> {
-  const snap = await firestore.doc('gamConfig/active').get();
-  const data = snap.data();
-  if (!snap.exists || typeof data?.ruleSetId !== 'string') return 0;
-  const ruleSetSnap = await firestore.doc(`gamRuleSets/${data.ruleSetId}`).get();
-  const version = ruleSetSnap.get('version');
-  return typeof version === 'number' && Number.isInteger(version) ? version : 0;
 }
 
 export type LedgerEntryView = Omit<GamLedgerEntry, 'createdAt'> & {
@@ -153,7 +147,7 @@ async function applyAdjustment(
     amount: number;
     reason: string;
     adjustmentId: string;
-    ruleSetVersion: number;
+    ruleSet: GamRuleSet;
   },
 ): Promise<void> {
   const projectionRef = firestore.doc(`gamification/${input.uid}`);
@@ -175,7 +169,7 @@ async function applyAdjustment(
     kind: 'adjust',
     amount: input.amount,
     ruleId: ADJUSTMENT_RULE_ID,
-    ruleSetVersion: input.ruleSetVersion,
+    ruleSetVersion: input.ruleSet.version,
     source: { event: 'admin.adjust', path: `gamification/${input.uid}`, eventId: input.adjustmentId },
     actor: 'admin',
     actorUid: actor.uid,
@@ -190,9 +184,19 @@ async function applyAdjustment(
     balance: balance + input.amount,
     lifetimeNet: newLifetimeNet,
     levelHighWaterMark: mark,
-    levelId: levelForHighWaterMark(mark),
+    levelId: levelFromRules(mark, parseProjection(data).levelId, input.ruleSet.levels),
+    levels: input.ruleSet.levels,
     updatedAt: FieldValue.serverTimestamp(),
   };
+  if (input.amount > 0) {
+    const earnedAt = Timestamp.now();
+    const sourceLedgerId = `adjust:${input.adjustmentId}`;
+    tx.create(projectionRef.collection('lots').doc(sourceLedgerId), {
+      amount: input.amount, earnedAt,
+      expiresAt: Timestamp.fromMillis(earnedAt.toMillis() + 365 * 86_400_000),
+      sourceLedgerId,
+    });
+  }
   tx.update(projectionRef, projectionUpdate);
 }
 
@@ -208,44 +212,35 @@ export async function adjustmentAppend(
   if (actor.uid === uid) {
     throw new HttpsError('permission-denied', 'An admin cannot adjust their own balance.');
   }
-  const adjustmentId = randomUUID();
-  if (Math.abs(amount) <= ADJUSTMENT_SECOND_APPROVER_THRESHOLD) {
-    const ruleSetVersion = await readActiveRuleSetVersion(firestore);
-    await firestore.runTransaction((tx) =>
-      applyAdjustment(firestore, tx, actor, { uid, amount, reason, adjustmentId, ruleSetVersion }));
-    const applied: GamAdjustmentWrite = {
-      uid,
-      amount,
-      reason,
-      raisedBy: actor.uid,
-      status: 'applied',
-      createdAt: FieldValue.serverTimestamp(),
+  const idempotencyKey = request.idempotencyKey === undefined
+    ? randomUUID() : reqString(request, 'idempotencyKey', { min: 1, max: 128 });
+  const adjustmentId = createHash('sha256').update(`${actor.uid}:${idempotencyKey}`).digest('hex');
+  const ref = firestore.doc(`gamAdjustments/${adjustmentId}`);
+  const immediate = Math.abs(amount) <= ADJUSTMENT_SECOND_APPROVER_THRESHOLD;
+  const ruleSet = immediate ? await new FirestoreRuleSetLoader(firestore).loadActive() : null;
+  return firestore.runTransaction(async (tx) => {
+    const previous = await tx.get(ref);
+    if (previous.exists) {
+      if (previous.get('uid') !== uid || previous.get('amount') !== amount || previous.get('reason') !== reason) {
+        throw new HttpsError('invalid-argument', 'The key belongs to a different adjustment.');
+      }
+      return { adjustmentId, status: previous.get('status') === 'applied' ? 'applied' : 'pending' };
+    }
+    if (ruleSet !== null) {
+      await applyAdjustment(firestore, tx, actor, { uid, amount, reason, adjustmentId, ruleSet });
+    }
+    const status = immediate ? 'applied' : 'pending';
+    const adjustment: GamAdjustmentWrite = {
+      uid, amount, reason, raisedBy: actor.uid, status, createdAt: FieldValue.serverTimestamp(),
     };
-    await firestore.doc(`gamAdjustments/${adjustmentId}`).create(applied);
-    await appendAudit(firestore, {
+    tx.create(ref, adjustment);
+    tx.create(firestore.collection('gamAudit').doc(), auditEntryFields({
       actor: actor.uid,
-      action: AUDIT_ACTIONS.adjustmentAppend,
-      reason,
-      target: uid,
-    });
-    return { adjustmentId, status: 'applied' };
-  }
-  const pending: GamAdjustmentWrite = {
-    uid,
-    amount,
-    reason,
-    raisedBy: actor.uid,
-    status: 'pending',
-    createdAt: FieldValue.serverTimestamp(),
-  };
-  await firestore.doc(`gamAdjustments/${adjustmentId}`).create(pending);
-  await appendAudit(firestore, {
-    actor: actor.uid,
-    action: AUDIT_ACTIONS.adjustmentRequest,
-    reason,
-    target: uid,
+      action: immediate ? AUDIT_ACTIONS.adjustmentAppend : AUDIT_ACTIONS.adjustmentRequest,
+      reason, target: uid,
+    }));
+    return { adjustmentId, status };
   });
-  return { adjustmentId, status: 'pending' };
 }
 
 export async function adjustmentApprove(
@@ -257,7 +252,7 @@ export async function adjustmentApprove(
   const adjustmentId = reqString(request, 'adjustmentId');
   const reason = reqString(request, 'reason', { min: MIN_ADJUSTMENT_REASON_LENGTH, max: 500 });
   const ref = firestore.doc(`gamAdjustments/${adjustmentId}`);
-  const ruleSetVersion = await readActiveRuleSetVersion(firestore);
+  const ruleSet = await new FirestoreRuleSetLoader(firestore).loadActive();
   await firestore.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
     const value = snap.data();
@@ -272,6 +267,7 @@ export async function adjustmentApprove(
     if (value.status !== 'pending') {
       throw new HttpsError('failed-precondition', `Adjustment ${adjustmentId} is ${value.status}, not pending.`);
     }
+    if (value.uid === actor.uid) throw new HttpsError('permission-denied', 'An admin cannot adjust their own balance.');
     if (value.raisedBy === actor.uid) {
       throw new HttpsError(
         'permission-denied',
@@ -283,7 +279,7 @@ export async function adjustmentApprove(
       amount: value.amount,
       reason: `${value.reason} — approved: ${reason}`,
       adjustmentId,
-      ruleSetVersion,
+      ruleSet,
     });
     tx.update(ref, { status: 'applied', secondApproverUid: actor.uid });
     tx.create(firestore.collection('gamAudit').doc(), {

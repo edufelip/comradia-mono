@@ -153,21 +153,21 @@ describe('rule-set validation rejects drift', () => {
     );
   });
 
-  it('rejects a level that moved off the ladder', () => {
-    assert.throws(
-      () => validateRuleSet(mutated((draft) => {
-        (draft.levels as Draft[])[1] = { id: 'flor', name: 'Flor', threshold: 250 };
-      })),
-      throwsWith('must be flor at 300'),
-    );
+  it('accepts tuned thresholds and rejects a ladder that moves backward', () => {
+    assert.equal(validateRuleSet(mutated((draft) => {
+      (draft.levels as Draft[])[1] = { id: 'flor', name: 'Flor', threshold: 250 };
+    })).levels[1].threshold, 250);
+    assert.throws(() => validateRuleSet(mutated((draft) => {
+      (draft.levels as Draft[])[1] = { id: 'flor', name: 'Flor', threshold: 1500 };
+    })), throwsWith('in an increasing ladder'));
   });
 
-  it('rejects achievement tiers and kinds that differ from the contract', () => {
+  it('rejects non-increasing badge thresholds and changes to registered kinds', () => {
     assert.throws(
       () => validateRuleSet(mutated((draft) => {
-        ((draft.achievements as Draft[])[0] as Draft).tiers = [2, 5, 20];
+        ((draft.achievements as Draft[])[0] as Draft).tiers = [5, 2, 20];
       })),
-      throwsWith('tiers must be 1, 5, 20'),
+      throwsWith('tiers must contain three increasing thresholds'),
     );
     assert.throws(
       () => validateRuleSet(mutated((draft) => {

@@ -82,6 +82,7 @@ export type GamProjection = {
   lifetimeNet: number;
   levelHighWaterMark: number;
   levelId: GamLevelId;
+  levels?: Array<{ id: GamLevelId; name: string; threshold: number }>;
   streak: GamStreakState;
   quest: GamQuestState;
   updatedAt: GamTimestamp;
@@ -138,12 +139,18 @@ export type GamUserAchievement = {
   updatedAt: GamTimestamp;
 };
 
-/** gamification/{uid}/lots/{id}. */
+/**
+ * gamification/{uid}/lots/{id}. Spending consumes the oldest lot first and leaves fully
+ * spent lots in place with `amount: 0` (a tombstone: refunds add the taken amount back,
+ * and every reader filters `amount > 0`). The weekly expiry job sets `noticeAt` when the
+ * 30-day expiry notice has been sent, so a lot is never noticed twice.
+ */
 export type GamLot = {
   amount: number;
   earnedAt: GamTimestamp;
   expiresAt: GamTimestamp;
   sourceLedgerId: string;
+  noticeAt?: GamTimestamp | null;
 };
 
 /** catalog/{itemId}. */
@@ -155,6 +162,30 @@ export type GamCatalogItem = {
   partner: string | null;
   stock: number | null;
   active: boolean;
+};
+
+// ---------------------------------------------------------------------------
+// Document shapes as Functions read them: the Firestore document id joined to the
+// contract type, for collections whose id is data (lot ids, catalog item ids).
+// ---------------------------------------------------------------------------
+
+/** A lot document with its id (spending and refunds address the lot by id). */
+export type LotDoc = { id: string } & GamLot;
+
+/** A catalog document with its id: the id is what members redeem. */
+export type CatalogItemDoc = { id: string } & GamCatalogItem;
+
+/**
+ * catalogCodes/{itemId}/codes/{code}: the server-only pool of single-use partner codes,
+ * pre-loaded by the operator before an item goes on sale. The redeem fulfilment step
+ * claims one code per redemption; partners only ever receive the code string, never a
+ * name, uid or profile. No security rule models this path: the default deny keeps it
+ * unreadable and unwritable by clients (proved by tests/redemption.test.ts).
+ */
+export type GamCatalogCode = {
+  /** The redemptionId that claimed this code, or null while unassigned. */
+  assignedTo: string | null;
+  assignedAt: GamTimestamp | null;
 };
 
 /** redemptions/{id}. */

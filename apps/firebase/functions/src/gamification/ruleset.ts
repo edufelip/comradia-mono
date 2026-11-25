@@ -193,13 +193,16 @@ function validateRule(input: unknown, path: string): GamRule {
     eachOf(array(value, clawbackPath), clawbackPath, (row, rowPath) => {
       const rowRecord = asRecord(row, rowPath);
       checkKeys(rowRecord, rowPath, ['on'], ['withinDays', 'scope', 'party']);
+      const withinDays = optionalInt(rowRecord, 'withinDays', rowPath);
+      const scope = optionalField(rowRecord, 'scope', rowPath,
+        (v, p) => oneOf({ scope: v }, 'scope', p, CLAWBACK_SCOPES));
+      const party = optionalField(rowRecord, 'party', rowPath,
+        (v, p) => oneOf({ party: v }, 'party', p, CLAWBACK_PARTIES));
       return {
         on: oneOf(rowRecord, 'on', rowPath, GAM_TRIGGER_EVENTS),
-        withinDays: optionalInt(rowRecord, 'withinDays', rowPath),
-        scope: optionalField(rowRecord, 'scope', rowPath,
-          (v, p) => oneOf({ scope: v }, 'scope', p, CLAWBACK_SCOPES)),
-        party: optionalField(rowRecord, 'party', rowPath,
-          (v, p) => oneOf({ party: v }, 'party', p, CLAWBACK_PARTIES)),
+        ...(withinDays === undefined ? {} : { withinDays }),
+        ...(scope === undefined ? {} : { scope }),
+        ...(party === undefined ? {} : { party }),
       };
     }));
   const celebration = optionalField(record, 'celebration', path, (value, celebrationPath) => {
@@ -213,11 +216,13 @@ function validateRule(input: unknown, path: string): GamRule {
   const audience = optionalField(record, 'audience', path, (value, audiencePath) => {
     const audienceRecord = asRecord(value, audiencePath);
     checkKeys(audienceRecord, audiencePath, [], ['experiment', 'arm']);
+    const experiment = optionalField(audienceRecord, 'experiment', audiencePath,
+      (v, p) => freeText({ experiment: v }, 'experiment', p));
+    const arm = optionalField(audienceRecord, 'arm', audiencePath,
+      (v, p) => freeText({ arm: v }, 'arm', p));
     return {
-      experiment: optionalField(audienceRecord, 'experiment', audiencePath,
-        (v, p) => freeText({ experiment: v }, 'experiment', p)),
-      arm: optionalField(audienceRecord, 'arm', audiencePath,
-        (v, p) => freeText({ arm: v }, 'arm', p)),
+      ...(experiment === undefined ? {} : { experiment }),
+      ...(arm === undefined ? {} : { arm }),
     };
   });
   return {
@@ -267,13 +272,13 @@ function validateAchievement(input: unknown, path: string): GamAchievementRule {
     throw new Error(`${path}.kind must be ${spec.kind} (the contract fixes it for ${id})`);
   }
   const tiers = eachOf(array(record.tiers, `${path}.tiers`), `${path}.tiers`, (value, tierPath) => {
-    if (typeof value !== 'number' || !Number.isInteger(value)) {
-      throw new Error(`${tierPath} must be an integer`);
+    if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 1) {
+      throw new Error(`${tierPath} must be a positive integer`);
     }
     return value;
   });
-  if (tiers.length !== spec.tiers.length || tiers.some((tier, index) => tier !== spec.tiers[index])) {
-    throw new Error(`${path}.tiers must be ${spec.tiers.join(', ')} (the contract fixes them)`);
+  if (tiers.length !== spec.tiers.length || tiers.some((tier, index) => index > 0 && tier <= tiers[index - 1])) {
+    throw new Error(`${path}.tiers must contain three increasing thresholds`);
   }
   const season = optionalField(record, 'season', path, (value, seasonPath) => {
     const seasonRecord = asRecord(value, seasonPath);
@@ -384,11 +389,13 @@ function validateCampaign(input: unknown, path: string): GamCampaign {
   const audience = optionalField(record, 'audience', path, (value, audiencePath) => {
     const audienceRecord = asRecord(value, audiencePath);
     checkKeys(audienceRecord, audiencePath, [], ['experiment', 'arm']);
+    const experiment = optionalField(audienceRecord, 'experiment', audiencePath,
+      (v, p) => freeText({ experiment: v }, 'experiment', p));
+    const arm = optionalField(audienceRecord, 'arm', audiencePath,
+      (v, p) => freeText({ arm: v }, 'arm', p));
     return {
-      experiment: optionalField(audienceRecord, 'experiment', audiencePath,
-        (v, p) => freeText({ experiment: v }, 'experiment', p)),
-      arm: optionalField(audienceRecord, 'arm', audiencePath,
-        (v, p) => freeText({ arm: v }, 'arm', p)),
+      ...(experiment === undefined ? {} : { experiment }),
+      ...(arm === undefined ? {} : { arm }),
     };
   });
   return {
@@ -406,22 +413,19 @@ function validateLevels(input: unknown, path: string): GamLevelRule[] {
   if (values.length !== GAM_LEVELS.length) {
     throw new Error(`${path} must list exactly ${GAM_LEVELS.length} levels`);
   }
+  let previousThreshold = -1;
   return values.map((value, index) => {
     const levelPath = `${path}[${index}]`;
     const record = asRecord(value, levelPath);
     checkKeys(record, levelPath, ['id', 'name', 'threshold']);
     const id = str(record, 'id', levelPath);
     const spec = GAM_LEVELS[index];
-    if (id !== spec.id || record.threshold !== spec.threshold) {
-      throw new Error(
-        `${levelPath} must be ${spec.id} at ${spec.threshold} (the contract fixes the ladder)`,
-      );
+    const threshold = int(record, 'threshold', levelPath, 0, Number.MAX_SAFE_INTEGER);
+    if (id !== spec.id || (index === 0 && threshold !== 0) || threshold <= previousThreshold) {
+      throw new Error(`${levelPath} must be ${spec.id} in an increasing ladder starting at zero`);
     }
-    return {
-      id: spec.id,
-      name: str(record, 'name', levelPath),
-      threshold: int(record, 'threshold', levelPath, 0),
-    };
+    previousThreshold = threshold;
+    return { id: spec.id, name: str(record, 'name', levelPath), threshold };
   });
 }
 

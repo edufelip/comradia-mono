@@ -8,6 +8,7 @@ import { FieldValue, Timestamp, type DocumentData, type DocumentReference, type 
 import type {
   GamAchievementId,
   GamLevelId,
+  GamLevelRule,
   GamProjection,
   GamQuestState,
   GamStreakState,
@@ -26,11 +27,11 @@ export type ProjectionState = {
   lifetimeNet: number;
   levelHighWaterMark: number;
   levelId: GamLevelId;
+  levels?: GamLevelRule[];
   streak: Required<Pick<GamStreakState, 'currentWeeks' | 'recordWeeks' | 'qualifiedThisWeek'
     | 'pauseBank' | 'pausedUntil'>> & { lastClosedWeek: string };
   quest: Required<Pick<GamQuestState, 'questId' | 'weekStart' | 'progress' | 'target'>>;
   questCompletedAt: Timestamp | null;
-  pausedUntil: Timestamp | null;
 };
 
 export function defaultProjection(): ProjectionState {
@@ -49,7 +50,6 @@ export function defaultProjection(): ProjectionState {
     },
     quest: { questId: null, weekStart: '', progress: 0, target: 0 },
     questCompletedAt: null,
-    pausedUntil: null,
   };
 }
 
@@ -63,6 +63,7 @@ export function parseProjection(data: DocumentData | undefined): ProjectionState
   state.balance = numberOf(data.balance, state.balance);
   state.lifetimeNet = numberOf(data.lifetimeNet, state.lifetimeNet);
   state.levelHighWaterMark = numberOf(data.levelHighWaterMark, state.levelHighWaterMark);
+  if (Array.isArray(data.levels)) state.levels = data.levels;
   if (typeof data.levelId === 'string') state.levelId = data.levelId as GamLevelId;
   if (data.streak !== undefined && data.streak !== null && typeof data.streak === 'object') {
     const streak = data.streak as Record<string, unknown>;
@@ -73,7 +74,6 @@ export function parseProjection(data: DocumentData | undefined): ProjectionState
     state.streak.pausedUntil = streak.pausedUntil instanceof Timestamp ? streak.pausedUntil : null;
     if (typeof streak.lastClosedWeek === 'string') state.streak.lastClosedWeek = streak.lastClosedWeek;
   }
-  if (data.pausedUntil instanceof Timestamp) state.pausedUntil = data.pausedUntil;
   if (data.quest !== undefined && data.quest !== null && typeof data.quest === 'object') {
     const quest = data.quest as Record<string, unknown>;
     state.quest.questId = typeof quest.questId === 'string' ? quest.questId : null;
@@ -92,12 +92,13 @@ export function projectionDoc(state: ProjectionState, updatedAt: FieldValue | Ti
     lifetimeNet: state.lifetimeNet,
     levelHighWaterMark: state.levelHighWaterMark,
     levelId: state.levelId,
+    ...(state.levels ? { levels: state.levels } : {}),
     streak: {
       currentWeeks: state.streak.currentWeeks,
       recordWeeks: state.streak.recordWeeks,
       qualifiedThisWeek: state.streak.qualifiedThisWeek,
       pauseBank: state.streak.pauseBank,
-      pausedUntil: state.pausedUntil,
+      pausedUntil: state.streak.pausedUntil,
       lastClosedWeek: state.streak.lastClosedWeek,
     },
     quest: {

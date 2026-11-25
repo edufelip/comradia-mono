@@ -22,3 +22,17 @@ change their defaults. In particular `gam_redemption` remains off pending legal 
 
 Firestore rules intentionally deny direct admin reads and writes. Use callable APIs for all
 access. The functions enforce authorization even if the console is bypassed.
+
+## Run the review console
+
+Use Node 24 in `apps/admin`. Install the lockfile, run `yarn test` and `yarn build`,
+then use `yarn dev` with the public Firebase web settings in `.env.local` (see
+`.env.example`). The Firebase project must allow the console's origin and have Google
+sign-in and reCAPTCHA Enterprise App Check configured. The console calls Functions in
+`southamerica-east1`.
+
+Without a published database rule set, the engine uses the bundled seed. The first
+draft can be created from that seed. The simulator compares both sets against up to
+10,000 normalized records from the last 14 days and reports when the sample was capped.
+Caps start at the beginning of the sample, so this is a forecast. It does not model
+delayed release, later clawbacks, prior lifetime counters, or post-sample activity.

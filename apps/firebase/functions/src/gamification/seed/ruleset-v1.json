@@ -231,7 +231,7 @@
     }
   },
   "campaigns": [
-    { "id": "spring_2026", "startsOn": "2026-09-22", "endsOn": "2026-12-21" },
+    { "id": "spring_2026", "startsOn": "2026-09-22", "endsOn": "2026-12-21", "appliesTo": ["conversation.started"] },
     {
       "id": "may_day",
       "startsOn": "2027-04-24",
@@ -239,7 +239,7 @@
       "multiplier": 2,
       "appliesTo": ["conversation.started"]
     },
-    { "id": "namorados", "startsOn": "2027-06-05", "endsOn": "2027-06-12" }
+    { "id": "namorados", "startsOn": "2027-06-05", "endsOn": "2027-06-12", "appliesTo": ["conversation.sustained"] }
   ],
   "levels": [
     { "id": "botao", "name": "Botão", "threshold": 0 },

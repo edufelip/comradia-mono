@@ -17,6 +17,7 @@ import {
   setDoc,
   Timestamp,
   updateDoc,
+  where,
 } from 'firebase/firestore';
 import { db, testEnvironment } from './helpers';
 
@@ -307,7 +308,7 @@ describe('catalog', () => {
 });
 
 describe('redemptions', () => {
-  it('lets only the member it belongs to get it; no list, no writes', async () => {
+  it('allows owner reads and bounded owner queries', async () => {
     await seed('redemptions/r1', {
       uid: 'alice',
       itemId: 'coffee_bookshop',
@@ -335,10 +336,34 @@ describe('redemptions', () => {
     await assertFails(
       getDocs(query(collection(db(alice), 'redemptions'), orderBy('createdAt'), limit(20))),
     );
+    await assertSucceeds(getDocs(query(collection(db(alice), 'redemptions'),
+      where('uid', '==', 'alice'), orderBy('createdAt', 'desc'), limit(25))));
+    await assertFails(getDocs(query(collection(db(bob), 'redemptions'),
+      where('uid', '==', 'alice'), orderBy('createdAt', 'desc'), limit(25))));
+    await assertFails(getDocs(query(collection(db(alice), 'redemptions'), where('uid', '==', 'alice'))));
     await assertFails(
       setDoc(doc(db(alice), 'redemptions/r3'), { uid: 'alice', itemId: 'coffee_bookshop' }),
     );
     await assertFails(updateDoc(doc(db(alice), 'redemptions/r1'), { code: 'FREEBIE' }));
     await assertFails(deleteDoc(doc(db(alice), 'redemptions/r1')));
   });
+});
+
+it('denies all direct access to the private partner code pool', async () => {
+  const path = 'catalogCodes/sample/codes/PARTNER_CODE';
+  await seed(path, { assignedTo: null });
+  for (const context of [alice, signedOut]) {
+    await assertFails(getDoc(doc(db(context), path)));
+    await assertFails(getDocs(collection(db(context), 'catalogCodes/sample/codes')));
+    await assertFails(updateDoc(doc(db(context), path), { assignedTo: 'alice' }));
+  }
+});
+
+it('lets only the owner read server-managed Cravos preferences', async () => {
+  const path = 'gamPreferences/alice';
+  await seed(path, { optedOut: true });
+  await assertSucceeds(getDoc(doc(db(alice), path)));
+  await assertFails(getDoc(doc(db(bob), path)));
+  await assertFails(getDocs(collection(db(alice), 'gamPreferences')));
+  await assertFails(updateDoc(doc(db(alice), path), { optedOut: false }));
 });

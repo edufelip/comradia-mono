@@ -139,6 +139,7 @@ export {
   gamOnMessageCreated,
   gamOnProfileWritten,
   gamOnReportWritten,
+  gamUpdatePreferences,
 } from './gamification/engine/functions';
 // ---------------------------------------------------------------------------
 // Cravos admin callables (spec §9; docs/gamification/admin.md). Every callable: App Check
@@ -176,3 +177,5 @@ export const gamGetFlags = onCall(GAM_ADMIN_CALLABLE_OPTIONS, async (request) =>
   gamAdminActor(request.auth);
   return gamFlags(getApp());
 });
+
+export { redeem, gamLiabilityReport } from './gamification/redemption/callable';

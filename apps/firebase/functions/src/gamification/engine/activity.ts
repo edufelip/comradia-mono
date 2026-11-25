@@ -1,8 +1,9 @@
+import { createHash } from 'node:crypto';
 import { FieldPath, Timestamp, type DocumentSnapshot } from 'firebase-admin/firestore';
 import { applyTrigger } from './clawbacks';
 import { markQualified, processEvent, releaseHold, type EngineCore, type EngineDeps } from './evaluator';
 import { engineEnabled, shadowTarget } from './flags';
-import { conversationGates, deriveMessageEvents, deriveProfileEvents, type DerivedEvent } from './normalizers';
+import { deriveMessageEvents, deriveProfileEvents, type DerivedEvent } from './normalizers';
 import { parseProjection } from './store';
 import { weekStartOf } from './weeks';
 
@@ -45,6 +46,7 @@ function dispatch(activity: Activity, derived: DerivedEvent, deps: EngineDeps) {
 }
 
 export async function recordMatch(deps: EngineDeps, match: DocumentSnapshot, id: string) {
+  if (!engineEnabled(await deps.flags.getFlags())) return;
   const users = matchMembers(match.id, match.get('users'));
   const at = snapshotTime(match, 'createdAt');
   if (users === null || at === null) return;
@@ -62,12 +64,13 @@ async function qualifyCurrentWeek(core: EngineCore, uid: string, at: Timestamp) 
   if (week !== weekStartOf(core.now(), timezone)) return;
   const shadow = shadowTarget(core.flags, uid);
   await core.store.runTransaction(async (tx) => {
-    const [account, counter, projection] = await tx.getAll(
+    const [account, preference, counter, projection] = await tx.getAll(
       core.store.firestore.doc(`users/${uid}`),
+      core.store.firestore.doc(`gamPreferences/${uid}`),
       core.store.counterRef(uid, shadow, `qualweek:${week}`),
       core.store.projectionRef(uid, shadow),
     );
-    if (account.exists && account.get('gamOptedOut') !== true && !counter.exists) markQualified(tx, core, uid, shadow, week, parseProjection(projection.data()));
+    if (account.exists && preference.get('optedOut') !== true && !counter.exists) markQualified(tx, core, uid, shadow, week, parseProjection(projection.data()));
   });
 }
 
@@ -102,14 +105,41 @@ export async function recordMessage(deps: EngineDeps, message: DocumentSnapshot,
     const from: unknown = doc.get('from');
     const time = snapshotTime(doc, 'createdAt');
     return typeof from === 'string' && time !== null && time.toMillis() >= since.toMillis()
-      ? [{ from, at: time.toMillis() }] : [];
+      ? [{ id: doc.id, from, at: time.toMillis() }] : [];
   });
   const other = users[0] === sender ? users[1] : users[0];
-  const firstReply = core.ruleSet.earnRules.filter((rule) =>
-    rule.event === 'message.first_in_match' && rule.hold?.releaseIf === 'other_replied');
-  for (const rule of firstReply) {
-    const bucket = core.store.pairBucketKey(match.id);
-    await releaseHold(core, other, shadowTarget(core.flags, other), rule, bucket, true);
+  let turn = priorMessages.length - 1;
+  while (turn > 0 && priorMessages[turn - 1].from === priorMessages[turn].from) turn -= 1;
+  const previous = priorMessages[turn];
+  const pair = core.store.pairBucketKey(match.id);
+  // Record turn boundaries and timing only. No message text, contact identifiers, or profile values.
+  const responseKey = (id: string) => createHash('sha256').update(`${pair}:${id}`).digest('hex');
+  if (previous?.from !== sender) {
+    const inbound = core.store.projectionRef(other, shadowTarget(core.flags, other))
+      .collection('gamReplies').doc(responseKey(message.id));
+    const senderResponse = previous ? core.store.projectionRef(sender, shadowTarget(core.flags, sender))
+      .collection('gamReplies').doc(responseKey(previous.id)) : null;
+    await db.runTransaction(async (tx) => {
+      const prefs = await tx.getAll(db.doc(`gamPreferences/${other}`), db.doc(`gamPreferences/${sender}`),
+        db.doc(`users/${other}`), db.doc(`users/${sender}`));
+      if (prefs[2].exists && prefs[0].get('optedOut') !== true) {
+        tx.set(inbound, { pair, at, expireAt: Timestamp.fromMillis(at.toMillis() + 45 * DAY_MS) }, { merge: true });
+      }
+      if (senderResponse !== null && previous !== undefined && prefs[3].exists && prefs[1].get('optedOut') !== true) {
+        tx.set(senderResponse, {
+          pair, at: Timestamp.fromMillis(previous.at), timely: at.toMillis() - previous.at <= DAY_MS,
+          expireAt: Timestamp.fromMillis(previous.at + 45 * DAY_MS),
+        }, { merge: true });
+      }
+    });
+  }
+
+  for (const rule of core.ruleSet.earnRules) {
+    if (!rule.hold || (rule.caps.perPairLifetime === undefined && rule.caps.perPairPerDay === undefined)) continue;
+    for (const recipient of users) {
+      await releaseHold(core, recipient, shadowTarget(core.flags, recipient), rule, pair,
+        rule.hold.releaseIf === 'other_replied' && recipient === other);
+    }
   }
   await qualifyCurrentWeek(core, sender, at);
 
@@ -123,7 +153,8 @@ export async function recordMessage(deps: EngineDeps, message: DocumentSnapshot,
     priorMessages, at: at.toMillis(), timezone: core.ruleSet.streakRules.timezone,
     accountAgeDays: [age(first), age(second)],
     pairAlready: { conversationStarted: false, conversationSustained: false },
-    gates: conversationGates(core.ruleSet.earnRules),
+    // Record candidates before the current rule's condition so draft changes can be replayed.
+    gates: { messagesEach: 1, activeDaysEach: 1 },
   });
   const blockedByToken = events.some((event) => event.kind.startsWith('conversation.')) &&
     await sharePushToken(first, second);
@@ -144,13 +175,18 @@ function profileFields(snapshot: DocumentSnapshot) {
   };
 }
 
-export async function recordProfile(deps: EngineDeps, before: DocumentSnapshot, after: DocumentSnapshot, activity: Activity) {
-  if (!after.exists) return;
-  const events = deriveProfileEvents(after.id, before.exists ? profileFields(before) : null, profileFields(after));
+export async function recordProfile(
+  deps: EngineDeps, before: DocumentSnapshot, after: DocumentSnapshot,
+  activity: Activity, verifyPortrait: (path: string) => Promise<boolean>,
+) {
+  if (!after.exists || !engineEnabled(await deps.flags.getFlags())) return;
+  const fields = profileFields(after);
+  const events = deriveProfileEvents(after.id, before.exists ? profileFields(before) : null, fields);
   for (const event of events) {
     if (event.kind === 'profile.photo_removed') {
       await recordClawback(deps, activity, event.kind, after.id, null);
     } else {
+      if (event.kind === 'profile.photo_added' && (fields.photoPath === null || !await verifyPortrait(fields.photoPath))) continue;
       await dispatch(activity, event, deps);
     }
   }

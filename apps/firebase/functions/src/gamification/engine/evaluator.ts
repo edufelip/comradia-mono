@@ -15,6 +15,7 @@ import {
   ledgerEntryId,
   type GamAchievementRule,
   type GamCampaign,
+  GAM_EARN_EVENTS,
   type GamEarnEvent,
   type GamEvent,
   type GamLedgerEntry,
@@ -23,7 +24,7 @@ import {
   type GamRule,
   type GamRuleSet,
 } from '../model';
-import { highWaterMark, levelForHighWaterMark } from '../level-for-lifetime';
+import { highWaterMark, levelFromRules } from '../level-for-lifetime';
 import { armFor, engineEnabled, shadowTarget, type GamFlags } from './flags';
 import type { RuleSetLoader } from './ruleset-loader';
 import type { GamFacts } from './normalizers';
@@ -322,9 +323,10 @@ export async function applyAwardCore(
   const next: ProjectionState = { ...state, streak: { ...state.streak }, quest: { ...state.quest } };
   next.balance = state.balance + spec.amount;
   next.lifetimeNet = state.lifetimeNet + spec.amount;
+  next.levels = ruleSet.levels;
   next.levelHighWaterMark = highWaterMark(state.levelHighWaterMark, next.lifetimeNet);
   const previousLevel = state.levelId;
-  next.levelId = levelForHighWaterMark(next.levelHighWaterMark);
+  next.levelId = levelFromRules(next.levelHighWaterMark, state.levelId, ruleSet.levels);
   const levelUpTo = next.levelId !== previousLevel ? next.levelId : null;
   tx.set(store.projectionRef(spec.recipient, spec.shadow), projectionDoc(next, FieldValue.serverTimestamp()), { merge: true });
 
@@ -345,7 +347,7 @@ export async function applyAwardCore(
       const [ticks, docs] = await Promise.all([tx.getAll(...tickRefs), tx.getAll(...docRefs)]);
       achievements.forEach((achievement, index) => {
         const tick = readCounter(ticks[index].data());
-        const newCount = tick.count + 1;
+        const newCount = achievement.kind === 'streak' ? next.streak.currentWeeks : tick.count + 1;
         tx.set(tickRefs[index], { count: FieldValue.increment(1), updatedAt: new Date(nowMs).toISOString() }, { merge: true });
         const currentTier = docs[index].exists && typeof docs[index].get('tier') === 'number'
           ? docs[index].get('tier') as number
@@ -391,6 +393,7 @@ export async function applyAwardCore(
 
   tx.set(store.metricsRef(day), {
     earned: FieldValue.increment(spec.amount),
+    gam_points_awarded: FieldValue.increment(1),
     [`rule:${spec.rule.id}`]: FieldValue.increment(1),
   }, { merge: true });
 
@@ -438,7 +441,7 @@ export async function applyAward(
     ? ruleSet.quests.find((candidate) => candidate.id === state.quest.questId) ?? null
     : questForWeek(ruleSet.quests, spec.recipient, weekStart);
 
-  if (quest !== null) {
+  if (quest !== null && state.quest.weekStart <= weekStart) {
     const partIndex = quest.parts.findIndex((part) => part.event === spec.rule.event);
     if (partIndex >= 0) {
       const partRef = store.counterRef(spec.recipient, spec.shadow, `quest:${weekStart}:${quest.id}:${partIndex}`);
@@ -542,6 +545,42 @@ export async function processEvent(input: ProcessEventInput, deps: EngineDeps): 
   };
   const outcome = await deps.store.runTransaction(async (tx) => {
     const velocity = new Map<string, { day: string; dailyEarnTotal: number; conversationsToday: number }>();
+    if (!GAM_EARN_EVENTS.some((event) => event === input.event.kind)) {
+      return { awards: 0, holds: 0, velocity };
+    }
+    const pair = input.event.pairKey?.split('_') ?? [];
+    const participants = pair.length === 2 && pair.includes(input.event.uid) ? pair : [input.event.uid];
+    const accountState = new Map<string, boolean>();
+    await Promise.all(participants.map(async (uid) => {
+      const [account, preference] = await tx.getAll(
+        deps.store.firestore.doc(`users/${uid}`), deps.store.firestore.doc(`gamPreferences/${uid}`),
+      );
+      accountState.set(uid, account.exists && preference.get('optedOut') !== true);
+    }));
+    if (input.event.pairKey !== undefined) {
+      const match = await tx.get(deps.store.firestore.doc(`matches/${input.event.pairKey}`));
+      const createdAt: unknown = match.get('createdAt');
+      if (!(createdAt instanceof Timestamp) || createdAt.toMillis() > atMs) return { awards: 0, holds: 0, velocity };
+    }
+
+    const normalized = await Promise.all(participants.filter((uid) => accountState.get(uid)).map(async (uid) => {
+      const key = documentKey(`${input.event.kind}:${input.event.eventId}`);
+      const activity = deps.store.firestore.doc(`gamEvents/${uid}/gamActivity/${key}`);
+      return { activity, uid, existing: (await tx.get(activity)).exists };
+    }));
+    const facts = Object.fromEntries(Object.entries(input.facts).filter(([, value]) => Number.isFinite(value)));
+    for (const { activity, uid, existing } of normalized) {
+      if (!existing) tx.create(activity, {
+        event: input.event.kind,
+        at: input.event.at,
+        expireAt: Timestamp.fromMillis(atMs + 30 * 86_400_000),
+        actor: uid === input.event.uid,
+        pairKey: input.event.pairKey === undefined ? null : deps.store.pairBucketKey(input.event.pairKey),
+        facts,
+        arm: armFor(uid, flags.experimentPct),
+      });
+    }
+
     const rules = ruleSet.earnRules.filter((rule) => rule.event === input.event.kind);
     const candidates: Candidate[] = [];
     for (const rule of rules) {
@@ -567,18 +606,16 @@ export async function processEvent(input: ProcessEventInput, deps: EngineDeps): 
 
     const states = new Map<string, ProjectionState>();
     await Promise.all([...new Set(candidates.map((candidate) => candidate.recipient))].map(async (recipient) => {
-      const [account, snapshot] = await tx.getAll(
-        deps.store.firestore.doc(`users/${recipient}`),
-        deps.store.projectionRef(recipient, shadowTarget(flags, recipient)),
-      );
-      if (account.exists && account.get('gamOptedOut') !== true) states.set(recipient, parseProjection(snapshot.data()));
+      if (!accountState.get(recipient)) return;
+      const snapshot = await tx.get(deps.store.projectionRef(recipient, shadowTarget(flags, recipient)));
+      states.set(recipient, parseProjection(snapshot.data()));
     }));
 
     let awards = 0;
     let holds = 0;
     for (const candidate of candidates) {
       const state = states.get(candidate.recipient);
-      if (state === undefined) continue;
+      if (state === undefined || !normalized.some((record) => record.uid === candidate.recipient && !record.existing)) continue;
       const spec: AwardSpec = {
         rule: candidate.rule,
         recipient: candidate.recipient,
@@ -628,7 +665,9 @@ export async function processEvent(input: ProcessEventInput, deps: EngineDeps): 
         });
       }
     }
-    tx.set(deps.store.metricsRef(day), { events: FieldValue.increment(1) }, { merge: true });
+    if (normalized.some(({ existing }) => !existing)) {
+      tx.set(deps.store.metricsRef(day), { events: FieldValue.increment(1) }, { merge: true });
+    }
     return { awards, holds, velocity };
   });
 
@@ -693,10 +732,11 @@ export async function releaseHold(
       }
     }
 
-    const [account, projectionSnap] = await tx.getAll(
-      core.store.firestore.doc(`users/${uid}`), core.store.projectionRef(uid, shadow),
+    const [account, preference, projectionSnap] = await tx.getAll(
+      core.store.firestore.doc(`users/${uid}`), core.store.firestore.doc(`gamPreferences/${uid}`),
+      core.store.projectionRef(uid, shadow),
     );
-    if (!account.exists || account.get('gamOptedOut') === true) {
+    if (!account.exists || preference.get('optedOut') === true) {
       tx.delete(holdRef);
       return 'void' as const;
     }

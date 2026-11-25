@@ -119,3 +119,51 @@ it('closes the qualified week once and pays its correctly dated award', async ()
   assert.equal(snapshot.get('balance'), 20);
   assert.equal((await projection.collection('ledger').get()).size, 2);
 });
+
+it('stops awards for an opted-out member, and allows that member to rejoin', async () => {
+  const { updatePreferences } = await import('../src/gamification/engine/preferences.js');
+  const { first, deps, input, store, at } = await fixture({ shadow: true });
+  await updatePreferences(db, first, { optedOut: true }, 12, 'America/Sao_Paulo', at.toMillis());
+  await processEvent(input, deps);
+  assert.equal((await store.projectionRef(first, true).get()).exists, false);
+  await updatePreferences(db, first, { optedOut: false }, 12, 'America/Sao_Paulo', at.toMillis());
+  assert.equal((await db.doc(`gamPreferences/${first}`).get()).get('optedOut'), false);
+  await assert.rejects(updatePreferences(db, first, { pauseWeeks: 13 }, 12, 'America/Sao_Paulo', at.toMillis()));
+});
+
+it('lapses and regains the active weekly badge without issuing Cravos', async () => {
+  const { refreshActiveBadges } = await import('../src/gamification/engine/active-badges.js');
+  const { first, deps, input, store } = await fixture({ shadow: false, uiEnabled: true, experimentPct: 100 });
+  await processEvent(input, deps);
+  const flags = await deps.flags.getFlags();
+  const core = { store, flags, ruleSet: seedRuleSet(), now: deps.now };
+  for (const week of ['2026-11-02', '2026-11-09', '2026-11-23']) {
+    await store.counterRef(first, false, `qualweek:${week}`).set({ count: 1 });
+  }
+  const badge = store.achievementRef(first, false, 'roda');
+  await refreshActiveBadges(core, first, false, '2026-11-23', deps.now());
+  assert.equal((await badge.get()).get('status'), 'unlocked');
+  await refreshActiveBadges(core, first, false, '2026-12-21', deps.now());
+  assert.equal((await badge.get()).get('status'), 'lapsed');
+  for (const week of ['2026-12-21', '2026-12-28', '2027-01-04']) {
+    await store.counterRef(first, false, `qualweek:${week}`).set({ count: 1 });
+  }
+  await refreshActiveBadges(core, first, false, '2027-01-04', deps.now());
+  assert.equal((await badge.get()).get('status'), 'unlocked');
+  assert.equal((await store.projectionRef(first, false).get()).get('balance'), 5);
+});
+
+it('requires Storage verification before issuing portrait points', async () => {
+  const { recordProfile } = await import('../src/gamification/engine/activity.js');
+  const { first, deps, store, at } = await fixture({ uiEnabled: true, experimentPct: 100 });
+  const profile = db.doc(`profiles/${first}`);
+  const before = await profile.get();
+  const path = `photos/${first}/portrait.jpg`;
+  await profile.set({ photoPath: path });
+  const after = await profile.get();
+  const activity = { at, id: 'profile-v1', path: profile.path };
+  await recordProfile(deps, before, after, activity, async () => false);
+  assert.equal((await store.projectionRef(first, false).get()).exists, false);
+  await recordProfile(deps, before, after, activity, async (candidate) => candidate === path);
+  assert.equal((await store.projectionRef(first, false).get()).get('balance'), 30);
+});

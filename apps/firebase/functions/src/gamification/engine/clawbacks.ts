@@ -8,7 +8,7 @@
 
 import { FieldValue, Timestamp, type Transaction } from 'firebase-admin/firestore';
 import { clawbackEntryId, ledgerEntryId, type GamRule, type GamRuleSet, type GamTriggerEvent } from '../model';
-import { highWaterMark, levelForHighWaterMark } from '../level-for-lifetime';
+import { highWaterMark, levelFromRules } from '../level-for-lifetime';
 import { shadowTarget, type GamFlags } from './flags';
 import { isoDateInZone } from './weeks';
 import { GamEngineStore, parseProjection, projectionDoc, readCounter, type ProjectionState } from './store';
@@ -98,11 +98,12 @@ export async function applyTrigger(
       const holdBucket = pairBucketFor(store, target.rule, input.pairKey);
       const holdRef = store.holdRef(target.uid, target.shadow, target.rule.id, holdBucket ?? target.sourceId);
 
-      const [originalSnap, clawbackSnap, holdSnap, projectionSnap] = await tx.getAll(
+      const [originalSnap, clawbackSnap, holdSnap, projectionSnap, expired] = await tx.getAll(
         originalRef,
         clawbackRef,
         holdRef,
         store.projectionRef(target.uid, target.shadow),
+        store.ledgerRef(target.uid, target.shadow, `expire:${ledgerId}`),
       );
 
       // An unreleased hold is voided (never ledgered) no matter its age.
@@ -137,13 +138,25 @@ export async function applyTrigger(
         createdAt: FieldValue.serverTimestamp(),
       });
       tx.delete(store.lotRef(target.uid, target.shadow, ledgerId));
+      // Expiry already debited this share. Reverse that debit before applying the full
+      // earned-amount clawback so both the ledger and projected balance reconcile.
+      const expiredDebit: unknown = expired.get('amount');
+      const restored = typeof expiredDebit === 'number' && expiredDebit < 0 ? Math.min(amount, -expiredDebit) : 0;
+      if (restored > 0) {
+        tx.create(store.ledgerRef(target.uid, target.shadow, `reverse-expiry:${ledgerId}`), {
+          track: 'cravos', kind: 'refund', amount: restored, ruleId: 'reverse_lot_expiry',
+          ruleSetVersion: ruleSet.version,
+          source: { event: 'lot.expiry_reversed', path: expired.ref.path, eventId: input.eventId },
+          actor: 'system', createdAt: FieldValue.serverTimestamp(),
+        });
+      }
 
       const next: ProjectionState = { ...state, streak: { ...state.streak }, quest: { ...state.quest } };
-      next.balance = state.balance - amount;
+      next.balance = state.balance - amount + restored;
       next.lifetimeNet = state.lifetimeNet - amount;
       // The high-water mark only rises: a clawback never demotes the level.
       next.levelHighWaterMark = highWaterMark(state.levelHighWaterMark, next.lifetimeNet);
-      next.levelId = levelForHighWaterMark(next.levelHighWaterMark);
+      next.levelId = levelFromRules(next.levelHighWaterMark, state.levelId, ruleSet.levels);
 
       // Revert the quest part this earn counted toward (the weekly quest is
       // "re-evaluated if its parts are clawed back", spec §4).
@@ -187,7 +200,7 @@ export async function applyTrigger(
                 next.balance -= questAmount;
                 next.lifetimeNet -= questAmount;
                 next.levelHighWaterMark = highWaterMark(next.levelHighWaterMark, next.lifetimeNet);
-                next.levelId = levelForHighWaterMark(next.levelHighWaterMark);
+                next.levelId = levelFromRules(next.levelHighWaterMark, state.levelId, ruleSet.levels);
                 next.questCompletedAt = null;
                 clawbacks += 1;
               }

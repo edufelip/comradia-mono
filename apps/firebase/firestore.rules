@@ -301,6 +301,10 @@ service cloud.firestore {
       }
     }
 
+    match /gamPreferences/{uid} {
+      allow get: if isOwner(uid);
+    }
+
     // The redemption catalog: any signed-in member may browse it; the redeem callable
     // (with App Check) is the only writer.
     match /catalog/{itemId} {
@@ -310,9 +314,13 @@ service cloud.firestore {
     // A member's own redemption receipt, created by the redeem callable.
     match /redemptions/{redemptionId} {
       allow get: if signedIn() && resource.data.uid == request.auth.uid;
+      allow list: if signedIn() && resource.data.uid == request.auth.uid
+        && request.query.limit != null && request.query.limit <= 25;
     }
 
     // gamRuleSets, gamConfig, gamAudit, gamAdjustments, gamShadow and gamMetrics have no
-    // match block on purpose: the default deny keeps them server-only.
+    // match block on purpose: the default deny keeps them server-only. So does
+    // catalogCodes/{itemId}/codes/{code}, the single-use partner code pool: no client may
+    // ever read a code (tests/gamification.test.ts proves the deny).
   }
 }

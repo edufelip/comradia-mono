@@ -98,7 +98,7 @@ export class FirebaseAccountCleanupStore implements AccountCleanupStore {
   async deleteUserTree(uid: string): Promise<void> {
     // Remove the account first so delayed award handlers cannot recreate either projection.
     await this.firestore.recursiveDelete(this.firestore.doc(`users/${uid}`));
-    await Promise.all(['gamification', 'gamShadow'].map((root) =>
+    await Promise.all(['gamification', 'gamShadow', 'gamEvents', 'gamPreferences'].map((root) =>
       this.firestore.recursiveDelete(this.firestore.doc(`${root}/${uid}`)),
     ));
   }

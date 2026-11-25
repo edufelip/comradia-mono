@@ -4,10 +4,11 @@
 // request, and `approvePublish` only applies when the newest audit entry for that rule
 // set is still the request and was written by a DIFFERENT admin. The client (apps/admin)
 // only mirrors that state; it cannot bypass it.
-import { FieldValue, Timestamp, type Firestore } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp, type Firestore, type Transaction } from 'firebase-admin/firestore';
 import { HttpsError } from 'firebase-functions/v2/https';
 import type { GamConfig, GamRuleSet } from '../model';
 import { validateRuleSet } from '../ruleset';
+import { seedRuleSet } from '../engine/ruleset-loader';
 import { AUDIT_ACTIONS, appendAudit, auditEntryFields, latestAuditForTarget, type GamAuditEntryRead } from './audit';
 import { optionalString, reqInt, reqRecord, reqString } from './request';
 import type { GamAdminActor } from './guard';
@@ -131,16 +132,11 @@ export async function createDraft(
     source = await readRuleSet(firestore, fromId);
   } else {
     const active = await readActiveConfig(firestore);
-    if (!active) {
-      throw new HttpsError(
-        'failed-precondition',
-        'There is no active rule set to draft from; pass fromRuleSetId.',
-      );
-    }
-    source = await readRuleSet(firestore, active.ruleSetId);
+    source = active ? await readRuleSet(firestore, active.ruleSetId) : seedRuleSet();
   }
   const highest = await firestore.collection('gamRuleSets').orderBy('version', 'desc').limit(1).get();
-  const nextVersion = (highest.docs.length === 0 ? 0 : readRuleSetSnapshot(highest.docs[0].id, highest.docs[0].data()).version) + 1;
+  const highestVersion = highest.docs.length === 0 ? 0 : readRuleSetSnapshot(highest.docs[0].id, highest.docs[0].data()).version;
+  const nextVersion = Math.max(source.version, highestVersion) + 1;
   const id = `v${nextVersion}`;
   const draft: GamRuleSet = {
     ...source,
@@ -210,12 +206,13 @@ export async function updateDraft(
  * must be a different admin than the approver. */
 async function readOpenRequest(
   firestore: Firestore,
+  tx: Transaction,
   ruleSetId: string,
   requestedAction: string,
   approveAction: string,
   actor: GamAdminActor,
 ): Promise<GamAuditEntryRead> {
-  const latest = await latestAuditForTarget(firestore, ruleSetId);
+  const latest = await latestAuditForTarget(firestore, ruleSetId, tx);
   if (!latest || latest.action !== requestedAction) {
     throw new HttpsError(
       'failed-precondition',
@@ -263,9 +260,9 @@ export async function approvePublish(
   const request = reqRecord(data);
   const ruleSetId = reqString(request, 'ruleSetId');
   const reason = reqString(request, 'reason', { min: 10, max: 500 });
-  await readOpenRequest(firestore, ruleSetId, AUDIT_ACTIONS.publishRequest, 'approve the publish', actor);
   const ref = firestore.doc(`gamRuleSets/${ruleSetId}`);
   await firestore.runTransaction(async (tx) => {
+    await readOpenRequest(firestore, tx, ruleSetId, AUDIT_ACTIONS.publishRequest, 'approve the publish', actor);
     const snap = await tx.get(ref);
     if (!snap.exists) throw new HttpsError('not-found', `Rule set ${ruleSetId} does not exist.`);
     const stored = readRuleSetSnapshot(ruleSetId, snap.data() ?? {});
@@ -339,9 +336,9 @@ export async function approveRollback(
   const request = reqRecord(data);
   const ruleSetId = reqString(request, 'ruleSetId');
   const reason = reqString(request, 'reason', { min: 10, max: 500 });
-  await readOpenRequest(firestore, ruleSetId, AUDIT_ACTIONS.rollbackRequest, 'approve the rollback', actor);
   const ref = firestore.doc(`gamRuleSets/${ruleSetId}`);
   await firestore.runTransaction(async (tx) => {
+    await readOpenRequest(firestore, tx, ruleSetId, AUDIT_ACTIONS.rollbackRequest, 'approve the rollback', actor);
     const snap = await tx.get(ref);
     if (!snap.exists) throw new HttpsError('not-found', `Rule set ${ruleSetId} does not exist.`);
     const stored = readRuleSetSnapshot(ruleSetId, snap.data() ?? {});

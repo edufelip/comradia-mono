@@ -35,7 +35,7 @@ export function daysBetweenIsoDates(a: string, b: string): number {
   return Math.round((utcMidnight(b) - utcMidnight(a)) / 86_400_000);
 }
 
-function addIsoDays(isoDate: string, days: number): string {
+export function addIsoDays(isoDate: string, days: number): string {
   const [year, month, day] = isoDate.split('-').map(Number);
   const shifted = new Date(Date.UTC(year, month - 1, day + days));
   return isoDateInZone(shifted.getTime(), 'UTC');

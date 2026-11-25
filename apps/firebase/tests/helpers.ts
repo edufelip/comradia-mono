@@ -15,7 +15,7 @@ export const STORAGE_RULES = readFileSync(join(ROOT, 'storage.rules'), 'utf8');
 
 const [HOST, PORT] = (process.env.FIRESTORE_EMULATOR_HOST ?? '127.0.0.1:8089').split(':');
 export const EMULATOR_ORIGIN = `http://${HOST}:${PORT}`;
-const STORAGE_PORT = 9199;
+const storageOrigin = new URL(`http://${process.env.FIREBASE_STORAGE_EMULATOR_HOST ?? '127.0.0.1:9199'}`);
 
 /**
  * Starts a rules environment for one test file and deploys firestore.rules to it. Every
@@ -33,7 +33,7 @@ export async function testEnvironment(
     firestore: { host: HOST, port: Number(PORT), rules: RULES },
     // The Storage emulator has one ruleset for every project. Loading it from each file in
     // parallel left gaps with no ruleset, so only the Storage tests load it.
-    ...(storage && { storage: { host: '127.0.0.1', port: STORAGE_PORT, rules: STORAGE_RULES } }),
+    ...(storage && { storage: { host: storageOrigin.hostname, port: Number(storageOrigin.port), rules: STORAGE_RULES } }),
   });
   await assertRulesDeployed(projectId);
   return env;
