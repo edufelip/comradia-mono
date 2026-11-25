@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
+  DsAchievementTier,
   DsArt,
   DsBorder,
   DsCategoryColor,
@@ -259,5 +260,51 @@ describe('design-system art palette', () => {
 
   it('keeps category accents as opaque 6-digit hex so a two-digit alpha suffix stays valid', () => {
     for (const value of Object.values(DsCategoryColor)) assert.match(value, /^#[0-9a-fA-F]{6}$/);
+  });
+});
+
+describe('design-system achievement tiers', () => {
+  it('uses valid opaque 6-digit hex for every tier shade', () => {
+    for (const tier of Object.values(DsAchievementTier)) {
+      const values = [
+        tier.base,
+        tier.rimLight,
+        tier.rimDark,
+        tier.face.light,
+        tier.face.dark,
+        tier.glyphInk.light,
+        tier.glyphInk.dark,
+        tier.highlightArc,
+        tier.ink,
+      ];
+
+      for (const value of values) assert.match(value, /^#[0-9a-fA-F]{6}$/);
+    }
+  });
+
+  it('keeps text on a tier fill readable: ink passes AA on every metal in both schemes', () => {
+    for (const scheme of SCHEMES) {
+      for (const [name, tier] of Object.entries(DsAchievementTier)) {
+        const ratio = contrastRatio(tier.ink, tier.base);
+
+        assert.ok(
+          ratio >= 4.5,
+          `${scheme} ink on ${name} tier is ${ratio.toFixed(2)}:1, expected >= 4.5:1`,
+        );
+      }
+    }
+  });
+
+  it('keeps the medal glyph visible against its face in both schemes (UI contrast 3:1)', () => {
+    for (const scheme of SCHEMES) {
+      for (const [name, tier] of Object.entries(DsAchievementTier)) {
+        const ratio = contrastRatio(tier.glyphInk[scheme], tier.face[scheme]);
+
+        assert.ok(
+          ratio >= 3,
+          `${scheme} glyphInk on ${name} face is ${ratio.toFixed(2)}:1, expected >= 3:1`,
+        );
+      }
+    }
   });
 });

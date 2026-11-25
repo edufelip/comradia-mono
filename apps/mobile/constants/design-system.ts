@@ -2,6 +2,9 @@ import type { TextStyle, ViewStyle } from 'react-native';
 
 export type DsColorScheme = 'light' | 'dark';
 
+/** Any color role name from the theme, for props that let a caller pick a fill (e.g. a progress bar). */
+export type DsColorToken = keyof DsTheme['color'];
+
 export type DsTheme = {
   color: {
     canvas: string;
@@ -386,6 +389,75 @@ export const DsArt = {
     { background: '#FFD9C7', shirt: '#E05A47', skin: '#C68642' },
   ],
 } as const;
+
+/** Only `constants/design-system.ts` may hold color literals, so the mixer lives here. */
+function mixHex(from: string, to: string, amount: number): string {
+  const channel = (hex: string, offset: number) =>
+    Number.parseInt(hex.slice(offset, offset + 2), 16);
+  const blend = (offset: number) => {
+    const mixed = Math.round(
+      channel(from, offset) + (channel(to, offset) - channel(from, offset)) * amount,
+    );
+    return mixed.toString(16).padStart(2, '0');
+  };
+  return `#${blend(1)}${blend(3)}${blend(5)}`;
+}
+
+/** Pure white and black exist only as blending targets for the fixed palettes below. */
+const WHITE = '#ffffff';
+const BLACK = '#000000';
+const BRAND_INK = '#231214';
+
+type TierSchemeShades = { light: string; dark: string };
+
+type DsAchievementTierPalette = {
+  /** The tier's metal: chip fills and the medal rim's mid stop. */
+  base: string;
+  /** Light end of the bevelled rim gradient. */
+  rimLight: string;
+  /** Dark end of the rim gradient and the inner bevel's outer edge. */
+  rimDark: string;
+  /** A face tinted with the metal, drawn on the card surface, per scheme. */
+  face: TierSchemeShades;
+  /** The centered glyph's ink, per scheme. */
+  glyphInk: TierSchemeShades;
+  /** The decorative highlight arc on the rim. */
+  highlightArc: string;
+  /** Text on a chip filled with `base`; the only AA-passing ink on all three metals. */
+  ink: string;
+};
+
+function tierPalette(base: string): DsAchievementTierPalette {
+  return {
+    base,
+    rimLight: mixHex(base, WHITE, 0.45),
+    rimDark: mixHex(base, BLACK, 0.32),
+    face: {
+      light: mixHex(THEME_BY_SCHEME.light.color.surface, base, 0.1),
+      dark: mixHex(THEME_BY_SCHEME.dark.color.surface, base, 0.16),
+    },
+    glyphInk: {
+      light: mixHex(base, BLACK, 0.38),
+      dark: mixHex(base, WHITE, 0.35),
+    },
+    highlightArc: WHITE,
+    ink: BRAND_INK,
+  };
+}
+
+/**
+ * Achievement tiers (bronze, silver, gold), the fixed palette of the Cravos conquistas.
+ * Like `DsArt` it does not change with the scheme, except for the medal shades that sit on
+ * a card (`face`, `glyphInk`). Text on a tier fill always uses `ink`: white fails AA on
+ * silver and bronze. The medal itself never carries text.
+ */
+export const DsAchievementTier = {
+  bronze: tierPalette('#B5703F'),
+  silver: tierPalette('#8C97A3'),
+  gold: tierPalette('#C9961E'),
+} as const satisfies Record<string, DsAchievementTierPalette>;
+
+export type DsAchievementTierKey = keyof typeof DsAchievementTier;
 
 export function getDsTheme(scheme: DsColorScheme): DsTheme {
   return THEME_BY_SCHEME[scheme];
