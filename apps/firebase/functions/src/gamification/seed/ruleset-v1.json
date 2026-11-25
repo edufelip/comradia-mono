@@ -1,0 +1,251 @@
+{
+  "version": 1,
+  "status": "published",
+  "parentVersion": null,
+  "author": "seed",
+  "notes": "Initial rule set from the Cravos spec (docs/gamification/README.md sections 4-7 and Appendix A). Amounts, caps, clawbacks and holds follow section 4's member table.",
+  "earnRules": [
+    {
+      "id": "conversation_started",
+      "track": "cravos",
+      "event": "conversation.started",
+      "award": { "amount": 30, "to": "both_participants" },
+      "conditions": [
+        { "fact": "conversation.messagesEach", "op": ">=", "value": 3 },
+        { "fact": "conversation.spanMinutes", "op": ">=", "value": 10 },
+        { "fact": "account.ageDays", "op": ">=", "value": 7 }
+      ],
+      "caps": { "perDay": 3, "perPairLifetime": 1 },
+      "hold": { "hours": 24, "releaseIf": "no_report_no_block" },
+      "clawback": [
+        { "on": "match.deleted", "withinDays": 7 },
+        { "on": "report.upheld", "scope": "match", "party": "reported" },
+        { "on": "block.created", "withinDays": 7, "party": "blocked" }
+      ],
+      "idempotencyKey": "{ruleId}:{matchId}:{uid}",
+      "celebration": { "kind": "toast", "copyKey": "gam.toast.conversation_started" }
+    },
+    {
+      "id": "conversation_sustained",
+      "track": "cravos",
+      "event": "conversation.sustained",
+      "award": { "amount": 40, "to": "both_participants" },
+      "conditions": [
+        { "fact": "conversation.activeDaysEach", "op": ">=", "value": 3 },
+        { "fact": "conversation.spanDays", "op": "<=", "value": 14 }
+      ],
+      "caps": { "perWeek": 2, "perPairLifetime": 1 },
+      "clawback": [{ "on": "report.upheld", "scope": "match", "party": "reported" }],
+      "idempotencyKey": "{ruleId}:{matchId}:{uid}",
+      "celebration": { "kind": "toast", "copyKey": "gam.toast.conversation_sustained" }
+    },
+    {
+      "id": "message_first_in_match",
+      "track": "cravos",
+      "event": "message.first_in_match",
+      "award": { "amount": 10, "to": "sender" },
+      "conditions": [{ "fact": "match.ageHours", "op": "<=", "value": 24 }],
+      "caps": { "perDay": 5, "perPairLifetime": 1 },
+      "hold": { "hours": 72, "releaseIf": "other_replied" },
+      "clawback": [
+        { "on": "report.created", "scope": "pair", "party": "reported", "withinDays": 3 },
+        { "on": "block.created", "withinDays": 3, "party": "blocked" }
+      ],
+      "idempotencyKey": "{ruleId}:{matchId}:{uid}",
+      "celebration": { "kind": "toast", "copyKey": "gam.toast.message_first_in_match" }
+    },
+    {
+      "id": "message_timely_reply",
+      "track": "cravos",
+      "event": "message.timely_reply",
+      "award": { "amount": 5, "to": "sender" },
+      "conditions": [{ "fact": "reply.waitedHours", "op": "<=", "value": 24 }],
+      "caps": { "perDay": 6, "perPairPerDay": 1, "minGapHours": 2 },
+      "idempotencyKey": "{ruleId}:{messageId}:{uid}",
+      "celebration": { "kind": "toast", "copyKey": "gam.toast.message_timely_reply" }
+    },
+    {
+      "id": "match_created",
+      "track": "cravos",
+      "event": "match.created",
+      "award": { "amount": 5, "to": "both_participants" },
+      "caps": { "perDay": 3, "perPairLifetime": 1 },
+      "clawback": [{ "on": "match.deleted", "withinDays": 7 }],
+      "idempotencyKey": "{ruleId}:{matchId}:{uid}"
+    },
+    {
+      "id": "profile_photo_added",
+      "track": "cravos",
+      "event": "profile.photo_added",
+      "award": { "amount": 30, "to": "owner" },
+      "caps": { "lifetime": 1 },
+      "clawback": [{ "on": "profile.photo_removed", "withinDays": 7 }],
+      "idempotencyKey": "{ruleId}:{uid}:{uid}",
+      "celebration": { "kind": "toast", "copyKey": "gam.toast.profile_photo_added" }
+    },
+    {
+      "id": "profile_prompt_refreshed",
+      "track": "cravos",
+      "event": "profile.prompt_refreshed",
+      "award": { "amount": 10, "to": "owner" },
+      "caps": { "per30Days": 1 },
+      "idempotencyKey": "{ruleId}:{uid}:{uid}",
+      "celebration": { "kind": "toast", "copyKey": "gam.toast.profile_prompt_refreshed" }
+    },
+    {
+      "id": "streak_week_completed",
+      "track": "cravos",
+      "event": "streak.week_completed",
+      "award": { "amount": 15, "to": "owner" },
+      "caps": { "perWeek": 1 },
+      "idempotencyKey": "{ruleId}:{weekStart}:{uid}",
+      "celebration": { "kind": "toast", "copyKey": "gam.toast.streak_week_completed" }
+    },
+    {
+      "id": "streak_milestone_4",
+      "track": "cravos",
+      "event": "streak.milestone",
+      "award": { "amount": 50, "to": "owner" },
+      "conditions": [{ "fact": "streak.weeks", "op": "==", "value": 4 }],
+      "caps": { "lifetime": 1 },
+      "idempotencyKey": "{ruleId}:{uid}:{uid}",
+      "celebration": { "kind": "toast", "copyKey": "gam.toast.streak_milestone" }
+    },
+    {
+      "id": "streak_milestone_12",
+      "track": "cravos",
+      "event": "streak.milestone",
+      "award": { "amount": 100, "to": "owner" },
+      "conditions": [{ "fact": "streak.weeks", "op": "==", "value": 12 }],
+      "caps": { "lifetime": 1 },
+      "idempotencyKey": "{ruleId}:{uid}:{uid}",
+      "celebration": { "kind": "toast", "copyKey": "gam.toast.streak_milestone" }
+    },
+    {
+      "id": "streak_milestone_26",
+      "track": "cravos",
+      "event": "streak.milestone",
+      "award": { "amount": 200, "to": "owner" },
+      "conditions": [{ "fact": "streak.weeks", "op": "==", "value": 26 }],
+      "caps": { "lifetime": 1 },
+      "idempotencyKey": "{ruleId}:{uid}:{uid}",
+      "celebration": { "kind": "toast", "copyKey": "gam.toast.streak_milestone" }
+    },
+    {
+      "id": "streak_milestone_52",
+      "track": "cravos",
+      "event": "streak.milestone",
+      "award": { "amount": 400, "to": "owner" },
+      "conditions": [{ "fact": "streak.weeks", "op": "==", "value": 52 }],
+      "caps": { "lifetime": 1 },
+      "idempotencyKey": "{ruleId}:{uid}:{uid}",
+      "celebration": { "kind": "toast", "copyKey": "gam.toast.streak_milestone" }
+    },
+    {
+      "id": "quest_completed",
+      "track": "cravos",
+      "event": "quest.completed",
+      "award": { "amount": 25, "to": "owner" },
+      "caps": { "perWeek": 1 },
+      "clawback": [{ "on": "quest.part_clawed_back" }],
+      "idempotencyKey": "{ruleId}:{weekStart}:{uid}",
+      "celebration": { "kind": "toast", "copyKey": "gam.toast.quest_completed" }
+    }
+  ],
+  "quests": [
+    {
+      "id": "quest_reply_three",
+      "copyKey": "gam.quest.reply_three",
+      "parts": [{ "event": "message.timely_reply", "target": 3 }]
+    },
+    {
+      "id": "quest_first_message_two",
+      "copyKey": "gam.quest.first_message_two",
+      "parts": [{ "event": "message.first_in_match", "target": 2 }]
+    },
+    {
+      "id": "quest_refresh_answer",
+      "copyKey": "gam.quest.refresh_answer",
+      "parts": [{ "event": "profile.prompt_refreshed", "target": 1 }]
+    }
+  ],
+  "achievements": [
+    { "id": "faisca", "kind": "progress", "src": "conversation.started", "tiers": [1, 5, 20] },
+    { "id": "papo", "kind": "progress", "src": "conversation.sustained", "tiers": [1, 5, 15] },
+    { "id": "passo", "kind": "progress", "src": "message.first_in_match", "tiers": [3, 10, 30] },
+    { "id": "vacuo", "kind": "progress", "src": "message.timely_reply", "tiers": [10, 50, 200] },
+    { "id": "constancia", "kind": "streak", "src": "streak.milestone", "tiers": [4, 12, 26] },
+    { "id": "cartao", "kind": "progress", "src": "profile.prompt_refreshed", "tiers": [1, 3, 6] },
+    {
+      "id": "roda",
+      "kind": "active",
+      "src": "streak.week_qualified",
+      "tiers": [1, 3, 6],
+      "windowWeeks": 4,
+      "windowNeedWeeks": 3
+    },
+    {
+      "id": "escuta",
+      "kind": "active",
+      "src": "message.timely_reply",
+      "tiers": [5, 10, 20],
+      "windowDays": 30,
+      "replyRatePct": 80
+    },
+    {
+      "id": "primavera",
+      "kind": "seasonal",
+      "src": "campaign:spring_2026",
+      "tiers": [3, 6, 12],
+      "season": { "startsOn": "2026-09-22", "endsOn": "2026-12-21" }
+    },
+    {
+      "id": "maio",
+      "kind": "campaign",
+      "src": "campaign:may_day",
+      "tiers": [2, 4, 8],
+      "season": { "startsOn": "2027-04-24", "endsOn": "2027-05-01" }
+    },
+    {
+      "id": "namorados",
+      "kind": "seasonal",
+      "src": "campaign:namorados",
+      "tiers": [1, 2, 3],
+      "season": { "startsOn": "2027-06-05", "endsOn": "2027-06-12" }
+    }
+  ],
+  "streakRules": {
+    "timezone": "America/Sao_Paulo",
+    "weekStartsOn": "monday",
+    "qualifyingEvents": ["message.created", "quest.completed", "profile.prompt_refreshed"],
+    "promptRefreshQualifiesEveryDays": 30,
+    "pauseEarnEveryWeeks": 4,
+    "pauseBankByLevel": { "botao": 1, "flor": 2, "ramalhete": 2, "jardim": 3, "primavera": 3 },
+    "maxPauseWeeks": 12,
+    "milestonesWeeks": [4, 12, 26, 52],
+    "reminder": {
+      "enabled": false,
+      "dayOfWeek": "sunday",
+      "hour": 18,
+      "timezone": "America/Sao_Paulo"
+    }
+  },
+  "campaigns": [
+    { "id": "spring_2026", "startsOn": "2026-09-22", "endsOn": "2026-12-21" },
+    {
+      "id": "may_day",
+      "startsOn": "2027-04-24",
+      "endsOn": "2027-05-01",
+      "multiplier": 2,
+      "appliesTo": ["conversation.started"]
+    },
+    { "id": "namorados", "startsOn": "2027-06-05", "endsOn": "2027-06-12" }
+  ],
+  "levels": [
+    { "id": "botao", "name": "Botão", "threshold": 0 },
+    { "id": "flor", "name": "Flor", "threshold": 300 },
+    { "id": "ramalhete", "name": "Ramalhete", "threshold": 1000 },
+    { "id": "jardim", "name": "Jardim", "threshold": 2500 },
+    { "id": "primavera", "name": "Primavera", "threshold": 5000 }
+  ]
+}
