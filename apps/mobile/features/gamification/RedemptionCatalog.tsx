@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { randomUUID } from 'expo-crypto';
 import { useEffect, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
@@ -9,6 +10,14 @@ import { useTranslation } from '@/localization';
 import type { GamDocument } from '@/services/gamification/types';
 import type { GamCatalogItem, GamRedemption } from './model';
 import { useGamification } from './provider';
+
+async function clearRequestKey(storageKey: string) {
+  try {
+    await AsyncStorage.removeItem(storageKey);
+  } catch {
+    // A key that could not be removed remains safe to replay.
+  }
+}
 
 export function RedemptionCatalog({ scheme, balance }: { scheme: DsColorScheme; balance: number }) {
   const { uid, client, flags } = useGamification();
@@ -36,7 +45,6 @@ function CatalogContent({
   const [result, setResult] = useState<{ code: string | null } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
-  const requests = useRef(new Map<string, string>());
   const pending = useRef(false);
 
   useEffect(() => {
@@ -59,17 +67,17 @@ function CatalogContent({
     pending.current = true;
     setBusy(true);
     setError(false);
-    const key = requests.current.get(selected.id) ?? randomUUID();
-    requests.current.set(selected.id, key);
+    const storageKey = `comradia.cravos.redemption:${uid}:${selected.id}`;
     try {
-      const claim = await client.redeem(selected.id, key);
-      if (claim.ok) {
-        setResult({ code: claim.code });
-        requests.current.delete(selected.id);
-      } else {
-        requests.current.delete(selected.id);
-        setError(true);
+      let key = await AsyncStorage.getItem(storageKey);
+      if (key === null) {
+        key = randomUUID();
+        await AsyncStorage.setItem(storageKey, key);
       }
+      const claim = await client.redeem(selected.id, key);
+      await clearRequestKey(storageKey);
+      if (claim.ok) setResult({ code: claim.code });
+      else setError(true);
     } catch (failure) {
       // Keep the same key for an ambiguous network failure.
       const code =
@@ -77,7 +85,7 @@ function CatalogContent({
           ? failure.code
           : undefined;
       if (code === 'functions/failed-precondition' || code === 'functions/invalid-argument') {
-        requests.current.delete(selected.id);
+        await clearRequestKey(storageKey);
       }
       setError(true);
     } finally {

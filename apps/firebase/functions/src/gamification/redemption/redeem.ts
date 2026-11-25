@@ -351,7 +351,7 @@ function redemptionCelebrations(cravos: number): GamRedemptionCelebration[] {
 // ---------------------------------------------------------------------------
 
 type RedemptionStart =
-  | { kind: 'created'; itemId: string; cravos: number }
+  | { kind: 'fulfilled'; code: string; cravos: number }
   | { kind: 'replay'; redemption: GamRedemption };
 
 /** The receipt id is the digest of uid + idempotency key: a retry with the same key
@@ -369,24 +369,20 @@ export async function redeemItem(uid: string, data: unknown, deps: RedemptionDep
     startRedemption(tx, deps.firestore, request, redemptionId, now, enabled),
   );
 
-  let itemId: string;
-  let cravos: number;
-  if (start.kind === 'created') {
-    itemId = start.itemId;
-    cravos = start.cravos;
-  } else if (start.redemption.status === 'failed') {
+  if (start.kind === 'fulfilled') {
+    return { redemptionId, code: start.code, celebrations: redemptionCelebrations(start.cravos) };
+  }
+  const { status, itemId, cravos } = start.redemption;
+  if (status === 'failed') {
     // Terminal for this key: the Cravos were refunded; a fresh attempt needs a new key.
     throw new RedeemError(
       'out_of_stock',
       'This redemption could not be fulfilled and the Cravos were refunded. Try again with a new idempotency key.',
     );
-  } else {
-    itemId = start.redemption.itemId;
-    cravos = start.redemption.cravos;
   }
 
-  // Pending (fresh or recovered after a crash between the two transactions): fulfil it.
-  const code = await fulfilRedemption(deps, redemptionId, itemId) ??
+  // Recover any older receipt created by the two-transaction flow.
+  const code = start.redemption.code ?? await fulfilRedemption(deps, redemptionId, itemId) ??
     await failRedemption(deps, request, redemptionId);
   if (code === null) {
     throw new RedeemError('out_of_stock', 'This item ran out of codes; the Cravos are back in your wallet.');
@@ -463,6 +459,10 @@ async function startRedemption(
     );
   }
 
+  const pool = await tx.get(availableCodes(firestore, request.itemId));
+  const code = pool.docs[0];
+  if (!code) throw new RedeemError('out_of_stock', 'This item ran out of codes.');
+
   const redeemEntryIds: string[] = [];
   for (const { id, lot, taken } of plan) {
     const entryId = `redeem:${request.idempotencyKey}:${id}`;
@@ -474,6 +474,7 @@ async function startRedemption(
     tx.create(firestore.doc(`gamification/${request.uid}/ledger/${entryId}`), redeemEntry(request, id, lot, taken));
   }
   if (item.stock !== null) tx.update(itemRef, { stock: item.stock - 1 });
+  tx.update(code.ref, { assignedTo: redemptionId, assignedAt: FieldValue.serverTimestamp() });
   // Spending is not un-earning: only balance moves, never lifetimeNet or the level.
   tx.update(projectionRef, {
     balance: projection.balance - item.priceCravos,
@@ -482,14 +483,21 @@ async function startRedemption(
   tx.create(redemptionRef, {
     uid: request.uid,
     itemId: request.itemId,
-    status: 'pending',
+    status: 'fulfilled',
     cravos: item.priceCravos,
     redeemEntryIds,
-    code: null,
+    code: code.id,
     createdAt: FieldValue.serverTimestamp(),
-    fulfilledAt: null,
-  } satisfies Omit<GamRedemption, 'createdAt'> & { createdAt: FieldValue });
-  return { kind: 'created', itemId: request.itemId, cravos: item.priceCravos };
+    fulfilledAt: FieldValue.serverTimestamp(),
+  } satisfies Omit<GamRedemption, 'createdAt' | 'fulfilledAt'> & {
+    createdAt: FieldValue;
+    fulfilledAt: FieldValue;
+  });
+  return { kind: 'fulfilled', code: code.id, cravos: item.priceCravos };
+}
+
+function availableCodes(firestore: Firestore, itemId: string) {
+  return firestore.collection(`catalogCodes/${itemId}/codes`).where('assignedTo', '==', null).limit(1);
 }
 
 /** Claims one unassigned code and marks the redemption fulfilled. Returns the code, the
@@ -501,9 +509,7 @@ async function fulfilRedemption(deps: RedemptionDeps, redemptionId: string, item
     const current = readRedemption(await tx.get(redemptionRef));
     if (current.status === 'fulfilled' && current.code !== null) return current.code;
     if (current.status !== 'pending') return null;
-    const pool = await tx.get(
-      deps.firestore.collection(`catalogCodes/${itemId}/codes`).where('assignedTo', '==', null).limit(1),
-    );
+    const pool = await tx.get(availableCodes(deps.firestore, itemId));
     if (pool.empty) return null;
     const code = pool.docs[0];
     tx.update(code.ref, { assignedTo: redemptionId, assignedAt: FieldValue.serverTimestamp() });

@@ -1,8 +1,10 @@
 # Cravos redemption backend
 
-`redeem({ itemId, idempotencyKey })` is an App Check enforced callable. It requires an authenticated member, checks `gam_redemption` (Remote Config; missing or unreadable means off), account age of at least 30 days, Flor level or higher, absence of an open report against the member, sufficient unexpired lot balance, and available stock. A single Firestore transaction reserves stock, consumes eligible lots FIFO, appends one `redeem` ledger entry per consumed lot, updates the balance projection, and creates a pending redemption. Reusing the same key returns the same redemption.
+`redeem({ itemId, idempotencyKey })` is an App Check enforced callable. It requires an authenticated member, checks `gam_redemption` (Remote Config; missing or unreadable means off), account age of at least 30 days, Flor level or higher, absence of an open report against the member, sufficient unexpired lot balance, and available stock. One Firestore transaction consumes eligible lots FIFO, appends a `redeem` ledger entry per consumed lot, updates the balance and stock, assigns a code, and creates the fulfilled receipt. If the code pool is empty, the transaction leaves the wallet and stock intact.
 
-Fulfilment atomically claims one code from `catalogCodes/{itemId}/codes/{code}`. Only the member-facing result contains the assigned single-use code. Partners receive only that code through the fulfilment process; no member, profile, balance, or other redemption data is shared. A fulfilment error marks the receipt failed and appends matching `refund` ledger entries while restoring stock and balance.
+Reusing the same key returns the same receipt. Mobile retains the key per account and item across an ambiguous network failure. Retrying an older pending receipt still completes code assignment or restores stock and balance with matching `refund` entries. The assigned single-use code is available in the member's result and private receipt. Partners receive only the code through the fulfilment process.
+
+Account cleanup removes the UID, voucher and ledger references from retained receipts. Set the retention period for the remaining accounting fields before launch.
 
 `failed-precondition` includes a `details.reason` value: `disabled`, `not_eligible_age`, `not_eligible_level`, `open_report`, `insufficient_balance`, or `out_of_stock`. Invalid requests use `invalid-argument`; unauthenticated requests use `unauthenticated`.
 

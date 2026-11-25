@@ -191,12 +191,12 @@ export async function updateDraft(
       author: stored.author,
       parentVersion: stored.parentVersion,
     });
-  });
-  await appendAudit(firestore, {
-    actor: actor.uid,
-    action: AUDIT_ACTIONS.draftUpdate,
-    reason,
-    target: ruleSetId,
+    tx.create(firestore.collection('gamAudit').doc(), auditEntryFields({
+      actor: actor.uid,
+      action: AUDIT_ACTIONS.draftUpdate,
+      reason,
+      target: ruleSetId,
+    }));
   });
   return { ok: true };
 }
@@ -236,18 +236,22 @@ export async function requestPublish(
   const request = reqRecord(data);
   const ruleSetId = reqString(request, 'ruleSetId');
   const reason = reqString(request, 'reason', { min: 10, max: 500 });
-  const ruleSet = await readRuleSet(firestore, ruleSetId);
-  if (ruleSet.status !== 'draft' && ruleSet.status !== 'simulated') {
-    throw new HttpsError(
-      'failed-precondition',
-      `Only a draft can be published (v${ruleSet.version} is ${ruleSet.status}).`,
-    );
-  }
-  await appendAudit(firestore, {
-    actor: actor.uid,
-    action: AUDIT_ACTIONS.publishRequest,
-    reason,
-    target: ruleSetId,
+  await firestore.runTransaction(async (tx) => {
+    const snap = await tx.get(firestore.doc(`gamRuleSets/${ruleSetId}`));
+    if (!snap.exists) throw new HttpsError('not-found', `Rule set ${ruleSetId} does not exist.`);
+    const ruleSet = readRuleSetSnapshot(ruleSetId, snap.data() ?? {});
+    if (ruleSet.status !== 'draft' && ruleSet.status !== 'simulated') {
+      throw new HttpsError(
+        'failed-precondition',
+        `Only a draft can be published (v${ruleSet.version} is ${ruleSet.status}).`,
+      );
+    }
+    tx.create(firestore.collection('gamAudit').doc(), auditEntryFields({
+      actor: actor.uid,
+      action: AUDIT_ACTIONS.publishRequest,
+      reason,
+      target: ruleSetId,
+    }));
   });
   return { ok: true };
 }

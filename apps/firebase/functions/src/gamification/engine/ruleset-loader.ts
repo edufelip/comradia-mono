@@ -11,6 +11,7 @@ import type { GamRuleSet } from '../model';
 
 export interface RuleSetLoader {
   loadActive(): Promise<GamRuleSet>;
+  loadPublished?(): Promise<GamRuleSet[]>;
 }
 
 export const SEED_RULE_SET_ID = 'seed-v1';
@@ -28,6 +29,7 @@ const CACHE_MS = 60_000;
 
 export class FirestoreRuleSetLoader implements RuleSetLoader {
   private cache: { at: number; ruleSet: GamRuleSet } | null = null;
+  private history: { at: number; ruleSets: GamRuleSet[] } | null = null;
 
   constructor(
     private readonly firestore: Firestore,
@@ -48,6 +50,15 @@ export class FirestoreRuleSetLoader implements RuleSetLoader {
     }
     this.cache = { at: this.now(), ruleSet };
     return ruleSet;
+  }
+
+  async loadPublished(): Promise<GamRuleSet[]> {
+    if (this.history && this.now() - this.history.at < CACHE_MS) return this.history.ruleSets;
+    const snapshots = await this.firestore.collection('gamRuleSets')
+      .where('status', 'in', ['published', 'archived']).get();
+    const ruleSets = [seedRuleSet(), ...snapshots.docs.map((doc) => validateRuleSet(doc.data()))];
+    this.history = { at: this.now(), ruleSets };
+    return ruleSets;
   }
 }
 

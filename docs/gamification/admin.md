@@ -11,8 +11,11 @@ credential. Never grant the claim to a member account.
 Rule sets are JSON documents matching the server contract in `gamification/model.ts` and
 `ruleset.ts`. Create a draft from a published set, edit only a draft, and run validation before
 saving. Simulations use recent normalized events and report the current and draft outcomes
-side by side. A publish request is approved by a different admin; rollback follows the same
-two-actor flow. All lifecycle changes are recorded in `gamAudit`.
+side by side. Save edits before requesting publication. A different admin approves the request, and
+another save invalidates it. Rollback follows the same two-actor flow. All lifecycle changes are
+recorded in `gamAudit`. Awards and holds retain their original rule version for later clawbacks.
+Each event requires the idempotency key template shown in the seed, so the engine and simulator
+deduplicate the same sources.
 
 The console exposes ledger lookup, signed balance adjustments, adjustment approval, feature
 flag readback, audit history, and liability summaries. Adjustments require a reason and an

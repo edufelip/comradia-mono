@@ -112,13 +112,15 @@ export default function CravosWallet() {
               <Text style={[DsTypography.body, sub]}>{t('gam.negative_balance')}</Text>
             )}
             <Text style={[DsTypography.cardTitle, header]}>{level.name}</Text>
-            <DsProgressBar
-              scheme={scheme}
-              value={lifetime}
-              min={level.threshold}
-              max={next?.threshold ?? level.threshold + 1}
-              accessibilityLabel={t('gam.lifetime', { count: lifetime })}
-            />
+            {next && (
+              <DsProgressBar
+                scheme={scheme}
+                value={Math.max(level.threshold, Math.min(lifetime, next.threshold))}
+                min={level.threshold}
+                max={next.threshold}
+                accessibilityLabel={t('gam.lifetime', { count: lifetime })}
+              />
+            )}
             <Text style={[DsTypography.body, sub]}>
               {next
                 ? t('gam.next_level', {

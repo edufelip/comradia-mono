@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { it } from 'node:test';
-import { editedSection, earningPreview } from '../src/editor.ts';
+import { editedSection, earningPreview, hasUnsavedChanges } from '../src/editor.ts';
 
 const draft = { version: 2, status: 'draft', earnRules: [
   { id: 'start', event: 'conversation.started', award: { amount: 30 }, caps: { perDay: 3 } },
@@ -21,4 +21,10 @@ it('rejects editing version metadata or replacing an array with a scalar', () =>
   assert.throws(() => editedSection(draft, 'version', '1'));
   assert.throws(() => editedSection(draft, 'earnRules', '1'));
   assert.throws(() => editedSection(draft, 'earnRules', '['));
+});
+
+it('detects unsaved changes across sections while allowing whitespace changes', () => {
+  assert.equal(hasUnsavedChanges(draft, editedSection(draft, 'quests', '[ ]')), false);
+  const edited = editedSection(draft, 'quests', '[{"id":"new"}]');
+  assert.equal(hasUnsavedChanges(draft, editedSection(edited, 'earnRules', JSON.stringify(draft.earnRules))), true);
 });

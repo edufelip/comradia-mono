@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { randomUUID } from 'expo-crypto';
 import { AppState, Linking, Platform, Text, type AppStateStatus } from 'react-native';
 import CravosCelebrationScreen from '@/app/conquista/[id]';
 import CravosWallet from '@/app/cravos';
@@ -17,7 +18,7 @@ import { TEST_PROFILE, TEST_USER } from './mocks/backend';
 jest.mock('expo-crypto', () => ({
   CryptoDigestAlgorithm: { SHA256: 'SHA-256' },
   digestStringAsync: jest.fn(async () => '00000000'),
-  randomUUID: () => 'feature-test-key',
+  randomUUID: jest.fn(() => 'feature-test-key'),
 }));
 const mockPush = jest.fn();
 const mockBack = jest.fn();
@@ -186,6 +187,31 @@ it('requires an explicit confirmation and a successful claim before showing a co
   expect(await screen.findByText('Code: PUBLIC-FIXTURE')).toBeOnTheScreen();
 });
 
+it('reuses the claim key after an ambiguous failure and wallet remount', async () => {
+  signIn();
+  const { api } = fixture({ gam_redemption: true });
+  const redeem = jest.mocked(api.redeem);
+  redeem.mockRejectedValueOnce(new Error('connection lost'));
+  jest.mocked(randomUUID).mockReturnValueOnce('original-attempt');
+  const wallet = (
+    <GamificationProvider client={api}>
+      <CravosWallet />
+    </GamificationProvider>
+  );
+  const first = await render(wallet);
+  await fireEvent.press(await screen.findByTestId('gam-redeem-coffee'));
+  await fireEvent.press(screen.getByTestId('gam-redeem-confirm'));
+  await screen.findByRole('alert');
+  expect(redeem).toHaveBeenLastCalledWith('coffee', 'original-attempt');
+  await first.unmount();
+
+  await render(wallet);
+  await fireEvent.press(await screen.findByTestId('gam-redeem-coffee'));
+  await fireEvent.press(screen.getByTestId('gam-redeem-confirm'));
+  expect(await screen.findByText('Code: PUBLIC-FIXTURE')).toBeOnTheScreen();
+  expect(redeem).toHaveBeenLastCalledWith('coffee', 'original-attempt');
+});
+
 it('shows a fresh wallet for an eligible member without a projection', async () => {
   signIn();
   const { api } = fixture();
@@ -206,6 +232,22 @@ it('shows a fresh wallet for an eligible member without a projection', async () 
   await fireEvent.press(screen.getByTestId('gam-achievement-papo'));
   expect(await screen.findByText('Locked')).toBeOnTheScreen();
   expect(screen.queryByText('Replay')).toBeNull();
+});
+
+it('shows a completed level state at the top of the ladder', async () => {
+  signIn();
+  const { api } = fixture();
+  api.watchMember = (_uid, receive) => {
+    receive({ ...projection, levelId: 'primavera', levelHighWaterMark: 5000 });
+    return () => {};
+  };
+  await render(
+    <GamificationProvider client={api}>
+      <CravosWallet />
+    </GamificationProvider>,
+  );
+  expect(await screen.findByText('Primavera')).toBeOnTheScreen();
+  expect(screen.queryByRole('progressbar', { name: '5000 lifetime Cravos' })).toBeNull();
 });
 
 it('retries a failed wallet subscription and clears the failure', async () => {

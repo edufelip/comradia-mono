@@ -96,14 +96,26 @@ function documentKey(value: string): string {
   return createHash('sha256').update(value).digest('hex');
 }
 
+export function ruleSourceKey(rule: GamRule, keys: {
+  match: string | null; message: string; uid: string; event: string; week: string;
+}): string | null {
+  const token = rule.idempotencyKey.split(':')[1] ?? '';
+  if (token === '{matchId}') return keys.match;
+  if (token === '{messageId}') return keys.message;
+  if (token === '{uid}') return rule.event === 'profile.prompt_refreshed' ? keys.event : keys.uid;
+  if (token === '{weekStart}') return keys.week;
+  return null;
+}
+
 /** The sourceId of a rule's idempotency template `{ruleId}:{token}:{uid}`. */
 export function resolveSourceId(rule: GamRule, event: GamEvent, ruleSet: GamRuleSet): string | null {
-  const token = rule.idempotencyKey.split(':')[1] ?? '';
-  if (token === '{matchId}') return event.pairKey ?? event.source.split('/').pop() ?? null;
-  if (token === '{messageId}') return documentKey(event.source);
-  if (token === '{uid}') return rule.event === 'profile.prompt_refreshed' ? documentKey(event.eventId) : event.uid;
-  if (token === '{weekStart}') return weekStartOf(event.at.toMillis(), ruleSet.streakRules.timezone);
-  return null;
+  return ruleSourceKey(rule, {
+    match: event.pairKey ?? event.source.split('/').pop() ?? null,
+    message: documentKey(event.source),
+    uid: event.uid,
+    event: documentKey(event.eventId),
+    week: weekStartOf(event.at.toMillis(), ruleSet.streakRules.timezone),
+  });
 }
 
 /** The campaign multiplier for an event on a day; the highest active one wins. */
@@ -168,6 +180,7 @@ export type AwardSpec = {
   atMs: number;
   sourcePath: string;
   eventId: string;
+  ruleSetVersion?: number;
 };
 
 export type AwardResult = {
@@ -311,7 +324,7 @@ export async function applyAwardCore(
     kind: 'earn',
     amount: spec.amount,
     ruleId: spec.rule.id,
-    ruleSetVersion: ruleSet.version,
+    ruleSetVersion: spec.ruleSetVersion ?? ruleSet.version,
     source: { event: spec.rule.event, path: spec.sourcePath, eventId: spec.eventId },
     lot: { expiresAt: lotExpiresAt },
     actor: 'system',
@@ -576,6 +589,7 @@ export async function processEvent(input: ProcessEventInput, deps: EngineDeps): 
         expireAt: Timestamp.fromMillis(atMs + 30 * 86_400_000),
         actor: uid === input.event.uid,
         pairKey: input.event.pairKey === undefined ? null : deps.store.pairBucketKey(input.event.pairKey),
+        sourceKey: documentKey(input.event.source),
         facts,
         arm: armFor(uid, flags.experimentPct),
       });
@@ -642,6 +656,8 @@ export async function processEvent(input: ProcessEventInput, deps: EngineDeps): 
           at: input.event.at,
           sourceId: candidate.sourceId,
           ruleId: candidate.rule.id,
+          ruleSetVersion: ruleSet.version,
+          releaseIf: candidate.rule.hold.releaseIf,
           event: candidate.rule.event,
           path: input.event.source,
           eventId: input.event.eventId,
@@ -711,7 +727,8 @@ export async function releaseHold(
       return 'void' as const;
     }
     const matured = core.now() >= hold.releaseAt.toMillis();
-    if (!matured && !(force && rule.hold?.releaseIf === 'other_replied')) return 'pending' as const;
+    const releaseIf = hold.releaseIf ?? rule.hold?.releaseIf;
+    if (!matured && !(force && releaseIf === 'other_replied')) return 'pending' as const;
 
     const pairKey = typeof hold.pairKey === 'string' ? hold.pairKey : null;
     if (pairKey !== null) {
@@ -752,6 +769,7 @@ export async function releaseHold(
       atMs: hold.at instanceof Timestamp ? hold.at.toMillis() : core.now(),
       sourcePath: typeof hold.path === 'string' ? hold.path : '',
       eventId: typeof hold.eventId === 'string' ? hold.eventId : '',
+      ruleSetVersion: typeof hold.ruleSetVersion === 'number' ? hold.ruleSetVersion : undefined,
     }, state);
     if (!result.awarded) {
       // The award was already paid by another path or fell to a cap: drop the hold.

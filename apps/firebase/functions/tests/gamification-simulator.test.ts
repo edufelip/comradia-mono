@@ -20,3 +20,16 @@ it('replays changed conditions even when the active rule would have rejected the
   assert.equal(result.awards, 2);
   assert.equal(result.cravos, 60);
 });
+
+it('deduplicates two deliveries of the same source message like the award engine', () => {
+  const activity: SimEvent = {
+    id: 'delivery-one', uid: 'first', event: 'message.timely_reply',
+    atMs: Date.parse('2026-11-25T12:00:00Z'), pairKey: null, actor: true, arm: 'treatment',
+    facts: { 'reply.waitedHours': 1 }, sourceKey: 'same-message',
+  };
+  const result = simulateRuleSet(seedRuleSet(), [
+    activity, { ...activity, id: 'delivery-two' },
+    { ...activity, id: 'delivery-three', sourceKey: 'another-message' },
+  ], 14);
+  assert.equal(result.awards, 2);
+});

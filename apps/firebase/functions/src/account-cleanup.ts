@@ -1,4 +1,4 @@
-import type { Firestore } from 'firebase-admin/firestore';
+import { FieldValue, type Firestore, type WriteBatch } from 'firebase-admin/firestore';
 import type { Bucket } from '@google-cloud/storage';
 
 const PAGE_SIZE = 300;
@@ -37,9 +37,11 @@ export async function cleanupDeletedAccount(uid: string, store: AccountCleanupSt
   await store.deletePhotos(uid);
 }
 
-async function deleteQueryPages(
+async function writeQueryPages(
   firestore: Firestore,
   queryFactory: () => FirebaseFirestore.Query,
+  write: (batch: WriteBatch, document: FirebaseFirestore.QueryDocumentSnapshot) => void =
+    (batch, document) => { batch.delete(document.ref); },
 ): Promise<void> {
   let cursor: FirebaseFirestore.QueryDocumentSnapshot | undefined;
   while (true) {
@@ -47,7 +49,7 @@ async function deleteQueryPages(
     const page = await (cursor ? query.startAfter(cursor) : query).get();
     if (page.empty) return;
     const batch = firestore.batch();
-    for (const document of page.docs) batch.delete(document.ref);
+    for (const document of page.docs) write(batch, document);
     await batch.commit();
     cursor = page.docs[page.docs.length - 1];
     if (page.size < PAGE_SIZE) return;
@@ -84,7 +86,7 @@ export class FirebaseAccountCleanupStore implements AccountCleanupStore {
   }
 
   async deleteReceivedLikes(uid: string): Promise<void> {
-    await deleteQueryPages(this.firestore, () => this.firestore.collection(`likes/${uid}/from`));
+    await writeQueryPages(this.firestore, () => this.firestore.collection(`likes/${uid}/from`));
   }
 
   async deleteLike(uid: string, targetUid: string): Promise<void> {
@@ -98,13 +100,22 @@ export class FirebaseAccountCleanupStore implements AccountCleanupStore {
   async deleteUserTree(uid: string): Promise<void> {
     // Remove the account first so delayed award handlers cannot recreate either projection.
     await this.firestore.recursiveDelete(this.firestore.doc(`users/${uid}`));
+    await writeQueryPages(this.firestore, () => this.firestore.collection('redemptions').where('uid', '==', uid),
+      (batch, document) => {
+        batch.update(document.ref, {
+          uid: FieldValue.delete(),
+          code: FieldValue.delete(),
+          redeemEntryIds: FieldValue.delete(),
+        });
+      },
+    );
     await Promise.all(['gamification', 'gamShadow', 'gamEvents', 'gamPreferences'].map((root) =>
       this.firestore.recursiveDelete(this.firestore.doc(`${root}/${uid}`)),
     ));
   }
 
   async deleteMatches(uid: string): Promise<void> {
-    await deleteQueryPages(this.firestore, () => this.firestore.collection('matches').where('users', 'array-contains', uid));
+    await writeQueryPages(this.firestore, () => this.firestore.collection('matches').where('users', 'array-contains', uid));
   }
 
   async deletePhotos(uid: string): Promise<void> {

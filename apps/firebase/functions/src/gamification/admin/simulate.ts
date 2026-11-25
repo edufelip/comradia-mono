@@ -1,6 +1,6 @@
 import { Timestamp, type Firestore } from 'firebase-admin/firestore';
 import { HttpsError } from 'firebase-functions/v2/https';
-import { applyConditions, campaignMultiplier } from '../engine/evaluator';
+import { applyConditions, campaignMultiplier, ruleSourceKey } from '../engine/evaluator';
 import type { GamFacts } from '../engine/normalizers';
 import { FirestoreRuleSetLoader } from '../engine/ruleset-loader';
 import { isoDateInZone, weekStartOf } from '../engine/weeks';
@@ -18,17 +18,11 @@ export type SimEvent = {
   event: GamEarnEvent;
   atMs: number;
   pairKey: string | null;
+  sourceKey?: string;
   actor: boolean;
   arm: 'control' | 'treatment';
   facts: GamFacts;
 };
-
-function replaySource(idempotencyKey: string, event: SimEvent, week: string) {
-  if (idempotencyKey.includes('{matchId}')) return event.pairKey ?? event.id;
-  if (idempotencyKey.includes('{weekStart}')) return week;
-  if (idempotencyKey.includes('{uid}') && event.event !== 'profile.prompt_refreshed') return event.uid;
-  return event.id;
-}
 
 /** Replays recent verified source events. Caps start at the start of the sample window
  * and the projection excludes delayed release outcomes, reversals and prior lifetime history. */
@@ -51,8 +45,12 @@ export function simulateRuleSet(ruleSet: GamRuleSet, events: SimEvent[], windowD
         (rule.award.to !== 'both_participants' && !event.actor) ||
         (rule.audience?.arm !== undefined && rule.audience.arm !== event.arm)) continue;
 
+      const source = ruleSourceKey(rule, {
+        match: event.pairKey, message: event.sourceKey ?? event.id, uid: event.uid, event: event.id, week,
+      });
+      if (source === null) continue;
       const key = `${event.uid}:${rule.id}`;
-      const awardKey = `${key}:${replaySource(rule.idempotencyKey, event, week)}`;
+      const awardKey = `${key}:${source}`;
       if (dedupe.has(awardKey)) continue;
       const pair = event.pairKey;
       const limits: Array<[string, number | undefined]> = [
@@ -120,6 +118,7 @@ export async function simulateFromStore(firestore: Firestore, actor: GamAdminAct
       typeof value === 'number' ? [[key, value]] : []));
     return [{
       id: doc.id, uid, event, facts, atMs: raw.at.toMillis(), actor: raw.actor === true,
+      ...(typeof raw.sourceKey === 'string' ? { sourceKey: raw.sourceKey } : {}),
       pairKey: typeof raw.pairKey === 'string' ? raw.pairKey : null, arm: raw.arm === 'treatment' ? 'treatment' : 'control',
     }];
   });

@@ -22,6 +22,11 @@ export function editedSection(draft: Draft, section: string, text: string): Draf
   return { ...draft, [section]: value };
 }
 
+export function hasUnsavedChanges(saved: Draft, preview: Draft | null): boolean {
+  return preview === null || EDITABLE_SECTIONS.some(([key]) =>
+    JSON.stringify(saved[key]) !== JSON.stringify(preview[key]));
+}
+
 export function earningPreview(draft: Draft) {
   const rules: unknown[] = Array.isArray(draft.earnRules) ? draft.earnRules : [];
   return rules.flatMap((rule) => {

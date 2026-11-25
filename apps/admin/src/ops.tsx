@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { EDITABLE_SECTIONS, editedSection, earningPreview, type Draft } from './editor';
+import { EDITABLE_SECTIONS, editedSection, earningPreview, hasUnsavedChanges, type Draft } from './editor';
 import type { AdminClient } from './firebase';
 
 type Summary = { id: string; version: number; status: string };
@@ -21,6 +21,7 @@ export function OpsConsole({ client }: { client: AdminClient }) {
   const [list, setList] = useState<List>({ ruleSets: [], active: null });
   const [id, setId] = useState('');
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [saved, setSaved] = useState<Draft | null>(null);
   const [section, setSection] = useState<EditableSection>('earnRules');
   const [text, setText] = useState('');
   const [reason, setReason] = useState('');
@@ -60,10 +61,11 @@ export function OpsConsole({ client }: { client: AdminClient }) {
   }
 
   async function open(ruleSetId: string) {
-    if (ruleSetId === '') { setId(''); setDraft(null); setText(''); return; }
+    if (ruleSetId === '') { setId(''); setDraft(null); setSaved(null); setText(''); return; }
     const { ruleSet } = await client.call<RuleSet>('gamGetRuleSet', { ruleSetId });
     setId(ruleSetId);
     setDraft(ruleSet);
+    setSaved(ruleSet);
     setText(JSON.stringify(ruleSet[section], null, 2));
   }
 
@@ -86,6 +88,7 @@ export function OpsConsole({ client }: { client: AdminClient }) {
     try { preview = editedSection(draft, section, text); }
     catch (error) { formError = error instanceof Error ? error.message : 'Invalid section.'; preview = null; }
   }
+  const dirty = editable && saved !== null && hasUnsavedChanges(saved, preview);
 
   async function invoke(name: string, input: Draft = {}) {
     setOutput(await client.call<unknown>(name, input));
@@ -148,13 +151,14 @@ export function OpsConsole({ client }: { client: AdminClient }) {
             <label>Reason<input value={reason} onChange={(event) => setReason(event.target.value)} /></label>
             <div className="inline">
               {editable ? <>
-                <button disabled={busy || reason.trim().length < 10} onClick={() => lifecycle('gamRequestPublish')}>Request publish</button>
-                <button disabled={busy || reason.trim().length < 10} onClick={() => lifecycle('gamApprovePublish')}>Approve publish</button>
+                <button disabled={busy || dirty || reason.trim().length < 10} onClick={() => lifecycle('gamRequestPublish')}>Request publish</button>
+                <button disabled={busy || dirty || reason.trim().length < 10} onClick={() => lifecycle('gamApprovePublish')}>Approve publish</button>
               </> : <>
                 <button disabled={busy || reason.trim().length < 10} onClick={() => lifecycle('gamRequestRollback')}>Request rollback</button>
                 <button disabled={busy || reason.trim().length < 10} onClick={() => lifecycle('gamApproveRollback')}>Approve rollback</button>
               </>}
             </div>
+            {dirty && <p>Save your edits before requesting or approving publication.</p>}
           </>}
         </>}
         {tab === 'Simulator' && <>

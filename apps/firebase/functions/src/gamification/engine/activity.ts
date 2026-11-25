@@ -201,7 +201,8 @@ export async function recordClawback(
 ) {
   const core = await loadEngine(deps);
   if (core === null) return;
-  await applyTrigger(core, { kind, uid, pairKey, at: activity.at, sourcePath: activity.path, eventId: activity.id });
+  const published = await deps.rules.loadPublished?.();
+  await applyTrigger(core, { kind, uid, pairKey, at: activity.at, sourcePath: activity.path, eventId: activity.id }, published);
 }
 
 export async function recordPairSafety(

@@ -751,6 +751,8 @@ Reanimated 4 withTiming with Easing.bezier(0.16, 1, 0.3, 1); no withSpring. useR
 
  | 4 · Redemption | Catalog, lots, liability report. | gam_redemption | Legal sign-off; partner contracts; liability report reviewed.
 
+Each member starts with an empty live wallet when they first enter treatment. Shadow balances and achievements remain simulation data, and shadow activity creates no redeemable lots. Keep the experiment percentage steady during each measurement window and record the cohort change at each ramp.
+
 ## Delivery and test conventions from AGENTS.md and docs/testing.md
 
  - Each app keeps its own toolchain and lockfile; run commands from the app folder. Access changes go in apps/firebase/firestore.rules with a rules test.

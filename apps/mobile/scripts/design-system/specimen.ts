@@ -510,7 +510,7 @@ function componentsSection(): string {
 
       <h3>DsSkeletonCard</h3>
       <div class="card skeleton" aria-label="Loading"><i class="bar t"></i><i class="bar"></i><i class="bar s"></i></div>
-      ${cravosSection()}
+${cravosSection()}
     </section>`;
 }
 

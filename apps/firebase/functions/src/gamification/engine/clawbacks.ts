@@ -6,12 +6,11 @@
 // anything; only the blocked or reported party does. Unreleased holds for the
 // pair are voided, never ledgered.
 
-import { FieldValue, Timestamp, type Transaction } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { clawbackEntryId, ledgerEntryId, type GamRule, type GamRuleSet, type GamTriggerEvent } from '../model';
 import { highWaterMark, levelFromRules } from '../level-for-lifetime';
-import { shadowTarget, type GamFlags } from './flags';
 import { isoDateInZone } from './weeks';
-import { GamEngineStore, parseProjection, projectionDoc, readCounter, type ProjectionState } from './store';
+import { parseProjection, projectionDoc, readCounter, type ProjectionState } from './store';
 import { EngineCore, pairBucketFor } from './evaluator';
 
 export type TriggerInput = {
@@ -28,8 +27,6 @@ export type TriggerInput = {
 export type ClawbackResult = {
   clawbacks: number;
   holdsVoided: number;
-  /** uid -> updated projection state, for the caller's follow-up logic. */
-  states: Map<string, ProjectionState>;
 };
 
 /** Rules that claw back on this trigger, and who they take from. */
@@ -68,50 +65,67 @@ export function affectedUids(
 export async function applyTrigger(
   core: EngineCore,
   input: TriggerInput,
+  published: readonly GamRuleSet[] = [],
 ): Promise<ClawbackResult> {
-  const { store, ruleSet, flags, now } = core;
+  const { store, ruleSet, now } = core;
   const nowMs = now();
   const day = isoDateInZone(input.at.toMillis(), ruleSet.streakRules.timezone);
-  const rules = clawbackRules(ruleSet, input.kind);
-  const states = new Map<string, ProjectionState>();
-  let clawbacks = 0;
-  let holdsVoided = 0;
-
-  await store.runTransaction(async (tx) => {
-    type Target = { rule: GamRule; uid: string; shadow: boolean; sourceId: string };
-    const targets: Target[] = [];
-    for (const { rule, party } of rules) {
-      const uids = affectedUids(party, input.uid, input.pairKey);
-      for (const uid of uids) {
-        const sourceId = rule.idempotencyKey.split(':')[1] === '{weekStart}'
-          ? 'unknown-week'
-          : input.pairKey ?? uid;
-        targets.push({ rule, uid, shadow: shadowTarget(flags, uid), sourceId });
+  type Target = { uid: string; shadow: boolean; ledgerId: string; rules: Map<number, GamRule> };
+  const targets = new Map<string, Target>();
+  const versions = new Map([...published, ruleSet].map((version) => [version.version, version]));
+  for (const version of versions.values()) {
+    for (const { rule, party } of clawbackRules(version, input.kind)) {
+      for (const uid of affectedUids(party, input.uid, input.pairKey)) {
+        const sourceId = rule.idempotencyKey.split(':')[1] === '{matchId}' ? input.pairKey : uid;
+        if (sourceId === null) continue;
+        const ledgerId = ledgerEntryId(rule.id, sourceId, uid);
+        for (const shadow of [false, true]) {
+          const key = store.ledgerRef(uid, shadow, ledgerId).path;
+          const target = targets.get(key) ?? { uid, shadow, ledgerId, rules: new Map<number, GamRule>() };
+          target.rules.set(version.version, rule);
+          targets.set(key, target);
+        }
       }
     }
-    if (targets.length === 0) return;
+  }
+  if (targets.size === 0) return { clawbacks: 0, holdsVoided: 0 };
 
-    for (const target of targets) {
-      const ledgerId = ledgerEntryId(target.rule.id, target.sourceId, target.uid);
+  return store.runTransaction(async (tx) => {
+    const states = new Map<string, ProjectionState>();
+    const deletedHolds = new Set<string>();
+    let clawbacks = 0;
+    let holdsVoided = 0;
+
+    for (const target of targets.values()) {
+      const { ledgerId } = target;
       const originalRef = store.ledgerRef(target.uid, target.shadow, ledgerId);
       const clawbackRef = store.ledgerRef(target.uid, target.shadow, clawbackEntryId(ledgerId));
-      const holdBucket = pairBucketFor(store, target.rule, input.pairKey);
-      const holdRef = store.holdRef(target.uid, target.shadow, target.rule.id, holdBucket ?? target.sourceId);
+      const projectionRef = store.projectionRef(target.uid, target.shadow);
 
-      const [originalSnap, clawbackSnap, holdSnap, projectionSnap, expired] = await tx.getAll(
+      const [originalSnap, clawbackSnap, projectionSnap, expired] = await tx.getAll(
         originalRef,
         clawbackRef,
-        holdRef,
-        store.projectionRef(target.uid, target.shadow),
+        projectionRef,
         store.ledgerRef(target.uid, target.shadow, `expire:${ledgerId}`),
       );
 
-      // An unreleased hold is voided (never ledgered) no matter its age.
-      if (holdSnap.exists) {
-        tx.delete(holdRef);
-        holdsVoided += 1;
+      for (const [version, rule] of target.rules) {
+        if (rule.hold === undefined) continue;
+        const bucket = pairBucketFor(store, rule, input.pairKey) ?? input.pairKey ?? target.uid;
+        const holdRef = store.holdRef(target.uid, target.shadow, rule.id, bucket);
+        if (deletedHolds.has(holdRef.path)) continue;
+        const hold = await tx.get(holdRef);
+        if (hold.exists && (hold.get('ruleSetVersion') ?? version) === version) {
+          tx.delete(holdRef);
+          deletedHolds.add(holdRef.path);
+          holdsVoided += 1;
+        }
       }
-      if (!originalSnap.exists || clawbackSnap.exists) continue;
+      if (!projectionSnap.exists || !originalSnap.exists || clawbackSnap.exists) continue;
+      const version: unknown = originalSnap.get('ruleSetVersion');
+      if (typeof version !== 'number') continue;
+      const rule = target.rules.get(version);
+      if (rule === undefined) continue;
 
       const amount = originalSnap.get('amount');
       const createdAt = originalSnap.get('createdAt');
@@ -119,19 +133,18 @@ export async function applyTrigger(
 
       // The window counts from the earn to the trigger (match deleted within 7
       // days of the earn, block within 7 days, report within 3).
-      const clawback = target.rule.clawback?.find((entry) => entry.on === input.kind);
+      const clawback = rule.clawback?.find((entry) => entry.on === input.kind);
       if (clawback?.withinDays !== undefined
         && input.at.toMillis() - createdAt.toMillis() > clawback.withinDays * 86_400_000) continue;
 
-      const state = states.get(target.uid) ?? parseProjection(projectionSnap.data());
-      states.set(target.uid, state);
+      const state = states.get(projectionRef.path) ?? parseProjection(projectionSnap.data());
 
       tx.create(clawbackRef, {
         track: 'cravos',
         kind: 'clawback',
         amount: -amount,
-        ruleId: target.rule.id,
-        ruleSetVersion: ruleSet.version,
+        ruleId: rule.id,
+        ruleSetVersion: version,
         source: { event: input.kind, path: input.sourcePath, eventId: input.eventId },
         actor: 'system',
         reason: input.kind,
@@ -165,7 +178,7 @@ export async function applyTrigger(
         const quest = state.quest.questId !== null && state.quest.weekStart === weekStart
           ? ruleSet.quests.find((candidate) => candidate.id === state.quest.questId)
           : null;
-        const partIndex = quest?.parts.findIndex((part) => part.event === target.rule.event) ?? -1;
+        const partIndex = quest?.parts.findIndex((part) => part.event === rule.event) ?? -1;
         if (quest !== undefined && quest !== null && partIndex >= 0) {
           const partRef = store.counterRef(target.uid, target.shadow, `quest:${weekStart}:${quest.id}:${partIndex}`);
           const partSnap = await tx.get(partRef);
@@ -209,8 +222,8 @@ export async function applyTrigger(
         }
       }
 
-      tx.set(store.projectionRef(target.uid, target.shadow), projectionDoc(next, FieldValue.serverTimestamp()), { merge: true });
-      states.set(target.uid, next);
+      tx.set(projectionRef, projectionDoc(next, FieldValue.serverTimestamp()), { merge: true });
+      states.set(projectionRef.path, next);
       clawbacks += 1;
     }
 
@@ -220,14 +233,8 @@ export async function applyTrigger(
         holdsVoided: FieldValue.increment(holdsVoided),
       }, { merge: true });
     }
+    return { clawbacks, holdsVoided };
   });
-
-  return { clawbacks, holdsVoided, states };
-}
-
-/** tx.get results are plain data; parseProjection expects DocumentData. */
-function txRead(_tx: Transaction, data: ReturnType<Transaction['get']> extends never ? never : unknown): unknown {
-  return data;
 }
 
 /** The zone-local week start of a Timestamp, or null when it is not one. */

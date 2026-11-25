@@ -36,6 +36,14 @@ function throwsWith(fragment: string): (error: unknown) => boolean {
   return (error) => error instanceof Error && error.message.includes(fragment);
 }
 
+it('rejects unsupported idempotency tokens and non-reversible clawback keys', () => {
+  for (const key of ['{ruleId}:{unknown}:{uid}', '{ruleId}:{messageId}:{uid}']) {
+    assert.throws(() => validateRuleSet(mutated((draft) => {
+      earnRule(draft, 0).idempotencyKey = key;
+    })), throwsWith('idempotencyKey'));
+  }
+});
+
 describe('seed rule set v1', () => {
   const ruleSet = loadRuleSet(SEED);
   const byId = new Map(ruleSet.earnRules.map((rule) => [rule.id, rule]));

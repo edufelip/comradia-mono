@@ -3,7 +3,9 @@ import { randomUUID } from 'node:crypto';
 import { after, it, mock } from 'node:test';
 import { initializeApp, deleteApp } from 'firebase-admin/app';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
-import { redeemItem, RedeemError } from '../src/gamification/redemption/redeem.js';
+import { getStorage } from 'firebase-admin/storage';
+import { FirebaseAccountCleanupStore } from '../src/account-cleanup.js';
+import { redeemItem, RedeemError, redemptionIdFor } from '../src/gamification/redemption/redeem.js';
 
 if (!/^127\.0\.0\.1:\d+$/.test(process.env.FIRESTORE_EMULATOR_HOST ?? '')) {
   throw new Error('Redemption tests require a local Firestore emulator');
@@ -58,7 +60,7 @@ it('spends FIFO and returns one claim for concurrent retries', async () => {
   assert.equal((await item.get()).get('stock'), 0);
 });
 
-it('refunds lot balances and stock once when fulfillment fails', async () => {
+it('leaves the wallet and stock untouched when no voucher is available', async () => {
   const { uid, data, deps, wallet, item } = await fixture({ code: false });
   for (let attempt = 0; attempt < 2; attempt += 1) {
     await assert.rejects(redeemItem(uid, data, deps), (error) =>
@@ -66,7 +68,29 @@ it('refunds lot balances and stock once when fulfillment fails', async () => {
   }
   assert.equal((await wallet.get()).get('balance'), 100);
   assert.equal((await item.get()).get('stock'), 1);
-  assert.equal((await wallet.collection('ledger').where('kind', '==', 'refund').get()).size, 2);
+  assert.equal((await wallet.collection('ledger').get()).size, 0);
+  assert.equal((await db.doc(`redemptions/${redemptionIdFor(uid, data.idempotencyKey)}`).get()).exists, false);
+});
+
+it('commits the voucher with the debit even if the transaction response is lost', async () => {
+  const { uid, data, deps, wallet } = await fixture();
+  const run = db.runTransaction.bind(db);
+  const interception = mock.method(db, 'runTransaction', async (...args: Parameters<typeof db.runTransaction>) => {
+    await run(...args);
+    throw new Error('connection lost after commit');
+  });
+  try {
+    await assert.rejects(redeemItem(uid, data, deps), /connection lost after commit/);
+  } finally {
+    interception.mock.restore();
+  }
+  const receipt = await db.doc(`redemptions/${redemptionIdFor(uid, data.idempotencyKey)}`).get();
+  assert.equal(receipt.get('status'), 'fulfilled');
+  assert.equal(receipt.get('code'), 'VOUCHER');
+  assert.equal((await wallet.get()).get('balance'), 30);
+  const replay = await redeemItem(uid, data, deps);
+  assert.equal(replay.redemptionId, receipt.id);
+  assert.equal((await wallet.get()).get('balance'), 30);
 });
 
 it('settles an expired lot once while preserving lifetime earnings', async () => {
@@ -83,21 +107,29 @@ it('settles an expired lot once while preserving lifetime earnings', async () =>
 
 it('resumes an existing pending claim when new redemptions have been disabled', async () => {
   const { uid, data, deps, wallet } = await fixture();
-  const run = db.runTransaction.bind(db);
-  let calls = 0;
-  const interception = mock.method(db, 'runTransaction', async (...args: Parameters<typeof db.runTransaction>) => {
-    calls += 1;
-    if (calls === 2) throw new Error('interrupted before fulfillment');
-    return run(...args);
-  });
-  try {
-    await assert.rejects(redeemItem(uid, data, deps), /interrupted before fulfillment/);
-  } finally {
-    interception.mock.restore();
-  }
+  const claim = await redeemItem(uid, data, deps);
+  await db.batch()
+    .update(db.doc(`redemptions/${claim.redemptionId}`), { status: 'pending', code: null, fulfilledAt: null })
+    .update(db.doc(`catalogCodes/${data.itemId}/codes/${claim.code}`), { assignedTo: null, assignedAt: null })
+    .commit();
   const off = { ...deps, isRedemptionEnabled: async () => false };
   assert.equal((await redeemItem(uid, data, off)).code, 'VOUCHER');
   assert.equal((await wallet.get()).get('balance'), 30);
   await assert.rejects(redeemItem(uid, { ...data, idempotencyKey: 'new-key' }, off), (error) =>
     error instanceof RedeemError && error.reason === 'disabled');
+});
+
+it('removes the account link and voucher from a retained receipt on account deletion', async () => {
+  const { uid, data, deps } = await fixture();
+  const { redemptionId } = await redeemItem(uid, data, deps);
+  const cleanup = new FirebaseAccountCleanupStore(db, getStorage(app).bucket('demo-comradia.appspot.com'));
+  await cleanup.deleteUserTree(uid);
+  await cleanup.deleteUserTree(uid);
+
+  const receipt = await db.doc(`redemptions/${redemptionId}`).get();
+  assert.equal(receipt.get('uid'), undefined);
+  assert.equal(receipt.get('code'), undefined);
+  assert.equal(receipt.get('redeemEntryIds'), undefined);
+  assert.equal(receipt.get('cravos'), 70);
+  assert.equal(receipt.get('status'), 'fulfilled');
 });

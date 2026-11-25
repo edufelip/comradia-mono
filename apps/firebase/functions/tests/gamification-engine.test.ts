@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { after, it } from 'node:test';
+import { after, it, mock } from 'node:test';
 import { deleteApp, initializeApp } from 'firebase-admin/app';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { processEvent } from '../src/gamification/engine/evaluator.js';
@@ -57,6 +57,35 @@ it('commits exactly one award per pair member across concurrent deliveries', asy
   }
 });
 
+it('gives each retry fresh projection state and honors the awarded rule version', async () => {
+  const { applyTrigger } = await import('../src/gamification/engine/clawbacks.js');
+  const { first, second, deps, input, store, at } = await fixture({ uiEnabled: true, experimentPct: 100 });
+  const original = seedRuleSet();
+  await processEvent(input, deps);
+  const active = { ...original, version: 2, earnRules: original.earnRules.filter((rule) => rule.event !== 'match.created') };
+  const run = store.runTransaction.bind(store);
+  // Discard the first callback's writes, then simulate a concurrent earn before retry.
+  const abort = new Error('retry fixture');
+  const interception = mock.method(store, 'runTransaction', async (callback: Parameters<typeof run>[0]) => {
+    await assert.rejects(run(async (tx) => {
+      await callback(tx);
+      throw abort;
+    }), (error) => error === abort);
+    await store.projectionRef(first, false).update({ balance: 15, lifetimeNet: 15 });
+    return run(callback);
+  });
+  try {
+    const result = await applyTrigger({ store, ruleSet: active, flags: await deps.flags.getFlags(), now: deps.now }, {
+      kind: 'match.deleted', uid: first, pairKey: input.event.pairKey, at, eventId: 'remove', sourcePath: input.event.source,
+    }, [original]);
+    assert.equal(result.clawbacks, 2);
+  } finally {
+    interception.mock.restore();
+  }
+  assert.equal((await store.projectionRef(first, false).get()).get('balance'), 10);
+  assert.equal((await store.projectionRef(second, false).get()).get('balance'), 0);
+});
+
 it('writes only shadow data when the shadow flag is explicitly enabled', async () => {
   const { first, deps, input, store } = await fixture({ shadow: true });
   assert.equal((await processEvent(input, deps)).awards, 2);
@@ -88,10 +117,12 @@ it('releases a verified hold once without counting its reserved cap twice', asyn
   assert.equal((await processEvent(hold, deps)).holds, 2);
   assert.equal((await processEvent(hold, deps)).holds, 0);
   const bucket = store.pairBucketKey(matchId);
-  const core = { store, flags, ruleSet, now: () => at.toMillis() + 24 * 3_600_000 };
+  const core = { store, flags, ruleSet: { ...ruleSet, version: 2 }, now: () => at.toMillis() + 24 * 3_600_000 };
   assert.equal(await releaseHold(core, first, false, rule, bucket, false), 'released');
   assert.equal(await releaseHold(core, first, false, rule, bucket, false), 'missing');
   assert.equal((await store.projectionRef(first, false).get()).get('balance'), 30);
+  const ledger = await store.projectionRef(first, false).collection('ledger').get();
+  assert.equal(ledger.docs[0]?.get('ruleSetVersion'), ruleSet.version);
   assert.equal((await store.counterRef(first, false, `pair:${rule.id}:${bucket}`).get()).get('count'), 1);
 });
 

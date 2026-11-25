@@ -205,6 +205,17 @@ function validateRule(input: unknown, path: string): GamRule {
         ...(party === undefined ? {} : { party }),
       };
     }));
+  const event = oneOf(record, 'event', path, GAM_EARN_EVENTS);
+  const idempotencyKey = str(record, 'idempotencyKey', path);
+  const token = event === 'message.timely_reply' ? 'messageId'
+    : event === 'streak.week_completed' || event === 'quest.completed' ? 'weekStart'
+      : event.startsWith('conversation.') || event === 'match.created' || event === 'message.first_in_match'
+        ? 'matchId' : 'uid';
+  if (idempotencyKey !== `{ruleId}:{${token}}:{uid}` ||
+    clawback?.some(({ on }) => token !== (on === 'quest.part_clawed_back' ? 'weekStart'
+      : on === 'profile.photo_removed' ? 'uid' : 'matchId'))) {
+    throw new Error(`${path}.idempotencyKey is incompatible with the earn or clawback event`);
+  }
   const celebration = optionalField(record, 'celebration', path, (value, celebrationPath) => {
     const celebrationRecord = asRecord(value, celebrationPath);
     checkKeys(celebrationRecord, celebrationPath, ['kind', 'copyKey']);
@@ -228,7 +239,7 @@ function validateRule(input: unknown, path: string): GamRule {
   return {
     id: str(record, 'id', path),
     track: oneOf(record, 'track', path, ['cravos'] as const),
-    event: oneOf(record, 'event', path, GAM_EARN_EVENTS),
+    event,
     award: {
       amount: int(awardRecord, 'amount', `${path}.award`, 1),
       to: oneOf(awardRecord, 'to', `${path}.award`, AWARD_TOS),
@@ -237,7 +248,7 @@ function validateRule(input: unknown, path: string): GamRule {
     caps,
     ...(hold !== undefined ? { hold } : {}),
     ...(clawback !== undefined ? { clawback } : {}),
-    idempotencyKey: str(record, 'idempotencyKey', path),
+    idempotencyKey,
     ...(celebration !== undefined ? { celebration } : {}),
     ...(audience !== undefined ? { audience } : {}),
   };

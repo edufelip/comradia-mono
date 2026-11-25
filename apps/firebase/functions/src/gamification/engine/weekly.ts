@@ -73,11 +73,15 @@ export async function runGamificationWeek(deps: EngineDeps, nowMs = deps.now()) 
   const core = await loadEngine(deps);
   if (core === null) return;
   const db = core.store.firestore;
+  const published = await deps.rules.loadPublished?.() ?? [];
+  const versions = new Map([...published, core.ruleSet].map((version) => [version.version, version]));
 
   for await (const hold of pages(db.collectionGroup('counters').where('releaseAt', '<=', Timestamp.fromMillis(nowMs)).orderBy('releaseAt'))) {
     const projection = hold.ref.parent.parent;
     if (projection === null || !['gamification', 'gamShadow'].includes(projection.parent.id)) continue;
-    const rule = core.ruleSet.earnRules.find((candidate) => candidate.id === hold.get('ruleId') && candidate.hold !== undefined);
+    const version: unknown = hold.get('ruleSetVersion');
+    const ruleSet = typeof version === 'number' ? versions.get(version) : core.ruleSet;
+    const rule = ruleSet?.earnRules.find((candidate) => candidate.id === hold.get('ruleId') && candidate.hold !== undefined);
     if (rule === undefined) continue;
     const shadow = projection.parent.id === 'gamShadow';
     const prefix = `hold:${rule.id}:`;
