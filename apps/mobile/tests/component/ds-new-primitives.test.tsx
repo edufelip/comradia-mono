@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import { AccessibilityInfo, Dimensions, Text } from 'react-native';
 import * as Reanimated from 'react-native-reanimated';
 import { DsAvatar } from '@/components/ds/primitives/DsAvatar';
@@ -13,6 +14,10 @@ import { getDsTheme } from '@/constants/design-system';
 
 const light = getDsTheme('light');
 const dark = getDsTheme('dark');
+
+/** The vector-icons glyph map types its values as `number | string`; they are codepoints. */
+const glyph = (name: keyof typeof MaterialIcons.glyphMap) =>
+  String.fromCodePoint(Number(MaterialIcons.glyphMap[name]));
 
 /** The portrait's image and initial are hidden from screen readers; the root carries the name. */
 const HIDDEN = { includeHiddenElements: true };
@@ -466,6 +471,81 @@ describe('DsNotice', () => {
     expect(screen.queryByTestId('n')).toBeNull();
   });
 
+  it('can swap the tone glyph for a named icon', async () => {
+    await render(<DsNotice icon="local-florist" scheme="light" testID="n" title="FYI" />);
+
+    expect(screen.getByTestId('n-icon', HIDDEN)).toHaveTextContent(glyph('local-florist'));
+  });
+
+  describe('close button', () => {
+    it('puts a labeled 44 pt close on the title line, clear of the copy', async () => {
+      await render(
+        <DsNotice
+          body="Something happened."
+          closeLabel="Close notice"
+          onClose={jest.fn()}
+          scheme="light"
+          testID="n"
+          title="FYI"
+        />,
+      );
+
+      const close = screen.getByRole('button', { name: 'Close notice' });
+      expect(close).toHaveStyle({ width: 44, height: 44, borderRadius: 9999 });
+      // The 44 pt target's centre sits on the title line: lg padding + half the cardTitle line.
+      expect(close).toHaveStyle({ top: 9 });
+      // A 20 pt close glyph in textSecondary, its right edge on the card's lg padding.
+      expect(close).toHaveStyle({ right: 8 });
+      const glyphText = screen.getByText(glyph('close'), HIDDEN);
+      expect(glyphText).toHaveStyle({ color: light.color.textSecondary, fontSize: 20 });
+      // The copy keeps its distance so text never runs under the target.
+      expect(screen.getByTestId('n-title').parent).toHaveStyle({ paddingRight: 24 });
+    });
+
+    it('pressing close fires onClose and plays the same 120 ms exit', async () => {
+      const onClose = jest.fn();
+      const onExitComplete = jest.fn();
+      await render(
+        <DsNotice
+          closeLabel="Close notice"
+          onClose={onClose}
+          onExitComplete={onExitComplete}
+          scheme="light"
+          testID="n"
+          title="FYI"
+        />,
+      );
+
+      await fireEvent.press(screen.getByRole('button', { name: 'Close notice' }));
+
+      expect(onClose).toHaveBeenCalledTimes(1);
+      expect(onExitComplete).toHaveBeenCalledTimes(1);
+      expect(screen.queryByTestId('n')).toBeNull();
+    });
+
+    it('still auto-dismisses with only a close button, and closing cancels the timer', async () => {
+      jest.useFakeTimers();
+      const onDismiss = jest.fn();
+      await render(
+        <DsNotice
+          autoDismissMs={1000}
+          closeLabel="Close notice"
+          onClose={jest.fn()}
+          onDismiss={onDismiss}
+          scheme="light"
+          testID="n"
+          title="FYI"
+        />,
+      );
+
+      await fireEvent.press(screen.getByRole('button', { name: 'Close notice' }));
+      await act(async () => jest.advanceTimersByTime(60000));
+
+      expect(onDismiss).not.toHaveBeenCalled();
+      jest.useRealTimers();
+    });
+  });
+
   describe('auto-dismiss', () => {
     beforeEach(() => jest.useFakeTimers());
     afterEach(() => jest.useRealTimers());
@@ -511,6 +591,26 @@ describe('DsNotice', () => {
       await act(async () => jest.advanceTimersByTime(60000));
 
       expect(onDismiss).not.toHaveBeenCalled();
+    });
+
+    it('still auto-dismisses when it only has a close button', async () => {
+      const onDismiss = jest.fn();
+      await render(
+        <DsNotice
+          autoDismissMs={1000}
+          closeLabel="Close"
+          onClose={jest.fn()}
+          onDismiss={onDismiss}
+          scheme="light"
+          title="FYI"
+        />,
+      );
+
+      await act(async () => jest.advanceTimersByTime(4900));
+      expect(onDismiss).not.toHaveBeenCalled();
+      await act(async () => jest.advanceTimersByTime(200));
+
+      expect(onDismiss).toHaveBeenCalledTimes(1);
     });
 
     it('does not dismiss while closing or when it is unmounted', async () => {

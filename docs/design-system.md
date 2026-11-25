@@ -67,6 +67,7 @@ Fixed palettes that do **not** change with the scheme live beside the theme and 
 
 - `DsCategoryColor` (forest, brick, crimson, wine, coral): one hue per vibe, used as `` `${accent}22` `` tints and selected borders.
 - `DsArt`: the welcome illustrations (sun and faces, including skin tones).
+- `DsAchievementTier` (bronze `#B5703F`, silver `#8C97A3`, gold `#C9961E`): the conquistas metals. `base` fills a tier chip and the medal rim; `rimLight`/`rimDark` are the rim gradient ends; `face` and `glyphInk` are per-scheme shades for the medal drawing (`DsMedal`); `highlightArc` is the rim's white glint. **Text on a tier fill always uses `ink`** (the brand ink): white fails AA on silver and bronze, and `ink` passes 4.5:1 on all three metals in both schemes (tested in `design-system.test.ts`, together with the glyph's 3:1 against its face). The medal itself never carries text.
 
 **Brand colors.** Light: crimson `#D92D3A`, ink `#231214`, cream `#FBF6F4`. Dark: coral `#E05A47` on `#181112`. The accent is for emphasis, never for large flat areas, and never as the primary button.
 
@@ -175,7 +176,7 @@ Surfaces are flat. `DsShadow.none` and `soft` (empty by design) for normal cards
 
 Source of truth: `DS_MOTION` in `constants/motion.ts` and [`motion-design.md`](motion-design.md).
 
-- Durations: `fast` 120 ms (press feedback), `standard` 220 ms (content and state changes), `slow` 360 ms (large transitions). Easing: ease-out cubic `[0.16, 1, 0.3, 1]`. No springs or bounce.
+- Durations: `fast` 120 ms (press feedback), `standard` 220 ms (content and state changes), `slow` 360 ms (large transitions), `countUp` 600 ms (a number counting to its final value), `celebrate` 900 ms (a one-shot celebration such as confetti). Easing: ease-out cubic `[0.16, 1, 0.3, 1]`. No springs or bounce; the count-up and medal entrance use the celebration curve `Easing.out(cubic)`, as `MatchCelebration` does.
 - One visual lead at a time. Stagger only the items of one small group. Do not reveal every section of every screen.
 - Entrances use `DsMotionView` (`reveal`, `scale`, `slide`); the first frame stays visible, so paused or reduced-motion renders never hide content.
 - Press feedback uses `DsMotionPressable` (scale 0.95–0.985, a 6% opacity dip).
@@ -199,7 +200,7 @@ All primitives live in `apps/mobile/components/ds/primitives` (motion in `compon
 | `DsTextField` | Text field with label, helper or error, prefix and suffix. | States: default, focused, filled, error, disabled, read-only. The row draws the focus border; an error replaces the helper, shows an icon and is announced as an alert. Row 52 high, `input` text. Props pass through to `TextInput` (`keyboardType`, `autoComplete`, ...). |
 | `DsStepProgress` | Segmented bar with "Step n of N" text and optional back button. | `step`, `total`, `label` (localized text, the spoken progress); the bar is decorative. |
 | `DsSheet` | Bottom sheet on phones, centered dialog from 768. | `visible`, `onClose`, `title`, `closeLabel`, `footer`. Closes by the visible button, a scrim tap, Android back or Escape. `accessibilityViewIsModal`; focus moves in and returns. |
-| `DsNotice` | Card notice: tone, title, optional body, actions. | `tone` `info` / `success` / `warning` / `danger`; `urgency` `alert` or `status`; `overlay` adds the floating shadow; auto-dismisses only when it has no actions, never under 5 s. |
+| `DsNotice` | Card notice: tone, title, optional body, actions. | `tone` `info` / `success` / `warning` / `danger`; `urgency` `alert` or `status`; `overlay` adds the floating shadow; `icon` overrides the tone glyph (e.g. the flower on a reward toast); `onClose` + `closeLabel` add a close button on the title line (44 pt target, 20 pt `close` glyph in `textSecondary`) that fires `onClose` and plays the same 120 ms exit; auto-dismisses only when it has no actions, never under 5 s. The title may be a node (the reward toast counts a number inside it). |
 | `DsEmptyState` | `DsCard` with a title, one warm line and an optional single action. | The empty state of every list (Matches, Discover, Blocked). |
 | `DsListRow` | Row: leading avatar, title, subtitle, trailing meta, chevron, unread dot. | One button with a combined spoken name (unread, title, subtitle). Min 64 high, optional inset divider. |
 | `DsAvatar` | Portrait or circle with an initial fallback. | `shape` `arch` or `circle`; `size` 32 / 40 / 56 / 96; `loading`, `presence`; hidden from assistive tech unless it has a label. |
@@ -208,6 +209,12 @@ All primitives live in `apps/mobile/components/ds/primitives` (motion in `compon
 | `DsSkeletonCard` | Card-shaped loading placeholder, pulses unless Reduce Motion. | Requires a localized `label`; `progressbar` role. |
 | `DsOfflineBanner` | Warning strip with a cloud-off icon. | `role="alert"`; show it at the top while offline. |
 | `DsBlobBackground` | Two soft blobs behind a screen. | Via `DsScreen withBlobs`; decorative. |
+| `DsProgressBar` | An 8 pt pill progress bar: `surfaceMuted` track, accent fill. | `value`/`min`/`max` (clamped), `fill` is a color role (default `accentPrimary`), `accessibilityLabel` is the spoken name; `progressbar` role with min/max/now. Fill eases in over `slow` 360 ms, instant with Reduce Motion. Level progress in the Cravos wallet. |
+| `DsProgressRing` | The 64 pt streak ring (stroke 6, SVG). | `progress` 0–1, optional visible `label` inside (e.g. "1/1"). Decorative like `DsStepProgress`: announce the streak in the card copy. Arc eases in over `slow` 360 ms, instant with Reduce Motion. |
+| `DsCountUp` | A number that counts from a previous value to a new one in place. | `value`, `from` (default 0), `locale` (BCP-47 grouping, e.g. 1.240 in pt-BR) or a `format` callback for the whole string, `textStyle` is a required `DsTypography` style (digits are always tabular). Runs over `countUp` 600 ms eased like `MatchCelebration`; with Reduce Motion the final value appears at once, and the spoken label is always the final value. |
+| `DsMedal` | The bevelled achievement medal (SVG): tier rim, inner bevel, tinted face, highlight arc, centered glyph. | `tier` from `DsAchievementTier`, `icon` (MaterialIcons), `size` (default 64), `locked` rests it at 40% opacity (copy carries the state). No text inside; decorative like `DsArt`, so the surrounding element carries the name. |
+| `DsConfetti` | A one-shot celebration burst. | Mount to play: 40 pieces from `origin` (fractions of its layer, default `{x: 0.5, y: 0.3}`) over `celebrate` 900 ms, accent/warm/tier/success/cyan colors, fading out (nothing flashes). `pointerEvents="none"`, hidden from assistive tech, renders nothing under Reduce Motion. |
+| `DsRewardToast` | The floating "Cravos ganhos" toast over a chat or a list. | Composes `DsNotice` (`overlay`, flower glyph) with a `DsCountUp` title built by `formatAmount`, `body`, `onClose`/`closeLabel`, and ten petals leaving the flower over 700 ms. Auto-dismisses after 5 s (`onDismiss`) so the caller plays the exit; no actions, so it never steals focus. Place it where `ForegroundNotification` sits (16 pt from the sides, 8 pt below the safe area). |
 | `DsMotionView`, `DsMotionPressable` | Entrance and press motion. | See [Motion](#motion). |
 | `useDsKeyboard*`, `useDsModalSheetLayout` | Keyboard-aware scroll, sheet lift, desktop dialog layout. | Use them instead of ad-hoc keyboard code. |
 

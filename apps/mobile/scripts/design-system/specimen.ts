@@ -1,4 +1,5 @@
 import {
+  DsAchievementTier,
   DsArt,
   DsBorder,
   DsCategoryColor,
@@ -154,10 +155,121 @@ const ICONS = {
     'M19.35 10.04C18.67 6.59 15.64 4 12 4c-1.48 0-2.85.43-4.01 1.17l1.46 1.46C10.21 6.23 11.08 6 12 6c3.04 0 5.5 2.46 5.5 5.5v.5H19c1.66 0 3 1.34 3 3 0 1.13-.64 2.11-1.56 2.62l1.45 1.45C23.16 18.16 24 16.68 24 15c0-2.64-2.05-4.78-4.65-4.96zM3 5.27l2.75 2.74C2.56 8.15 0 10.77 0 14c0 3.31 2.69 6 6 6h11.73l2 2L21 20.73 4.27 4 3 5.27zM7.73 10l8 8H6c-2.21 0-4-1.79-4-4s1.79-4 4-4h1.73z',
   favorite:
     'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z',
+  close:
+    'M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z',
+  localFlorist:
+    'M12 22a9 9 0 0 0 9-9 9 9 0 0 0-9 9zM5.6 10.25a2.5 2.5 0 0 0 3.92 2.06l-.02.19a2.5 2.5 0 0 0 5 0l-.02-.19c.4.28.89.44 1.42.44a2.5 2.5 0 0 0 2.5-2.5c0-1-.59-1.85-1.43-2.25.84-.4 1.43-1.25 1.43-2.25a2.5 2.5 0 0 0-3.92-2.06l.02-.19a2.5 2.5 0 0 0-5 0l.02.19c-.4-.28-.89-.44-1.42-.44a2.5 2.5 0 0 0-2.5 2.5c0 1 .59 1.85 1.43 2.25-.84.4-1.43 1.25-1.43 2.25zM12 5.5a2.5 2.5 0 0 1 0 5 2.5 2.5 0 0 1 0-5zM3 13a9 9 0 0 0 9 9 9 9 0 0 0-9-9z',
+  forum:
+    'M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z',
+  verified:
+    'M12 1 3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z',
 };
 
 function icon(path: string, size: number = DsIconSize.md): string {
   return `<svg aria-hidden="true" viewBox="0 0 24 24" width="${size}" height="${size}" fill="currentColor"><path d="${path}"/></svg>`;
+}
+
+/** The medal as `DsMedal` draws it: rim gradient, inner bevel, tinted face, highlight arc, glyph. */
+function medalSketch(
+  tier: 'bronze' | 'silver' | 'gold',
+  scheme: DsColorScheme,
+  glyph: string,
+  size: number,
+  locked = false,
+): string {
+  const shades = DsAchievementTier[tier];
+  const id = `specimen-medal-${tier}-${scheme}`;
+  const glyphSize = Math.round(size * (52 / 132));
+  return `<div class="medal-figure${locked ? ' locked' : ''}">
+    <div class="medal-art" style="width:${size}px;height:${size}px">
+      <svg aria-hidden="true" viewBox="0 0 132 132" width="${size}" height="${size}">
+        <defs>
+          <linearGradient id="${id}-rim" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="${shades.rimLight}"/><stop offset=".5" stop-color="${shades.base}"/><stop offset="1" stop-color="${shades.rimDark}"/>
+          </linearGradient>
+          <linearGradient id="${id}-bevel" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="${shades.rimDark}"/><stop offset="1" stop-color="${shades.rimLight}"/>
+          </linearGradient>
+        </defs>
+        <circle cx="66" cy="66" r="62" fill="url(#${id}-rim)"/>
+        <circle cx="66" cy="66" r="51" fill="url(#${id}-bevel)"/>
+        <circle cx="66" cy="66" r="48" fill="${shades.face[scheme]}"/>
+        <path d="M30 44 A42 42 0 0 1 88 24" fill="none" stroke="${shades.highlightArc}" stroke-opacity="${scheme === 'dark' ? 0.12 : 0.5}" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+      <span class="medal-glyph" style="color:${shades.glyphInk[scheme]}">${icon(glyph, glyphSize)}</span>
+    </div>
+    <figcaption><code>${tier}</code></figcaption>
+  </div>`;
+}
+
+function cravosSection(): string {
+  const arcOffset = (2 * Math.PI * 27 * 0.25).toFixed(2);
+  const confettiColors = [
+    'var(--c-accent-primary)',
+    'var(--c-accent-warm)',
+    DsAchievementTier.gold.base,
+    'var(--c-success)',
+    'var(--c-accent-cyan)',
+  ];
+  const pieces = Array.from({ length: 14 }, (_, index) => {
+    const left = 110 + Math.sin(index * 2.7) * 60 + index * 4;
+    const top = 20 + ((index * 37) % 70);
+    return `<i style="left:${Math.round(left)}px;top:${top}px;width:${4 + (index % 3)}px;height:${6 + (index % 4)}px;background:${confettiColors[index % confettiColors.length]};transform:rotate(${(index * 47) % 360}deg)"></i>`;
+  }).join('');
+  const medals = (scheme: DsColorScheme) =>
+    (['bronze', 'silver', 'gold'] as const)
+      .map((tier) =>
+        medalSketch(
+          tier,
+          scheme,
+          tier === 'gold' ? ICONS.verified : tier === 'silver' ? ICONS.forum : ICONS.localFlorist,
+          56,
+        ),
+      )
+      .join('');
+
+  return `
+      <h3>Cravos reward moments</h3>
+      <div class="row wrap">
+        <div class="kv-demo">
+          <b>DsProgressBar</b>
+          <div class="reward-bar" role="progressbar" aria-valuemin="0" aria-valuemax="2500" aria-valuenow="1240" aria-label="Progresso até Jardim"><b style="width:49.6%"></b></div>
+          <small>8 pt pill, surfaceMuted track, accent fill; eases in over 360 ms.</small>
+        </div>
+        <div class="kv-demo">
+          <b>DsProgressRing</b>
+          <div class="reward-ring">
+            <svg aria-hidden="true" viewBox="0 0 64 64" width="64" height="64">
+              <circle cx="32" cy="32" r="27" fill="none" style="stroke:var(--c-surface-muted)" stroke-width="6"/>
+              <circle cx="32" cy="32" r="27" fill="none" style="stroke:var(--c-accent-primary)" stroke-width="6" stroke-linecap="round" stroke-dasharray="169.65" stroke-dashoffset="${arcOffset}"/>
+            </svg>
+            <span>5/6</span>
+          </div>
+          <small>Decorative streak ring; the card copy announces the streak.</small>
+        </div>
+        <div class="kv-demo">
+          <b>DsCountUp</b>
+          <div style="${typeRule('figure')}">1.240</div>
+          <small>Counts from the last seen value over 600 ms (tabular digits, final value spoken).</small>
+        </div>
+      </div>
+
+      <h4>DsMedal · light face</h4>
+      <div class="medals">${medals('light')}${medalSketch('bronze', 'light', ICONS.forum, 56, true)}</div>
+      <h4>DsMedal · dark face</h4>
+      <div class="medals">${medals('dark')}</div>
+
+      <h4>DsConfetti</h4>
+      <div class="confetti-demo" aria-hidden="true">${pieces}</div>
+      <small>40 pieces rise and fade over 900 ms from the origin; nothing under Reduce Motion.</small>
+
+      <h4>DsRewardToast</h4>
+      <div class="notice tone-info reward" role="status">
+        <span class="notice-icon" aria-hidden="true">${icon(ICONS.localFlorist)}</span>
+        <div class="notice-content"><b>+30 Cravos</b><small>Conversa iniciada com Maya</small></div>
+        <button class="reward-close" type="button" aria-label="Fechar aviso">${icon(ICONS.close, DsIconSize.md)}</button>
+      </div>
+      <small>DsNotice overlay with the flower glyph, a DsCountUp title, ten petals behind the flower and the close button on the title line.</small>`;
 }
 
 function colorSection(): string {
@@ -211,6 +323,23 @@ function colorSection(): string {
           ].map(
             ([part, value]) =>
               `<div class="swatch"><div class="chip-color" style="background:${value}"></div><code>DsArt.faces[${index}].${part}</code><small>${value}</small></div>`,
+          ),
+        )
+        .join('')}${Object.entries(DsAchievementTier)
+        .flatMap(([tier, shades]) =>
+          (
+            [
+              ['base', shades.base],
+              ['rimLight', shades.rimLight],
+              ['rimDark', shades.rimDark],
+              ['face.light', shades.face.light],
+              ['face.dark', shades.face.dark],
+              ['glyphInk.light', shades.glyphInk.light],
+              ['glyphInk.dark', shades.glyphInk.dark],
+            ] as const
+          ).map(
+            ([part, value]) =>
+              `<div class="swatch"><div class="chip-color" style="background:${value}"></div><code>DsAchievementTier.${tier}.${part}</code><small>${value}</small></div>`,
           ),
         )
         .join('')}</div>
@@ -381,6 +510,7 @@ function componentsSection(): string {
 
       <h3>DsSkeletonCard</h3>
       <div class="card skeleton" aria-label="Loading"><i class="bar t"></i><i class="bar"></i><i class="bar s"></i></div>
+      ${cravosSection()}
     </section>`;
 }
 
@@ -531,6 +661,27 @@ small.err{color:var(--c-danger);display:flex;gap:6px;align-items:center}
 .phone-foot{margin-top:auto;padding-top:16px}.phone-foot .pill{width:100%}
 @media (max-width:640px){.type-row{grid-template-columns:1fr;gap:4px}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+h4{font-size:13px;line-height:18px;font-weight:700;margin:20px 0 6px;color:var(--c-text-primary)}
+.kv-demo{display:flex;flex-direction:column;gap:8px;max-width:280px}
+.kv-demo b{color:var(--c-text-primary)}
+.reward-bar{height:8px;border-radius:var(--r-pill);background:var(--c-surface-muted);overflow:hidden}
+.reward-bar>b{display:block;height:100%;border-radius:var(--r-pill);background:var(--c-accent-primary)}
+.reward-ring{position:relative;width:64px;height:64px}
+.reward-ring svg{transform:rotate(-90deg)}
+.reward-ring span{position:absolute;inset:0;display:grid;place-items:center;font:700 13px/18px 'Geist',sans-serif;color:var(--c-text-primary)}
+.medals{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;margin:8px 0}
+.medal-figure{display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--c-text-primary)}
+.medal-figure.locked{opacity:.4}
+.medal-art{position:relative}
+.medal-glyph{position:absolute;inset:0;display:grid;place-items:center}
+.confetti-demo{position:relative;width:280px;height:120px;border:1px dashed var(--c-border-strong);border-radius:var(--r-lg);overflow:hidden;margin:8px 0}
+.confetti-demo i{position:absolute;border-radius:2px}
+.notice.reward{display:flex;gap:12px;align-items:flex-start;position:relative;max-width:380px}
+.notice-icon{flex:none;width:24px;height:24px;color:var(--c-accent-text)}
+.notice-content{display:flex;flex-direction:column;gap:8px;flex:1;min-width:0;padding-right:24px}
+.notice-content b{font:700 16px/22px 'Geist',sans-serif;color:var(--c-text-primary)}
+.reward-close{all:unset;position:absolute;top:9px;right:8px;width:44px;height:44px;display:grid;place-items:center;border-radius:var(--r-pill);color:var(--c-text-secondary);cursor:pointer}
+.reward-close:focus-visible{outline:3px solid var(--c-accent-primary);outline-offset:-3px}
 `;
 
 const SCRIPT = `
