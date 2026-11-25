@@ -1,5 +1,5 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { useCallback, useEffect, useRef, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, {
   cancelAnimation,
@@ -12,6 +12,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import {
   DsIconSize,
+  DsLayout,
   DsRadius,
   DsShadow,
   DsSpace,
@@ -21,6 +22,7 @@ import {
 } from '@/constants/design-system';
 import { DS_MOTION } from '@/constants/motion';
 import { DsCard } from './DsCard';
+import { DsMotionPressable } from '../motion/DsMotionPressable';
 import { DsMotionView } from '../motion/DsMotionView';
 
 export type DsNoticeTone = 'info' | 'success' | 'warning' | 'danger';
@@ -40,7 +42,8 @@ export const DS_NOTICE_MIN_VISIBLE_MS = 5000;
 type DsNoticeProps = {
   scheme: DsColorScheme;
   tone?: DsNoticeTone;
-  title: string;
+  /** Plain copy, or a node (e.g. a counting number). Callers keep it one line of copy. */
+  title: ReactNode;
   body?: string;
   /** Buttons (e.g. `DsPillButton size="sm"`), laid out in a row under the copy. */
   actions?: ReactNode;
@@ -48,23 +51,30 @@ type DsNoticeProps = {
   urgency?: 'alert' | 'status';
   /** Adds the floating shadow for a notice laid over content. */
   overlay?: boolean;
+  /** Overrides the tone glyph (e.g. the flower on a reward toast). */
+  icon?: IconName;
+  /** Adds a close button on the title line. It fires `onClose` and plays the same exit. */
+  onClose?: () => void;
+  /** Spoken name of the close button; required with `onClose` (no hardcoded strings). */
+  closeLabel?: string;
   /** Plays the exit and blocks input. `onExitComplete` fires when it ends. */
   closing?: boolean;
   onExitComplete?: () => void;
   /**
    * Dismisses by itself after this many ms (never less than 5 s), but only when the notice has
-   * no actions. Needs `onDismiss`.
+   * no actions. Needs `onDismiss`. A close button does not stop the auto-dismiss.
    */
   autoDismissMs?: number;
   onDismiss?: () => void;
   style?: StyleProp<ViewStyle>;
-  /** The card. The entrance wrapper is `${testID}-motion`. */
+  /** The card. The entrance wrapper is `${testID}-motion`, the close button `${testID}-close`. */
   testID?: string;
 };
 
 /**
  * Card with a tone icon, a title, optional body and actions. Enters with a short reveal and
- * leaves with a short fade; both are instant with Reduce Motion.
+ * leaves with a short fade; both are instant with Reduce Motion. `onClose` adds a close
+ * button on the title line that plays the same exit.
  */
 export function DsNotice({
   scheme,
@@ -74,7 +84,10 @@ export function DsNotice({
   actions,
   urgency = 'status',
   overlay = false,
+  icon,
   closing = false,
+  onClose,
+  closeLabel,
   onExitComplete,
   autoDismissMs,
   onDismiss,
@@ -84,6 +97,8 @@ export function DsNotice({
   const ds = getDsTheme(scheme);
   const reduceMotion = useReducedMotion();
   const exit = useSharedValue(1);
+  const [selfClosing, setSelfClosing] = useState(false);
+  const exiting = closing || selfClosing;
   const exitComplete = useRef(onExitComplete);
   exitComplete.current = onExitComplete;
   const completeExit = useCallback(() => exitComplete.current?.(), []);
@@ -94,7 +109,7 @@ export function DsNotice({
   const hasActions = actions !== undefined && actions !== null && actions !== false;
 
   useEffect(() => {
-    if (!closing) {
+    if (!exiting) {
       exit.value = 1;
       return;
     }
@@ -111,13 +126,13 @@ export function DsNotice({
       },
     );
     return () => cancelAnimation(exit);
-  }, [closing, completeExit, exit, reduceMotion]);
+  }, [exiting, completeExit, exit, reduceMotion]);
 
   useEffect(() => {
-    if (hasActions || closing || !autoDismissMs || !onDismiss) return;
+    if (hasActions || exiting || !autoDismissMs || !onDismiss) return;
     const timer = setTimeout(onDismiss, Math.max(autoDismissMs, DS_NOTICE_MIN_VISIBLE_MS));
     return () => clearTimeout(timer);
-  }, [autoDismissMs, closing, hasActions, onDismiss]);
+  }, [autoDismissMs, exiting, hasActions, onDismiss]);
 
   const toneColor = {
     info: ds.color.accentText,
@@ -134,9 +149,9 @@ export function DsNotice({
 
   return (
     <Animated.View
-      accessibilityElementsHidden={closing}
-      importantForAccessibility={closing ? 'no-hide-descendants' : 'auto'}
-      pointerEvents={closing ? 'none' : 'auto'}
+      accessibilityElementsHidden={exiting}
+      importantForAccessibility={exiting ? 'no-hide-descendants' : 'auto'}
+      pointerEvents={exiting ? 'none' : 'auto'}
       style={exitStyle}
     >
       <DsMotionView testID={testID ? `${testID}-motion` : undefined} variant="reveal">
@@ -157,11 +172,11 @@ export function DsNotice({
             aria-hidden
             color={toneColor}
             importantForAccessibility="no-hide-descendants"
-            name={TONE_ICON[tone]}
+            name={icon ?? TONE_ICON[tone]}
             size={DsIconSize.lg}
             testID={testID ? `${testID}-icon` : undefined}
           />
-          <View style={styles.content}>
+          <View style={[styles.content, onClose ? styles.contentWithClose : null]}>
             <Text
               role={urgency === 'alert' ? 'alert' : 'status'}
               style={[DsTypography.cardTitle, { color: ds.color.textPrimary }]}
@@ -174,6 +189,20 @@ export function DsNotice({
             ) : null}
             {hasActions ? <View style={styles.actions}>{actions}</View> : null}
           </View>
+          {onClose && closeLabel ? (
+            <DsMotionPressable
+              accessibilityLabel={closeLabel}
+              accessibilityRole="button"
+              onPress={() => {
+                onClose();
+                setSelfClosing(true);
+              }}
+              style={styles.close}
+              testID={testID ? `${testID}-close` : undefined}
+            >
+              <MaterialIcons color={ds.color.textSecondary} name="close" size={DsIconSize.md} />
+            </DsMotionPressable>
+          ) : null}
         </DsCard>
       </DsMotionView>
     </Animated.View>
@@ -194,9 +223,24 @@ const styles = StyleSheet.create({
     gap: DsSpace.xs,
     minWidth: 0,
   },
+  contentWithClose: {
+    paddingRight: DsSpace.xl,
+  },
   actions: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: DsSpace.xs,
+  },
+  close: {
+    alignItems: 'center',
+    borderRadius: DsRadius.pill,
+    height: DsLayout.minTouchTarget,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: DsSpace.xs,
+    // Centers the 44 pt target on the title line (padding lg + half the cardTitle line height
+    // minus half the target) and puts the glyph's right edge on the card's lg padding.
+    top: DsSpace.lg + (DsTypography.cardTitle.lineHeight ?? 0) / 2 - DsLayout.minTouchTarget / 2,
+    width: DsLayout.minTouchTarget,
   },
 });

@@ -9,6 +9,7 @@ Comradia is a dating app for people on the left: sign in, build a card from your
 | Path | What it is | Toolchain |
 | --- | --- | --- |
 | `apps/mobile` | The app (iOS, Android, web) | Expo, yarn 1 |
+| `apps/admin` | Cravos operations console (web only) | Vite, TypeScript, yarn 1 |
 | `apps/firebase` | Firestore and Storage rules, notification Functions, emulator config and tests | firebase-tools 13, yarn 1 |
 | `apps/website` | Public landing page (static HTML, no build) | none |
 | `docs` | Architecture and testing notes | — |

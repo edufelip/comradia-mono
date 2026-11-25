@@ -38,10 +38,22 @@ jobs:
       - run: yarn test:component:coverage
 
   e2e-web:
-    name: E2E (Playwright web)
-    # GitHub-hosted (free for public repos); each job gets its own VM, so emulator ports never clash.
+    name: ${{ matrix.name }}
+    # Each suite gets a fresh VM so a Firestore process left by one suite cannot block the next.
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - suite: web
+            name: E2E (Playwright web)
+            args: ''
+            gamification: '0'
+          - suite: cravos
+            name: E2E (Cravos wallet)
+            args: tests/e2e/gamification.spec.ts --project=iphone-chromium --project=iphone-webkit --workers=1
+            gamification: '1'
     steps:
       - uses: actions/checkout@v4
       # Playwright starts the Firebase emulators (`yarn --cwd ../firebase emulators`),
@@ -61,13 +73,14 @@ jobs:
       - run: yarn install --frozen-lockfile
         working-directory: apps/firebase
       - run: npx playwright install --with-deps chromium webkit
-      - run: yarn test:e2e
+      - run: yarn test:e2e ${{ matrix.args }}
         env:
           CI: '1'
+          E2E_GAMIFICATION: ${{ matrix.gamification }}
       - if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.suite }}
           path: |
             apps/mobile/playwright-report
             apps/mobile/test-results

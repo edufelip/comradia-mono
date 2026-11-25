@@ -139,7 +139,7 @@ The repo is public, so every job runs on free GitHub-hosted `ubuntu-latest` runn
 
 | Workflow | Runs when | Jobs |
 | --- | --- | --- |
-| `.github/workflows/mobile-tests.yml` | every PR; pushes to `develop` / `main` touching `apps/mobile/**` or `apps/firebase/**` | `checks` (typecheck, lint, format, unit, component + coverage) and `e2e-web` (Playwright; report uploaded on failure) |
+| `.github/workflows/mobile-tests.yml` | every PR; pushes to `develop` / `main` touching `apps/mobile/**` or `apps/firebase/**` | `checks` (typecheck, lint, format, unit, component + coverage) and `e2e-web` (the main Playwright suite and the Cravos wallet journey run on separate VMs with separate failure reports) |
 | `.github/workflows/firebase-rules.yml` | every PR; pushes to `develop` / `main` touching `apps/firebase/**` or `apps/mobile/features/profile/profile-schema.ts` | `yarn test` in `apps/firebase`: rules tests under a Firestore emulator |
 | `.github/workflows/mobile-firebase-distribution-android.yml` | pushes to `develop` touching `apps/mobile/**`; manual | dev release APK (arm64, React Native debug key) to Firebase App Distribution, group `base-group` |
 | `.github/workflows/mobile-firebase-distribution-ios.yml` | the same, when `IOS_CI_ENABLED` is `true` | dev Ad Hoc IPA on `macos-15` to Firebase App Distribution, group `base-group` |

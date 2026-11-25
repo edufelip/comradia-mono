@@ -1,0 +1,29 @@
+name: Admin checks
+
+on:
+  pull_request:
+    paths:
+      - 'apps/admin/**'
+      - '.github/workflows/admin-tests.yml'
+  push:
+    branches: [develop, main]
+    paths:
+      - 'apps/admin/**'
+      - '.github/workflows/admin-tests.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/admin
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: yarn
+          cache-dependency-path: apps/admin/yarn.lock
+      - run: yarn install --frozen-lockfile
+      - run: yarn test
+      - run: yarn build

@@ -148,7 +148,12 @@ events older than six days. The Firebase Auth user-deleted trigger recursively r
 data, relationship documents, matches and portrait objects, including accounts already partly
 cleaned up by the client. A Storage finalize trigger in `us-east1` rejects non-JPEG portraits
 and keeps each account to at most three unreferenced/active photo objects. These triggers have
-zero minimum instances and add no scheduled jobs or external services. See
+zero minimum instances. Cravos has one approved scheduled exception, `gamCloseWeek` at
+03:00 Mondays in America/Sao_Paulo, which settles streaks, matured holds, active badges
+and expired lots. The same job sends eligible reminders at 18:00 Sundays. The hourly/day
+cron combination also invokes at the two unused time slots, where the function exits.
+Its feature flags default to disabled. Set the `GAM_PAIR_SALT` Functions secret before
+deployment and keep it stable across releases so existing per-pair caps stay effective. See
 [`apps/firebase/functions/README.md`](../apps/firebase/functions/README.md) for delivery and
 cleanup behavior.
 
