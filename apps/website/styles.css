@@ -144,49 +144,9 @@ h1 {
   max-width: 600px;
 }
 
-.waitlist-form {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 12px;
-}
-
-.waitlist-form input {
-  flex: 1 1 260px;
-  max-width: 360px;
-  padding: 12px 16px;
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--border-strong);
-  font-family: inherit;
-  font-size: 1rem;
-  background: var(--surface);
-  color: var(--text-primary);
-}
-
-.waitlist-form input::placeholder {
-  color: var(--text-tertiary);
-}
-
-.waitlist-form button {
-  padding: 12px 24px;
-  border-radius: var(--radius-pill);
-  border: none;
-  background: var(--accent);
-  color: var(--on-accent);
-  font-family: inherit;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.waitlist-form button:hover {
-  background: var(--accent-hover);
-}
-
-.status-text {
-  font-size: 0.95rem;
+.early-access {
+  font-weight: 500;
   color: var(--accent-text);
-  min-height: 1.4em;
 }
 
 :focus-visible {

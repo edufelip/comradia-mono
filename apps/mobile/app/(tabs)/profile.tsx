@@ -42,6 +42,7 @@ export default function ProfileScreen() {
     setEditingUid(null);
   }, [uid]);
   const [signingOut, setSigningOut] = useState(false);
+  const [signOutError, setSignOutError] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<BackendErrorCode | null>(null);
@@ -85,11 +86,14 @@ export default function ProfileScreen() {
   };
 
   const signOut = async () => {
+    setSignOutError(false);
     setSigningOut(true);
     try {
       await backend.signOut();
     } catch {
+      // The safety gate: the session is kept, the person stays signed in and can retry.
       setSigningOut(false);
+      setSignOutError(true);
     }
   };
 
@@ -386,6 +390,12 @@ export default function ProfileScreen() {
           variant="ghost"
         />
       )}
+
+      {signOutError ? (
+        <Text accessibilityRole="alert" style={[DsTypography.body, { color: ds.color.danger }]}>
+          {t('profile.sign_out.error')}
+        </Text>
+      ) : null}
 
       <DsPillButton
         label={t('profile.sign_out')}

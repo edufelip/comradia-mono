@@ -12,6 +12,8 @@ Five test layers, fastest first. Run the cheapest layer that proves your change,
 
 `yarn test:all` in `apps/mobile` runs typecheck, lint, unit, component (with coverage) and E2E web in that order.
 
+Run `node --test apps/website/index.test.mjs` from the repo root to check the static landing page.
+
 ## E2E native on iOS
 
 Maestro drives a dev build on a booted simulator. Continuous Native Generation means `ios/` is
@@ -190,6 +192,7 @@ From `docs/architecture.md` "Deferred" and "Costs":
 - **Voice intros.** Photos run on the emulator in tests; `comradia-dev` has a real bucket since 2026-11-12.
 - **Age recompute, ranking by shared passions and distance:** a Cloud Function.
 - **App Check.** Account deletion, blocking and reporting are implemented in `apps/mobile` (S12 and S11).
+- **Website early access.** The landing page displays a coming-soon message until a signup service is available.
 
 Known flaky test:
 

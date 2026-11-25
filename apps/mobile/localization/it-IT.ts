@@ -243,6 +243,7 @@ export const itIT: Record<TranslationKey, string> = {
   'blocked.unblock.confirm': 'Sblocca',
   'blocked.unblock.cancel': 'Annulla',
   'profile.sign_out': 'Esci',
+  'profile.sign_out.error': 'Impossibile effettuare la disconnessione. Riprova.',
   'profile.age': '{age}',
   'profile.delete_account': 'Elimina il mio account',
   'profile.delete.title': 'Vuoi eliminare il tuo account?',

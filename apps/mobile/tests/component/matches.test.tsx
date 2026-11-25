@@ -359,4 +359,31 @@ describe('MatchesScreen', () => {
     expect(screen.queryByTestId(`match-row-${maya}`)).not.toBeOnTheScreen();
     expect(fakeBackend.callsTo('listBlockedUids')).toHaveLength(2);
   });
+
+  it('recovers a match hidden by their block when they unblock me', async () => {
+    signIn();
+    seedProfiles(MAYA);
+    fakeBackend.likeFrom(MAYA.id, TEST_USER.uid);
+    fakeBackend.likeFrom(TEST_USER.uid, MAYA.id);
+    const maya = matchIdFor(TEST_USER.uid, MAYA.id);
+    // Maya blocked me before the tab was ever opened: her card is denied, so the row is
+    // hidden without the denial being memoized as a missing profile.
+    fakeBackend.state.profileDenied.add(MAYA.id);
+    fakeBackend.state.blocked.add(MAYA.id);
+
+    await render(<MatchesScreen />);
+
+    expect(await screen.findByTestId('matches-empty')).toBeOnTheScreen();
+    expect(screen.queryByTestId(`match-row-${maya}`)).not.toBeOnTheScreen();
+
+    // They unblock; regaining focus re-reads the card and the row comes back.
+    fakeBackend.state.profileDenied.delete(MAYA.id);
+    fakeBackend.state.blocked.delete(MAYA.id);
+    await act(async () => {
+      mockFocusEffects.forEach((effect) => effect());
+    });
+
+    expect(await screen.findByTestId(`match-row-${maya}`)).toBeOnTheScreen();
+    expect(screen.getByText('Maya, 28')).toBeOnTheScreen();
+  });
 });

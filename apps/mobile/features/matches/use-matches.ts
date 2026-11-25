@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { Backend, Match, Unsubscribe } from '@/services/backend/types';
 import { forgetReconciliationForSession, markReconciliationForSession } from './reconcile-session';
@@ -12,19 +13,39 @@ export type MatchesStatus = 'idle' | 'loading' | 'ready' | 'error';
  * S9's live list. Opening Matches first repairs any match both people created at the same
  * moment without seeing each other's like once per app session, then follows the matches
  * collection until the screen unmounts. Repair failures do not stop the live list.
+ * Regaining focus reloads it: a card the rules denied (they blocked me) is never cached,
+ * so an unblock must get a fresh read to bring the row back.
  */
 export function useMatches(backend: MatchesBackend, uid: string | undefined) {
   const [status, setStatus] = useState<MatchesStatus>('idle');
   const [matches, setMatches] = useState<Match[]>([]);
   const [attempt, setAttempt] = useState(0);
-
+  const seenMountFocus = useRef(false);
+  const subscriptionUid = useRef<string | undefined>(undefined);
   const retry = useCallback(() => setAttempt((value) => value + 1), []);
+
+  // The mount run below already loads once; only a regained focus reloads.
+  useFocusEffect(
+    useCallback(() => {
+      if (!seenMountFocus.current) {
+        seenMountFocus.current = true;
+        return;
+      }
+      setAttempt((value) => value + 1);
+    }, []),
+  );
 
   useEffect(() => {
     if (!uid) return;
     let active = true;
     let unsubscribe: Unsubscribe | undefined;
-    setStatus('loading');
+    if (subscriptionUid.current !== uid) {
+      subscriptionUid.current = uid;
+      setMatches([]);
+      setStatus('loading');
+    } else {
+      setStatus((current) => (current === 'error' ? 'loading' : current));
+    }
 
     if (markReconciliationForSession(uid)) {
       void backend.reconcileMatches(uid).catch(() => forgetReconciliationForSession(uid));

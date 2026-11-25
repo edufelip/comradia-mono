@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 import ChatScreen from '@/app/chat/[id]';
+import * as chatScroll from '@/features/chat/chat-scroll';
 import { useSessionStore } from '@/features/auth/session-store';
 import { enUS } from '@/localization/en-US';
 import { matchIdFor } from '@/services/backend/shared';
@@ -14,11 +15,17 @@ const mockBack = jest.fn();
 const mockPush = jest.fn();
 let mockParams: { id?: string } = {};
 let mockIsFocused = true;
+/** Every focus callback the screen registered, so a test can simulate regaining focus. */
+let mockFocusEffects: (() => void)[] = [];
 jest.mock('expo-router', () => {
   const { useEffect } = jest.requireActual<typeof import('react')>('react');
   return {
-    // Stand-in for `useFocusEffect`: runs on mount, like a focused screen.
-    useFocusEffect: (callback: () => void) => useEffect(callback, [callback]),
+    // Stand-in for `useFocusEffect`: runs on mount and whenever the callback changes,
+    // which is what the real hook does when the screen regains focus.
+    useFocusEffect: (callback: () => void) => {
+      mockFocusEffects.push(callback);
+      useEffect(callback, [callback]);
+    },
     useLocalSearchParams: () => mockParams,
     useRouter: () => ({
       back: mockBack,
@@ -37,6 +44,7 @@ jest.mock('@/localization/get-device-locale', () => ({ getDeviceLocale: () => 'e
 beforeEach(() => {
   mockIsFocused = true;
   mockParams = {};
+  mockFocusEffects = [];
 });
 
 const MAYA: DiscoveryProfile = {
@@ -186,6 +194,60 @@ describe('ChatScreen', () => {
     expect(fakeBackend.callsTo('loadOlderMessages')).toEqual([
       { method: 'loadOlderMessages', args: [matchId, 'history-6', 200] },
     ]);
+  });
+
+  it('keeps the visible position when earlier messages prepend', async () => {
+    // Drive the resize before the animation-frame fallback, as a native layout can.
+    jest.spyOn(globalThis, 'requestAnimationFrame').mockReturnValue(0);
+    signIn();
+    const matchId = await seedMatch();
+    fakeBackend.state.messages.set(
+      matchId,
+      Array.from({ length: 205 }, (_, index) => ({
+        id: `history-${index + 1}`,
+        from: MAYA.id,
+        text: `History ${index + 1}`,
+        createdAt: index + 1,
+      })),
+    );
+    const actionFor = jest.spyOn(chatScroll, 'chatScrollAction');
+
+    await render(<ChatScreen />);
+    const scroll = await screen.findByTestId('chat-messages');
+
+    // First layout shows the newest message, as before.
+    actionFor.mockClear();
+    await act(() => scroll.props.onContentSizeChange(320, 1000));
+    expect(actionFor).toHaveBeenLastCalledWith(
+      expect.objectContaining({ intent: 'latest', height: 1000 }),
+    );
+
+    // The user scrolls up into the history.
+    await act(() => scroll.props.onScroll({ nativeEvent: { contentOffset: { y: 300 } } }));
+
+    // Older messages prepend above the visible window: the viewport follows by exactly the
+    // height the history added, instead of snapping back to the newest message.
+    await fireEvent.press(await screen.findByTestId('chat-load-earlier'));
+    expect(await screen.findByText('History 1')).toBeOnTheScreen();
+    actionFor.mockClear();
+    await act(() => scroll.props.onContentSizeChange(320, 2400));
+    expect(actionFor).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        intent: 'anchor',
+        offset: 300,
+        previousHeight: 1000,
+        height: 2400,
+      }),
+    );
+    expect(actionFor).toHaveLastReturnedWith({ kind: 'anchor', y: 1700 });
+
+    // A message that arrives still brings the newest into view.
+    actionFor.mockClear();
+    await act(() => fakeBackend.receiveMessage(matchId, MAYA.id, 'Newest'));
+    await act(() => scroll.props.onContentSizeChange(320, 2500));
+    expect(actionFor).toHaveBeenLastCalledWith(
+      expect.objectContaining({ intent: 'latest', height: 2500 }),
+    );
   });
 
   it('says so when earlier messages fail to load', async () => {
@@ -390,6 +452,52 @@ describe('ChatScreen', () => {
     expect(screen.getByText('Thursday sounds good')).toBeOnTheScreen();
     expect(screen.queryByTestId('chat-input')).not.toBeOnTheScreen();
     expect(screen.queryByTestId('chat-send')).not.toBeOnTheScreen();
+  });
+
+  it('opens a conversation they blocked as closed and identity-free, not missing', async () => {
+    signIn();
+    const matchId = await seedMatch();
+    // The profile read can be denied before the separate block list catches up.
+    fakeBackend.state.profileDenied.add(MAYA.id);
+    fakeBackend.state.messages.set(matchId, [
+      { id: 'history-1', from: MAYA.id, text: 'Before the block', createdAt: 1 },
+    ]);
+
+    await render(<ChatScreen />);
+
+    expect(await screen.findByTestId('chat-closed')).toBeOnTheScreen();
+    expect(screen.queryByTestId('chat-not-found')).not.toBeOnTheScreen();
+    // The history stays readable; nothing about Maya beyond the uid the route carries.
+    expect(screen.getByText('Before the block')).toBeOnTheScreen();
+    expect(screen.getByRole('header', { name: enUS['chat.title'] })).toBeOnTheScreen();
+    expect(screen.queryByTestId('chat-photo')).not.toBeOnTheScreen();
+    expect(screen.queryByTestId('chat-input')).not.toBeOnTheScreen();
+    expect(screen.queryByTestId('chat-send')).not.toBeOnTheScreen();
+    // Reporting the person who blocked me is still possible.
+    expect(screen.getByTestId('chat-safety')).toBeOnTheScreen();
+  });
+
+  it('recovers the conversation when they unblock me, without leaving the screen', async () => {
+    signIn();
+    const matchId = await seedMatch();
+    fakeBackend.state.profileDenied.add(MAYA.id);
+    fakeBackend.state.blocked.add(MAYA.id);
+
+    await render(<ChatScreen />);
+    expect(await screen.findByTestId('chat-closed')).toBeOnTheScreen();
+
+    // They lift the block elsewhere; regaining focus re-reads the denied card instead of
+    // keeping the denial memoized as a missing profile.
+    fakeBackend.state.profileDenied.delete(MAYA.id);
+    fakeBackend.state.blocked.delete(MAYA.id);
+    await act(async () => {
+      mockFocusEffects.forEach((effect) => effect());
+    });
+
+    expect(await screen.findByRole('header', { name: 'Maya' })).toBeOnTheScreen();
+    expect(screen.getByText('28 · Outdoorsy')).toBeOnTheScreen();
+    expect(screen.getByTestId('chat-input')).toBeOnTheScreen();
+    expect(screen.queryByTestId('chat-closed')).not.toBeOnTheScreen();
   });
 
   it('keeps the composer when nobody is blocked', async () => {

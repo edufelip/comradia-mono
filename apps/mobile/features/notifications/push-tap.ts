@@ -1,5 +1,5 @@
 import { matchIdFor } from '@/services/backend/shared';
-import type { Match } from '@/services/backend/types';
+import { matchHasCard, type Match } from '@/services/backend/types';
 
 export type PushTapIntent = {
   type: 'match' | 'message';
@@ -38,6 +38,7 @@ export function createPushTapRouter(dependencies: PushTapRouterDependencies) {
     try {
       const match = await dependencies.getMatch(uid, intent.matchId);
       if (!readySession(uid) || !match || match.id !== intent.matchId) return;
+      if (!matchHasCard(match)) return;
       if (!match.other.id || match.other.id === uid || matchIdFor(uid, match.other.id) !== match.id)
         return;
 

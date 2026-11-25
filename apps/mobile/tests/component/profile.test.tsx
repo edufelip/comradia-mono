@@ -68,16 +68,31 @@ describe('ProfileScreen', () => {
     expect(screen.getByTestId('profile-sign-out')).toHaveAccessibleName(enUS['profile.sign_out']);
   });
 
-  it('stays usable when the sign-out call fails', async () => {
+  it('reports a sign-out that did not go through and stays signed in', async () => {
     signIn();
     fakeBackend.state.failNext.set('signOut', 'network');
 
     await render(<ProfileScreen />);
     await fireEvent.press(screen.getByTestId('profile-sign-out'));
 
-    // While the call is pending the button shows a spinner instead of its label.
-    await waitFor(() => expect(screen.getByText(enUS['profile.sign_out'])).toBeOnTheScreen());
+    expect(await screen.findByRole('alert')).toHaveTextContent(enUS['profile.sign_out.error']);
     expect(fakeBackend.callsTo('signOut')).toHaveLength(1);
+    expect(useSessionStore.getState().user?.uid).toBe(TEST_USER.uid);
+    expect(screen.getByTestId('profile-sign-out')).toBeEnabled();
+  });
+
+  it('clears the error when the sign-out retry succeeds', async () => {
+    signIn();
+    fakeBackend.state.failNext.set('signOut', 'network');
+
+    await render(<ProfileScreen />);
+    await fireEvent.press(screen.getByTestId('profile-sign-out'));
+    expect(await screen.findByRole('alert')).toHaveTextContent(enUS['profile.sign_out.error']);
+
+    await fireEvent.press(screen.getByTestId('profile-sign-out'));
+
+    await waitFor(() => expect(fakeBackend.callsTo('signOut')).toHaveLength(2));
+    await waitFor(() => expect(screen.queryByText(enUS['profile.sign_out.error'])).toBeNull());
   });
 
   it('keeps Sign out available while the profile is still missing', async () => {

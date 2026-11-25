@@ -243,6 +243,7 @@ export const ptBR: Record<TranslationKey, string> = {
   'blocked.unblock.confirm': 'Desbloquear',
   'blocked.unblock.cancel': 'Cancelar',
   'profile.sign_out': 'Sair',
+  'profile.sign_out.error': 'Não foi possível sair da sua conta. Tente de novo.',
   'profile.age': '{age}',
   'profile.delete_account': 'Excluir minha conta',
   'profile.delete.title': 'Excluir sua conta?',

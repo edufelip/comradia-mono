@@ -56,6 +56,8 @@ function createFakeBackend() {
     messages: new Map<string, ChatMessage[]>(),
     /** Uids the signed-in user blocked (or reported, which also blocks). */
     blocked: new Set<string>(),
+    /** Uids whose profile reads are denied (they blocked me): the card is unreadable. */
+    profileDenied: new Set<string>(),
     /** Every report written, in order. */
     reports: [] as ReportInput[],
     /** Uploaded portraits: Storage path -> the local uri it came from. */
@@ -88,11 +90,20 @@ function createFakeBackend() {
     return path;
   };
 
+  /** The raw SDK shape (before toBackendError) of a rules denial, as the emulators throw it. */
+  const permissionDenied = () => {
+    const error = new Error('blocked') as Error & { code: string };
+    error.code = 'permission-denied';
+    return error;
+  };
+
   const matchesOf = (uid: string): Match[] => {
     const out: Match[] = [];
     state.matches.forEach((createdAt, id) => {
       if (!id.split('_').includes(uid)) return;
       const otherId = otherUid(id, uid);
+      // The real backend hides a row whose card is denied (they blocked me).
+      if (state.profileDenied.has(otherId)) return;
       const profile = state.profiles.get(otherId);
       if (profile) out.push({ id, other: { id: otherId, ...profile }, createdAt });
     });
@@ -155,6 +166,7 @@ function createFakeBackend() {
     },
     async getProfile(uid) {
       record('getProfile', [uid]);
+      if (state.profileDenied.has(uid)) throw permissionDenied();
       return state.profiles.get(uid) ?? null;
     },
     async saveOnboarding(uid, docs, photoUri) {
@@ -226,7 +238,17 @@ function createFakeBackend() {
     },
     async getMatch(uid, matchId) {
       record('getMatch', [uid, matchId]);
-      return matchesOf(uid).find((m) => m.id === matchId) ?? null;
+      const createdAt = state.matches.get(matchId);
+      if (createdAt === undefined || !matchId.split('_').includes(uid)) return null;
+      const otherId = otherUid(matchId, uid);
+      // Like the real backend: a denied card (they blocked me) keeps the conversation,
+      // but carries nothing about them beyond the uid the match id already holds.
+      if (state.profileDenied.has(otherId)) {
+        return { id: matchId, other: { id: otherId, hidden: true }, createdAt };
+      }
+      const profile = state.profiles.get(otherId);
+      if (!profile) return null;
+      return { id: matchId, other: { id: otherId, ...profile }, createdAt };
     },
     onMessages(matchId, listener, onError) {
       const code = state.failNext.get('onMessages');
@@ -324,6 +346,7 @@ function createFakeBackend() {
       state.matches.clear();
       state.messages.clear();
       state.blocked.clear();
+      state.profileDenied.clear();
       state.reports = [];
       state.user = null;
       state.appleAvailable = false;

@@ -86,6 +86,18 @@ describe('push notification taps', () => {
     assert.deepEqual(calls, [`get-match:alice:${matchId}`]);
   });
 
+  it('does not route from a push when the other profile is hidden', async () => {
+    const baseline = createHarness();
+    const { router, calls, matchId, setSession } = createHarness({
+      returnedMatch: { ...baseline.match, other: { id: 'bob', hidden: true } },
+    });
+    setSession({ status: 'ready', uid: 'alice' });
+
+    await router.handle({ type: 'message', matchId, recipientUid: 'alice' });
+
+    assert.deepEqual(calls, [`get-match:alice:${matchId}`]);
+  });
+
   it('does not route when either person in the match is blocked', async () => {
     const { router, calls, matchId, setSession } = createHarness({ blocked: ['bob'] });
     setSession({ status: 'ready', uid: 'alice' });
